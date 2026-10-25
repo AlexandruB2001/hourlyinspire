@@ -9,7 +9,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Four-tab navigation (Journey, Friends, World, Profile)
 - ✅ Journey screen: animated parallax scene, distance/steps, next-km progress, trail strip, next-zone preview, friends preview, data-source + last-updated chip
 - ✅ Original pixel art: 6 avatars with walk cycle, 16 icons, 10 biome scenes, app icon
-- 🔶 Build verified by CI on macOS (check the latest workflow run)
+- ⬜ iOS app compiled in Xcode. The SwiftUI target has not been built yet: it was written in a Linux container without Xcode. Build it on a Mac or via the CI workflow, and fix anything the compiler reports.
 
 ## Milestone 2: Walking
 - ✅ `WalkingDataProvider` protocol; mock and HealthKit implementations
