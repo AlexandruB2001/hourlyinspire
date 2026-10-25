@@ -4,5 +4,5 @@
 xcuserdata/
 DerivedData/
 .DS_Store
-/preview-output/
+preview-output/
 Config/Secrets.xcconfig

@@ -41,3 +41,21 @@ for biome in Biome.allCases {
 var items = PixelCanvas(width: ItemSprites.allIDs.count * 12, height: 12)
 for (i, id) in ItemSprites.allIDs.enumerated() { items.draw(ItemSprites.render(id), x: i * 12 + 1, y: 1) }
 write(items, "items", scale: 6)
+
+// Thumbnails at the sizes the app uses.
+var thumbs = PixelCanvas(width: 10 * 64, height: 48)
+for (i, biome) in Biome.allCases.enumerated() {
+    thumbs.draw(SceneRenderer.thumbnail(biome, width: 60, height: 44), x: i * 64, y: 0)
+}
+write(thumbs, "thumbnails", scale: 3)
+
+// App icon source: 128x128 art scaled 8x to 1024. Usage: pixel-preview <dir> icon
+if CommandLine.arguments.contains("icon") {
+    let layers = SceneRenderer.render(.meadow, width: 64, height: 64)
+    var icon = layers.composite(cloudOffset: 20, midOffset: 6, groundOffset: 10)
+    let character = CharacterSprites.walkFrame(0, avatarID: "fern").scaled(by: 2)
+    icon.draw(character, x: 16, y: layers.footY - character.height + 2)
+    var data = Data("P6\n\(icon.width * 16) \(icon.height * 16)\n255\n".utf8)
+    for p in icon.scaled(by: 16).pixels { data.append(contentsOf: [p.r, p.g, p.b]) }
+    FileManager.default.createFile(atPath: "\(output)/AppIcon.ppm", contents: data)
+}

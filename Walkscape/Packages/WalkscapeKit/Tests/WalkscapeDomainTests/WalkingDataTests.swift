@@ -104,6 +104,20 @@ final class WalkingDataTests: XCTestCase {
         XCTAssertNil(status.progress)
     }
 
+    func testRestoreAndCancel() {
+        var status = WalkingSyncStatus()
+        let saved = DailyProgress(userID: "me", localDate: .init(year: 2026, month: 10, day: 25), timeZoneIdentifier: "UTC",
+                                  steps: 100, distanceMeters: 70, distanceSource: .recorded,
+                                  updatedAt: date("2026-10-25T08:00:00Z"))
+        status.restore(saved)
+        XCTAssertEqual(status.progress, saved)
+        XCTAssertEqual(status.lastSuccessfulRefresh, saved.updatedAt)
+        XCTAssertEqual(status.freshness(now: date("2026-10-25T12:00:00Z")), .stale)
+        status.beginRefresh()
+        status.cancelRefresh()
+        XCTAssertEqual(status.phase, .loaded)
+    }
+
     func testFriendAvailability() {
         let now = date("2026-10-25T12:00:00Z")
         let today = LocalDay(year: 2026, month: 10, day: 25)

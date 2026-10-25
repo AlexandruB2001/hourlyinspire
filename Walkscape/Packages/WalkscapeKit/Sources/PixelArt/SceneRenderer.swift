@@ -37,7 +37,7 @@ public struct SceneLayers: Hashable, Sendable {
 /// tiles seamlessly.
 public enum SceneRenderer {
     public static func render(_ biome: Biome, width: Int = 160, height: Int = 100) -> SceneLayers {
-        var painter = ScenePainter(biome: biome, width: max(32, width), height: max(40, height))
+        var painter = ScenePainter(biome: biome, width: max(24, width), height: max(24, height))
         return painter.paint()
     }
 

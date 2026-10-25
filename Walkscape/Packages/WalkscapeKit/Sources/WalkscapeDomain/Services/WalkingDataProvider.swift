@@ -68,6 +68,21 @@ public struct WalkingSyncStatus: Hashable, Sendable {
 
     public init() {}
 
+    /// Seeds the status with totals saved on a previous launch, so the app
+    /// shows the last known numbers (marked by their age) while offline.
+    public mutating func restore(_ saved: DailyProgress) {
+        guard progress == nil else { return }
+        progress = saved
+        lastSuccessfulRefresh = saved.updatedAt
+        phase = .loaded
+    }
+
+    /// Returns to idle without changing data, e.g. when a refresh can't start
+    /// because Health access hasn't been requested yet.
+    public mutating func cancelRefresh() {
+        if phase == .loading { phase = progress == nil ? .idle : .loaded }
+    }
+
     public mutating func beginRefresh() {
         phase = .loading
     }

@@ -251,7 +251,7 @@ public enum FriendTrackLayoutEngine {
             let side = direction == .ahead ? "right" : "left"
             result.append(OverflowIndicator(
                 direction: direction, members: [me], targetUserID: me.id, gapFromCurrentUserMeters: 0,
-                label: "You · \(DistanceFormatting.kilometres(meters))",
+                title: "You", detail: DistanceFormatting.kilometres(meters),
                 accessibilityLabel: "You, \(DistanceFormatting.kilometres(meters)) today, off screen to the \(side). Double tap to return to you."))
         }
         let friends = members.filter { !$0.isCurrentUser }
@@ -261,23 +261,24 @@ public enum FriendTrackLayoutEngine {
         if friends.count == 1 {
             result.append(OverflowIndicator(
                 direction: direction, members: friends, targetUserID: nearest.id, gapFromCurrentUserMeters: gap,
-                label: "\(nearest.name) · \(GapText.short(gap))",
+                title: nearest.name, detail: GapText.short(gap),
                 accessibilityLabel: "\(nearest.name), \(GapText.spoken(gap)), off screen to the \(side). Double tap to focus."))
         } else {
             let gaps = friends.map { $0.distanceMeters! - currentUserMeters }
             // "ahead"/"behind" are relative to the user, so only use them when true for everyone.
-            let label: String
+            let title: String
+            let detail: String
             if gaps.allSatisfy({ $0 > 0 }) {
-                label = "\(friends.count) friends ahead"
+                (title, detail) = ("\(friends.count) friends", "ahead")
             } else if gaps.allSatisfy({ $0 < 0 }) {
-                label = "\(friends.count) friends behind"
+                (title, detail) = ("\(friends.count) friends", "behind")
             } else {
-                label = "\(friends.count) more friends"
+                (title, detail) = ("\(friends.count) more", "friends")
             }
             let names = friends.map(\.name).joined(separator: ", ")
             result.append(OverflowIndicator(
                 direction: direction, members: friends, targetUserID: nearest.id, gapFromCurrentUserMeters: gap,
-                label: label,
+                title: title, detail: detail,
                 accessibilityLabel: "\(friends.count) friends off screen to the \(side): \(names). Nearest is \(nearest.name), \(GapText.spoken(gap)). Double tap to focus on \(nearest.name)."))
         }
         return result

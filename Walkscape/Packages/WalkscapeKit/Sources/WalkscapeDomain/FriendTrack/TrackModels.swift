@@ -151,8 +151,14 @@ public struct OverflowIndicator: Identifiable, Hashable, Sendable {
     public let targetUserID: UserID
     /// Nearest member's distance minus the current user's distance.
     public let gapFromCurrentUserMeters: Int
-    public let label: String
+    /// First line, e.g. "Taylor", "You", "3 friends".
+    public let title: String
+    /// Second line, e.g. "+4.8 km", "2.4 km", "ahead".
+    public let detail: String
     public let accessibilityLabel: String
+
+    /// One-line form: "Taylor · +4.8 km" or "3 friends ahead".
+    public var label: String { members.count > 1 ? "\(title) \(detail)" : "\(title) · \(detail)" }
 
     public var id: String { "\(direction.rawValue)-" + members.map(\.id.rawValue).joined(separator: ",") }
     public var isGroup: Bool { members.count > 1 }

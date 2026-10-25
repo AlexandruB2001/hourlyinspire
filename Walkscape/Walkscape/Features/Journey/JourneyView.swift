@@ -1,0 +1,120 @@
+import SwiftUI
+import WalkscapeDomain
+
+/// The main screen: today's walk as a journey through the world.
+struct JourneyView: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: Theme.Spacing.l) {
+                    JourneyHero(topInset: proxy.safeAreaInsets.top)
+                    VStack(spacing: Theme.Spacing.l) {
+                        DistanceCard()
+                        HealthStatusCard()
+                        TrailStrip()
+                        NextZoneCard()
+                        FriendsPreviewCard()
+                        if model.isDemo { DemoControlsCard() }
+                    }
+                    .padding(.horizontal, Theme.Spacing.l)
+                    .padding(.top, -Theme.Spacing.xxl - Theme.Spacing.l)
+                }
+                .padding(.bottom, Theme.Spacing.xl)
+            }
+            .ignoresSafeArea(edges: .top)
+            .refreshable { await model.refreshAll() }
+        }
+        .background(Theme.Palette.night.ignoresSafeArea())
+    }
+}
+
+/// The large animated scene at the top of the Journey screen.
+private struct JourneyHero: View {
+    @Environment(AppModel.self) private var model
+    let topInset: CGFloat
+
+    var body: some View {
+        let zone = model.zoneProgress.currentZone
+        PixelSceneView(biome: zone.biome, avatarID: model.settings.avatarID, walking: model.distanceMeters > 0)
+            .id(zone.biome)
+            .transition(.opacity)
+            .frame(height: 330 + topInset)
+            .overlay(alignment: .bottom) {
+                LinearGradient(colors: [.clear, Theme.Palette.night], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 90)
+            }
+            .overlay(alignment: .top) {
+                VStack(spacing: Theme.Spacing.s) {
+                    ZoneSign(zone: zone)
+                    DataSourceChip()
+                }
+                .padding(.top, topInset + Theme.Spacing.s)
+            }
+            .animation(.easeInOut(duration: 0.8), value: zone.biome)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("You are in \(zone.name). \(zone.tagline)")
+    }
+}
+
+/// A wooden signpost with the current zone's name.
+private struct ZoneSign: View {
+    let zone: Zone
+
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(zone.name.uppercased())
+                .font(.system(.headline, design: .rounded).weight(.heavy))
+                .tracking(1.5)
+                .foregroundStyle(Theme.Palette.cream)
+            Text(zone.tagline)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.cream.opacity(0.85))
+                .lineLimit(1)
+        }
+        .padding(.horizontal, Theme.Spacing.l)
+        .padding(.vertical, Theme.Spacing.s)
+        .background {
+            RoundedRectangle(cornerRadius: Theme.Radius.s)
+                .fill(Theme.Palette.bark)
+                .overlay(alignment: .top) {
+                    Rectangle().fill(Color.white.opacity(0.15)).frame(height: 2).padding(.horizontal, 4).padding(.top, 2)
+                }
+        }
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
+        .shadow(color: Theme.Palette.ink.opacity(0.4), radius: 0, x: 0, y: 3)
+        .padding(.horizontal, Theme.Spacing.xl)
+    }
+}
+
+/// "Apple Health · Updated 2 min ago" or "Demo data".
+struct DataSourceChip: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let freshness = model.freshness
+        let updated = model.sync.lastSuccessfulRefresh.map { RelativeTime.short(since: $0, now: model.now) }
+        Group {
+            if model.isDemo {
+                StatusChip(text: "Demo data · not from Apple Health", systemImage: "sparkles", tint: Theme.Palette.crystal)
+            } else if model.sync.phase == .loading && updated == nil {
+                StatusChip(text: "Reading Apple Health…", systemImage: "heart.fill")
+            } else if let updated {
+                StatusChip(text: "Apple Health · updated \(updated)",
+                           systemImage: freshness == .stale ? "exclamationmark.triangle.fill" : "heart.fill",
+                           tint: freshness == .stale ? Theme.Palette.ember : Theme.Palette.cream)
+            } else {
+                StatusChip(text: "Apple Health · not synced yet", systemImage: "heart")
+            }
+        }
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        if model.isDemo { return "Showing demo data, not your Apple Health data" }
+        guard let last = model.sync.lastSuccessfulRefresh else { return "Apple Health has not synced yet" }
+        let stale = model.freshness == .stale ? ". This data may be out of date." : ""
+        return "Apple Health data updated \(RelativeTime.short(since: last, now: model.now))\(stale)"
+    }
+}

@@ -5,7 +5,7 @@ import WalkscapeDomain
 final class PixelArtTests: XCTestCase {
     func testEveryBiomeRendersAtManySizesWithoutCrashing() {
         for biome in Biome.allCases {
-            for (w, h) in [(32, 40), (96, 56), (130, 96), (200, 120), (433, 99)] {
+            for (w, h) in [(24, 24), (40, 30), (48, 28), (32, 40), (96, 56), (130, 96), (200, 120), (433, 99)] {
                 let layers = SceneRenderer.render(biome, width: w, height: h)
                 XCTAssertEqual(layers.sky.width, w)
                 XCTAssertEqual(layers.ground.height, h)
