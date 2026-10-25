@@ -17,7 +17,7 @@ location.
 | 1. Foundation: design system, 4-tab shell, Journey screen, pixel-art scenes | ✅ implemented |
 | 2. Walking: HealthKit service, mock provider, zone progression, boundary celebrations | ✅ implemented (needs device testing) |
 | 3. Social track: viewport fitting, edge indicators, focus, Back to me | ✅ implemented with mock friends |
-| 4. Backend (Supabase) | ⏳ not started |
+| 4. Backend: Supabase auth, friendships, progress sync, RLS | ✅ implemented. Needs a Supabase project, see [`docs/BACKEND.md`](docs/BACKEND.md) |
 | 5–7. Game depth, beta, monetisation | ⏳ not started |
 
 See [`docs/CHECKLIST.md`](docs/CHECKLIST.md) for the detailed task list.
@@ -68,16 +68,24 @@ The same tests run on Linux in Docker:
 docker run --rm -v "$PWD":/pkg -w /pkg swift:6.0-noble swift test
 ```
 
-There are 64 tests covering kilometre boundaries (0, 999, 1,000, 1,999, 2,000
+There are 81 tests covering kilometre boundaries (0, 999, 1,000, 1,999, 2,000
 and very large distances), local-day resets and DST, late and duplicate
 updates, idempotent unlocks, the friend-track layout (narrow spreads,
 far-ahead and far-behind friends, grouping, focus, Back to me, equal
 distances, empty lists, huge distances, stale and unavailable friends,
-determinism and stability), the leaderboard, the mock repositories and the
-pixel-art renderer.
+determinism and stability), the leaderboard, the mock repositories, the
+pixel-art renderer and the Supabase client (sign-in, token refresh, error
+mapping, duplicate-sync prevention).
+
+The Supabase schema has its own tests (64 checks for row level security,
+friendship rules and sync), run against real Postgres:
+
+```sh
+Walkscape/supabase/tests/run.sh    # needs Docker
+```
 
 CI (`.github/workflows/walkscape.yml` at the repo root) runs the package tests
-on Linux and builds the iOS app for the simulator on macOS.
+and database tests on Linux, and builds the iOS app for the simulator on macOS.
 
 ### Previewing the art without a simulator
 
@@ -93,6 +101,8 @@ This writes PPM images of every scene, the character sheet and the item icons.
 ```
 Walkscape/
 ├── project.yml                 XcodeGen spec (source of truth for the Xcode project)
+├── Config/                     xcconfig files (Supabase connection; secrets are git-ignored)
+├── supabase/                   SQL migrations and database tests
 ├── Packages/WalkscapeKit/      Pure-Swift package, builds and tests on any platform
 │   ├── Sources/WalkscapeDomain
 │   │   ├── Models/             DailyProgress, FriendSummary, LocalDay, UserID, avatars
@@ -102,6 +112,7 @@ Walkscape/
 │   │   ├── Mock/               Deterministic demo walking data and sample friends
 │   │   └── Utilities/          Distance formatting
 │   ├── Sources/PixelArt        Pixel canvas, sprite format, characters, items, biome scenes
+│   ├── Sources/WalkscapeBackend  Dependency-free Supabase client: auth, RPC, friends, sync
 │   ├── Sources/PixelPreview    Command-line art previewer
 │   └── Tests/
 └── Walkscape/                  The iOS app (SwiftUI)
@@ -111,6 +122,7 @@ Walkscape/
     ├── Core/Utilities/         Pixel art → CGImage, sprite cache, relative time
     ├── Features/Journey|Friends|World|Profile
     ├── Data/HealthKit/         HealthKitWalkingDataProvider
+    ├── Data/Backend/           Keychain session storage, Sign in with Apple
     ├── Data/Persistence/       Settings and progression storage
     └── Resources/              Assets, Info.plist, entitlements
 ```
@@ -177,10 +189,9 @@ catalog under the documented names override the generated art automatically.
 
 ## Not done yet
 
-- Supabase auth, profiles, friendships, daily progress sync, RLS (Milestone 4).
-  Friends are local sample data behind `FriendRepository`.
+- Syncing discoveries and achievements to the server (tables exist; the app
+  keeps them on the device for now).
 - Notifications: the reminder toggle is stored but nothing is scheduled yet.
-- Account sign-out and deletion (needs auth).
 - Character customisation beyond the six starter palettes.
 - Walkscape Plus (StoreKit 2): intentionally not started.
 - Physical-device testing of HealthKit, background delivery, time-zone travel

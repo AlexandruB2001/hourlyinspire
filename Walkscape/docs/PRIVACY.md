@@ -12,7 +12,7 @@
   *where* anyone is.
 - No raw Health samples leave the device.
 
-## What friends can see (once sync exists)
+## What friends can see
 
 - Your username, avatar, and today's step and distance totals, with the time
   they were last updated.
@@ -26,9 +26,14 @@
   the lifetime total and achievements are computed from.
 - Demo-mode progress, kept separately from Apple Health progress.
 
-## Backend (Milestone 4, planned)
+## Server (when signed in)
 
-Only daily aggregates will be synced. Row-level security will limit friends to
-permitted daily summaries. Client-submitted totals can't be fully verified, so
-the server will apply plausibility limits (for example a maximum daily
-distance) and the limitation will be documented.
+- Sign in with Apple, requesting **no** name or e-mail scope.
+- Stored: username, walker, sharing preference, friendships and blocks, and
+  one row of daily totals per day (only while sharing is on, and never from
+  demo mode).
+- Row level security limits each table to its owner, and limits daily totals
+  to accepted friends while sharing is on. Tested in `supabase/tests`.
+- **Delete account** (Profile → Account) removes the server account and all of
+  the above immediately.
+- See [`BACKEND.md`](BACKEND.md) for the limits of client-reported totals.

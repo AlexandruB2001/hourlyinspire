@@ -13,7 +13,7 @@ struct ProfileView: View {
                     CollectionSection()
                     HealthSection()
                     SettingsSection()
-                    AboutSection()
+                    AccountSection()
                 }
                 .padding(Theme.Spacing.l)
             }
@@ -28,6 +28,7 @@ private struct ProfileHeader: View {
     @Environment(AppModel.self) private var model
     @State private var editingName = false
     @State private var draftName = ""
+    @State private var nameError: String?
 
     var body: some View {
         @Bindable var model = model
@@ -46,7 +47,10 @@ private struct ProfileHeader: View {
                         editingName = true
                     } label: {
                         HStack(spacing: Theme.Spacing.xs) {
-                            Text(model.settings.username).font(Theme.Typography.title)
+                            Text((model.isSignedIn ? "@" : "") + model.settings.username)
+                                .font(Theme.Typography.title)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
                             Image(systemName: "pencil").font(.caption)
                         }
                         .foregroundStyle(Theme.Palette.cream)
@@ -64,7 +68,7 @@ private struct ProfileHeader: View {
                 Eyebrow("Choose your walker")
                 HStack(spacing: Theme.Spacing.s) {
                     ForEach(AvatarCatalog.starters) { avatar in
-                        Button { model.settings.avatarID = avatar.id } label: {
+                        Button { model.setAvatar(avatar.id) } label: {
                             AvatarPortrait(avatarID: avatar.id, size: 44,
                                            ring: model.settings.avatarID == avatar.id ? Theme.Palette.gold : Theme.Palette.ink)
                         }
@@ -78,11 +82,21 @@ private struct ProfileHeader: View {
         .alert("Username", isPresented: $editingName) {
             TextField("Username", text: $draftName)
                 .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
             Button("Save") {
-                let trimmed = draftName.trimmingCharacters(in: .whitespacesAndNewlines)
-                if !trimmed.isEmpty { model.settings.username = String(trimmed.prefix(20)) }
+                let name = draftName
+                Task { nameError = await model.updateUsername(name) }
             }
             Button("Cancel", role: .cancel) {}
+        } message: {
+            if model.isSignedIn {
+                Text("Friends find you by this name. 3–20 lowercase letters, numbers or underscores.")
+            }
+        }
+        .alert("Username not saved", isPresented: Binding(get: { nameError != nil }, set: { if !$0 { nameError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(nameError ?? "")
         }
     }
 }
@@ -213,7 +227,8 @@ private struct SettingsSection: View {
             Text("Reminders are saved now and will be delivered once notifications are added.")
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
-            Toggle("Share daily totals with friends", isOn: $model.settings.shareProgressWithFriends)
+            Toggle("Share daily totals with friends",
+                   isOn: Binding(get: { model.settings.shareProgressWithFriends }, set: { model.setShareProgress($0) }))
             Text("Only today's step count and distance are shared, never raw Health data or location.")
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
@@ -225,16 +240,54 @@ private struct SettingsSection: View {
     }
 }
 
-private struct AboutSection: View {
+private struct AccountSection: View {
+    @Environment(AppModel.self) private var model
+    @State private var confirmingDelete = false
+    @State private var isDeleting = false
+    @State private var deleteError: String?
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             SectionHeader(title: "Account")
+            switch model.account {
+            case .localOnly:
+                Label("Friend sync isn't configured in this build, so your progress stays on this device.",
+                      systemImage: "iphone")
+            case .signedOut:
+                Text("Sign in to sync your daily totals with friends. Your walking history stays on this device either way.")
+                WalkscapeSignInButton()
+            case .signedIn(let profile):
+                Label("Signed in as @\(profile.username)", systemImage: "person.crop.circle.badge.checkmark")
+                    .foregroundStyle(Theme.Palette.cream)
+                HStack(spacing: Theme.Spacing.m) {
+                    Button("Sign out") { Task { await model.signOut() } }
+                        .buttonStyle(.pixelQuiet)
+                    Button("Delete account", role: .destructive) { confirmingDelete = true }
+                        .buttonStyle(.pixelQuiet)
+                        .disabled(isDeleting)
+                }
+            }
             Label("Walkscape Plus — optional cosmetics, coming later. Walking, zones and friends stay free.",
                   systemImage: "crown")
-            Label("Sign-in, sign-out and account deletion arrive with friend sync.", systemImage: "person.badge.key")
         }
         .font(Theme.Typography.caption)
         .foregroundStyle(Theme.Palette.creamDim)
         .pixelPanel()
+        .confirmationDialog("Delete your Walkscape account?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+            Button("Delete account permanently", role: .destructive) {
+                isDeleting = true
+                Task {
+                    deleteError = await model.deleteAccount()
+                    isDeleting = false
+                }
+            }
+        } message: {
+            Text("This removes your profile, friends and shared daily totals from our server. It can't be undone. Walking history on this device is kept.")
+        }
+        .alert("Account not deleted", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(deleteError ?? "")
+        }
     }
 }

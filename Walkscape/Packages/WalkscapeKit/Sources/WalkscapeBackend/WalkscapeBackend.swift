@@ -1,0 +1,34 @@
+import Foundation
+import WalkscapeDomain
+
+/// Everything the app needs from Supabase, built from one config.
+public final class WalkscapeBackend: Sendable {
+    public let config: SupabaseConfig
+    public let auth: SupabaseAuth
+    public let api: SupabaseAPI
+    public let friends: SupabaseFriendRepository
+    public let profiles: ProfileService
+    public let progressSync: DailyProgressSyncer
+
+    public init(config: SupabaseConfig, transport: HTTPTransport = URLSessionTransport(), sessionStore: SessionStore,
+                catalog: ZoneCatalog = .standard) {
+        self.config = config
+        auth = SupabaseAuth(config: config, transport: transport, store: sessionStore)
+        api = SupabaseAPI(config: config, transport: transport, auth: auth)
+        friends = SupabaseFriendRepository(api: api, catalog: catalog)
+        profiles = ProfileService(api: api)
+        progressSync = DailyProgressSyncer(api: api)
+    }
+
+    /// Permanently deletes the account and everything stored for it, then signs out locally.
+    public func deleteAccount() async throws {
+        try await api.call("delete_account")
+        await auth.clearSession()
+        await progressSync.reset()
+    }
+
+    public func signOut() async {
+        await auth.signOut()
+        await progressSync.reset()
+    }
+}

@@ -11,10 +11,13 @@ struct FriendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                    if model.account == .signedOut { SignInCard() }
                     trackSection
                     FocusCard()
-                    leaderboardSection
-                    FriendRequestsSection()
+                    if model.account != .signedOut {
+                        leaderboardSection
+                        FriendRequestsSection()
+                    }
                     privacyNote
                 }
                 .padding(Theme.Spacing.l)
@@ -28,6 +31,7 @@ struct FriendsView: View {
                         Label("Add friend", systemImage: "person.badge.plus")
                     }
                     .tint(Theme.Palette.gold)
+                    .disabled(model.account == .signedOut)
                 }
             }
             .refreshable { await model.refreshFriends() }
@@ -70,7 +74,9 @@ struct FriendsView: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.ember)
             }
-            Text("Drag to explore. Tap a walker or an edge badge to jump to them.")
+            Text(model.usesSampleFriends
+                 ? "Sample friends for this preview build. Drag to explore; tap a walker or an edge badge to jump to them."
+                 : "Drag to explore. Tap a walker or an edge badge to jump to them.")
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
         }
@@ -182,5 +188,22 @@ private struct FocusCard: View {
             }
         }
         .animation(.trackFocus, value: model.trackFocus)
+    }
+}
+
+/// Shown on the Friends tab when the backend is configured but nobody is signed in.
+struct SignInCard: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            Label("Walk with friends", systemImage: "person.2.fill")
+                .font(Theme.Typography.headline)
+                .foregroundStyle(Theme.Palette.gold)
+            Text("Sign in to add friends and see everyone's daily distance on a shared trail. Only your username, walker and daily totals are shared — never your location.")
+                .font(Theme.Typography.body)
+                .foregroundStyle(Theme.Palette.cream.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+            WalkscapeSignInButton()
+        }
+        .pixelPanel(fill: Theme.Palette.forestRaised)
     }
 }

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import WalkscapeBackend
 import WalkscapeDomain
 
 /// App-wide state. Views read from it; all data flows in through `refresh*`.
@@ -9,12 +10,22 @@ import WalkscapeDomain
 final class AppModel {
     enum Tab: Hashable { case journey, friends, world, profile }
 
+    /// Where friends come from.
+    enum AccountState: Equatable {
+        /// No Supabase configured in this build: local sample friends.
+        case localOnly
+        case signedOut
+        case signedIn(RemoteProfile)
+    }
+
     // MARK: Dependencies
 
     let engine = ZoneProgressionEngine()
     let demoProvider = MockWalkingDataProvider()
     private let healthProvider = HealthKitWalkingDataProvider()
-    private let friendRepository: FriendRepository
+    /// Nil when the build has no Supabase configuration.
+    let backend: WalkscapeBackend?
+    private let sampleFriends: FriendRepository
     private let store: LocalStore
     @ObservationIgnored private var tickerTask: Task<Void, Never>?
     @ObservationIgnored private var lastAutoRefresh = Date.distantPast
@@ -39,13 +50,24 @@ final class AppModel {
     /// Ticks every 30 s so relative times and staleness stay current.
     private(set) var now = Date()
 
-    /// Local-only identity until Supabase auth lands (Milestone 4).
+    private(set) var account: AccountState
+    private(set) var isSigningIn = false
+    /// A user-facing account problem to show in an alert.
+    var accountError: String?
+
+    /// The user's id on the shared track. Friends have server ids, so a fixed
+    /// local id can't collide with them.
     let currentUserID: UserID = "me"
     var timeZone: TimeZone { .current }
 
-    init(store: LocalStore = LocalStore(), friendRepository: FriendRepository = MockFriendRepository()) {
+    init(store: LocalStore = LocalStore(), sampleFriends: FriendRepository = MockFriendRepository(),
+         backend: WalkscapeBackend? = SupabaseConfig.fromBundle.map {
+             WalkscapeBackend(config: $0, sessionStore: KeychainSessionStore())
+         }) {
         self.store = store
-        self.friendRepository = friendRepository
+        self.sampleFriends = sampleFriends
+        self.backend = backend
+        account = backend == nil ? .localOnly : .signedOut
         let settings = store.loadSettings()
         self.settings = settings
         let source = settings.dataSource ?? Self.defaultSource
@@ -95,6 +117,22 @@ final class AppModel {
         [me] + friends.map(TrackParticipant.init(friend:))
     }
 
+    var isSignedIn: Bool {
+        if case .signedIn = account { return true }
+        return false
+    }
+
+    /// Sample friends are only used when there is no backend.
+    var usesSampleFriends: Bool { account == .localOnly }
+
+    private var friendRepository: FriendRepository? {
+        switch account {
+        case .localOnly: return sampleFriends
+        case .signedOut: return nil
+        case .signedIn: return backend?.friends
+        }
+    }
+
     // MARK: Lifecycle
 
     /// Call once at launch.
@@ -107,6 +145,7 @@ final class AppModel {
             }
         }
         Task {
+            await restoreSession()
             await refreshAll()
             startHealthObservationIfPossible()
         }
@@ -162,6 +201,7 @@ final class AppModel {
             let event = progression.apply(progress, using: engine)
             store.save(progression, for: source)
             if let newCelebration = event.celebration { celebration = newCelebration }
+            await uploadProgress(progress, source: source)
         } catch let error as WalkingDataError {
             sync.fail(error)
         } catch {
@@ -219,6 +259,13 @@ final class AppModel {
     // MARK: Friends
 
     func refreshFriends() async {
+        guard let friendRepository else {
+            friends = []
+            friendRequests = FriendRequests()
+            friendsError = nil
+            trackFocus.reconcile(with: trackParticipants)
+            return
+        }
         isLoadingFriends = true
         defer { isLoadingFriends = false }
         do {
@@ -227,6 +274,8 @@ final class AppModel {
             (friends, friendRequests) = try await (summaries, requests)
             friendsError = nil
             trackFocus.reconcile(with: trackParticipants)
+        } catch FriendRepositoryError.notSignedIn {
+            handleSessionExpired()
         } catch {
             friendsError = "Couldn't reach your friends right now. Showing the last update."
         }
@@ -234,6 +283,7 @@ final class AppModel {
 
     /// Returns a user-facing error message, or nil on success.
     func sendFriendRequest(to username: String) async -> String? {
+        guard let friendRepository else { return "Sign in to add friends." }
         do {
             try await friendRepository.sendFriendRequest(toUsername: username)
             await refreshFriends()
@@ -245,6 +295,9 @@ final class AppModel {
             case .alreadyFriends: return "You're already friends."
             case .requestAlreadyPending: return "A request is already pending."
             case .notConfigured: return "Friend sync isn't set up yet."
+            case .notSignedIn:
+                handleSessionExpired()
+                return "Please sign in again."
             case .network: return "Couldn't send the request. Check your connection."
             }
         } catch {
@@ -253,22 +306,30 @@ final class AppModel {
     }
 
     func accept(_ request: FriendRequest) async {
-        try? await friendRepository.acceptFriendRequest(id: request.id)
-        await refreshFriends()
+        await performFriendAction { try await $0.acceptFriendRequest(id: request.id) }
     }
 
     func decline(_ request: FriendRequest) async {
-        try? await friendRepository.declineFriendRequest(id: request.id)
-        await refreshFriends()
+        await performFriendAction { try await $0.declineFriendRequest(id: request.id) }
     }
 
     func removeFriend(_ id: UserID) async {
-        try? await friendRepository.removeFriend(id)
-        await refreshFriends()
+        await performFriendAction { try await $0.removeFriend(id) }
     }
 
     func blockFriend(_ id: UserID) async {
-        try? await friendRepository.blockUser(id)
+        await performFriendAction { try await $0.blockUser(id) }
+    }
+
+    private func performFriendAction(_ action: (FriendRepository) async throws -> Void) async {
+        guard let friendRepository else { return }
+        do {
+            try await action(friendRepository)
+        } catch FriendRepositoryError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            friendsError = "That didn't go through. Check your connection and try again."
+        }
         await refreshFriends()
     }
 
@@ -276,5 +337,141 @@ final class AppModel {
     func showOnTrack(_ id: UserID) {
         trackFocus.focus(on: id, currentUserID: currentUserID)
         selectedTab = .friends
+    }
+
+    // MARK: Account
+
+    /// Restores a saved session at launch.
+    private func restoreSession() async {
+        guard let backend, await backend.auth.isSignedIn else { return }
+        await loadProfile(backend)
+    }
+
+    func signInWithApple(idToken: String, nonce: String) async {
+        guard let backend else { return }
+        isSigningIn = true
+        defer { isSigningIn = false }
+        do {
+            try await backend.auth.signInWithApple(idToken: idToken, nonce: nonce)
+        } catch {
+            accountError = "Couldn't sign in. Check your connection and try again."
+            return
+        }
+        await loadProfile(backend)
+        // Carry the walker chosen before signing in over to the account.
+        if case .signedIn(let profile) = account, profile.avatarID != settings.avatarID {
+            await pushProfile { try await backend.profiles.update(avatarID: self.settings.avatarID) }
+        }
+        await refreshAll()
+    }
+
+    private func loadProfile(_ backend: WalkscapeBackend) async {
+        do {
+            let profile = try await backend.profiles.myProfile()
+            apply(profile)
+        } catch BackendError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            // Offline at launch: stay signed in with the last known name and retry later.
+            if account == .signedOut {
+                account = .signedIn(RemoteProfile(id: currentUserID, username: settings.username,
+                                                  avatarID: settings.avatarID,
+                                                  shareProgress: settings.shareProgressWithFriends))
+            }
+        }
+    }
+
+    private func apply(_ profile: RemoteProfile) {
+        account = .signedIn(profile)
+        settings.username = profile.username
+        settings.shareProgressWithFriends = profile.shareProgress
+    }
+
+    /// Changes the username. Returns an error message, or nil on success.
+    func updateUsername(_ raw: String) async -> String? {
+        guard let backend, isSignedIn else {
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return "Enter a name." }
+            settings.username = String(trimmed.prefix(20))
+            return nil
+        }
+        do {
+            apply(try await backend.profiles.update(username: raw))
+            return nil
+        } catch ProfileUpdateError.invalidUsername {
+            return "Use 3–20 lowercase letters, numbers or underscores."
+        } catch ProfileUpdateError.usernameTaken {
+            return "That username is taken."
+        } catch {
+            return "Couldn't save your username. Check your connection."
+        }
+    }
+
+    func setAvatar(_ avatarID: String) {
+        settings.avatarID = avatarID
+        guard let backend, isSignedIn else { return }
+        Task { await pushProfile { try await backend.profiles.update(avatarID: avatarID) } }
+    }
+
+    func setShareProgress(_ share: Bool) {
+        settings.shareProgressWithFriends = share
+        guard let backend, isSignedIn else { return }
+        Task {
+            await pushProfile { try await backend.profiles.update(shareProgress: share) }
+            if share, let progress = todayProgress { await uploadProgress(progress, source: dataSource) }
+        }
+    }
+
+    private func pushProfile(_ update: () async throws -> RemoteProfile) async {
+        do {
+            apply(try await update())
+        } catch ProfileUpdateError.backend(.notSignedIn) {
+            handleSessionExpired()
+        } catch {
+            accountError = "Couldn't save your profile. It will be kept on this device."
+        }
+    }
+
+    /// Shares today's totals with friends. Demo data is never uploaded, and
+    /// nothing is uploaded while sharing is off.
+    private func uploadProgress(_ progress: DailyProgress, source: WalkingDataSourceKind) async {
+        guard let backend, isSignedIn, source == .appleHealth, settings.shareProgressWithFriends else { return }
+        do {
+            try await backend.progressSync.sync(progress)
+        } catch BackendError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            // Offline: the next refresh retries, since nothing was recorded as uploaded.
+        }
+    }
+
+    func signOut() async {
+        guard let backend else { return }
+        await backend.signOut()
+        account = .signedOut
+        trackFocus.backToMe()
+        await refreshFriends()
+    }
+
+    /// Deletes the account and all server data. Returns an error message, or nil on success.
+    func deleteAccount() async -> String? {
+        guard let backend else { return nil }
+        do {
+            try await backend.deleteAccount()
+        } catch {
+            return "Couldn't delete your account. Check your connection and try again."
+        }
+        account = .signedOut
+        trackFocus.backToMe()
+        await refreshFriends()
+        return nil
+    }
+
+    private func handleSessionExpired() {
+        guard isSignedIn else { return }
+        account = .signedOut
+        friends = []
+        friendRequests = FriendRequests()
+        accountError = "You've been signed out. Sign in again to see your friends."
     }
 }

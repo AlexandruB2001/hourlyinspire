@@ -1,0 +1,10 @@
+// Shared build settings for all configurations.
+//
+// Supabase connection. Leave empty to run with local sample friends.
+// Put real values in Config/Secrets.xcconfig (git-ignored); see
+// Config/Secrets.example.xcconfig. CI writes that file from repository secrets.
+SUPABASE_HOST =
+SUPABASE_SCHEME = https
+SUPABASE_ANON_KEY =
+
+#include? "Secrets.xcconfig"

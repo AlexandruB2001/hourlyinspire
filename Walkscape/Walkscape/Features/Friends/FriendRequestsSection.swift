@@ -57,7 +57,12 @@ struct AddFriendSheet: View {
                 Text("Friends see your daily distance and steps on a shared track. Requests must be accepted before anyone sees anything.")
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Palette.creamDim)
-                TextField("Username", text: $username)
+                if model.isSignedIn {
+                    Text("Your username is @\(model.settings.username)")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.gold)
+                }
+                TextField("Friend's username", text: $username)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .padding(Theme.Spacing.m)
@@ -79,9 +84,11 @@ struct AddFriendSheet: View {
                 }
                 .buttonStyle(.pixelQuiet)
 
-                Text("Friend accounts arrive with sign-in. Until then, requests go to sample walkers.")
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Palette.creamDim)
+                if model.usesSampleFriends {
+                    Text("This build has no friend server configured, so requests go to sample walkers.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.creamDim)
+                }
                 Spacer()
             }
             .padding(Theme.Spacing.l)

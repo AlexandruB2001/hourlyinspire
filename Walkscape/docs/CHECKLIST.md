@@ -30,12 +30,16 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Layout unit tests (all cases from the brief)
 
 ## Milestone 4: Backend
-- ⬜ Supabase project, auth (Sign in with Apple)
-- ⬜ Migrations: profiles, friendships, daily_progress, zone_definitions, user_discoveries, achievements, user_achievements
-- ⬜ RLS policies + cross-user access tests
-- ⬜ Idempotent daily-progress upsert RPC with plausibility limits
-- ⬜ `SupabaseFriendRepository` replacing `MockFriendRepository`
-- ⬜ Account deletion, sign-out
+- ✅ Migrations: profiles, friendships, blocks, daily_progress, zone_definitions, user_discoveries, achievements, user_achievements
+- ✅ RLS policies + 64 database tests (cross-user access, friendship rules, validation, idempotent sync, blocking, deletion)
+- ✅ Idempotent daily-progress upsert with plausibility limits
+- ✅ Dependency-free Swift client: Apple ID-token sign-in, token refresh, RPC, error mapping (17 tests)
+- ✅ `SupabaseFriendRepository`; sample friends only when no backend is configured
+- ✅ Sign in with Apple, sign-out, account deletion, username/avatar/sharing sync
+- ✅ Daily totals sync after each Health refresh (never demo data; skipped when unchanged or sharing is off)
+- ⬜ Create the Supabase project, run the migrations, enable the Apple provider, add the GitHub secrets (see docs/BACKEND.md)
+- ⬜ End-to-end test on device with two accounts
+- ⬜ Sync discoveries/achievements to the server
 
 ## Milestone 5: Game progression
 - ⬜ More character customisation (hats, colours)

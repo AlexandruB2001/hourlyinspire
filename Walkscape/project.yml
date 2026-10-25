@@ -15,6 +15,9 @@ settings:
     CURRENT_PROJECT_VERSION: "1"
     # Set your Apple Developer team here or in Xcode's Signing & Capabilities tab.
     DEVELOPMENT_TEAM: ""
+configFiles:
+  Debug: Config/Base.xcconfig
+  Release: Config/Base.xcconfig
 packages:
   WalkscapeKit:
     path: Packages/WalkscapeKit
@@ -29,6 +32,8 @@ targets:
         product: WalkscapeDomain
       - package: WalkscapeKit
         product: PixelArt
+      - package: WalkscapeKit
+        product: WalkscapeBackend
       - sdk: HealthKit.framework
     settings:
       base:

@@ -38,5 +38,11 @@ struct RootTabView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.celebration)
+        .alert("Account", isPresented: Binding(get: { model.accountError != nil },
+                                               set: { if !$0 { model.accountError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(model.accountError ?? "")
+        }
     }
 }

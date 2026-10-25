@@ -6,6 +6,7 @@ public enum FriendRepositoryError: Error, Hashable, Sendable {
     case alreadyFriends
     case requestAlreadyPending
     case notConfigured
+    case notSignedIn
     case network(String)
 }
 

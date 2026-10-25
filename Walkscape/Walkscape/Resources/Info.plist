@@ -26,6 +26,12 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Walkscape reads your step count and walking distance to move your character through the world. Only daily totals are ever shared, and only with friends you accept.</string>
+	<key>SupabaseAnonKey</key>
+	<string>$(SUPABASE_ANON_KEY)</string>
+	<key>SupabaseHost</key>
+	<string>$(SUPABASE_HOST)</string>
+	<key>SupabaseScheme</key>
+	<string>$(SUPABASE_SCHEME)</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
