@@ -48,6 +48,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ⬜ Local notifications (daily reminder, friend passed you)
 
 ## Milestone 6: Beta
+- ✅ TestFlight workflow (automatic signing via App Store Connect API key) + privacy manifest
+- ⬜ API key + GitHub secrets + App Store Connect app record (docs/TESTFLIGHT.md)
 - ⬜ Physical-device test pass, offline/stale states, relaunch persistence
 - ⬜ Accessibility audit (VoiceOver, Dynamic Type at XXL)
 - ⬜ TestFlight

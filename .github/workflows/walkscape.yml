@@ -41,6 +41,12 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v5
+      - name: Select newest Xcode
+        # Match the SDK the TestFlight workflow uses.
+        run: |
+          xcode=$(ls -d /Applications/Xcode_*.app | grep -viE "beta|release_candidate|_rc" | sort -V | tail -1)
+          sudo xcode-select -s "$xcode"
+          xcodebuild -version
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Write Supabase config
@@ -54,7 +60,7 @@ jobs:
             printf 'SUPABASE_HOST = %s\nSUPABASE_ANON_KEY = %s\n' "$SUPABASE_HOST" "$SUPABASE_ANON_KEY" > Config/Secrets.xcconfig
             echo "Supabase configured."
           else
-            echo "No Supabase secrets; building in local-only mode."
+            echo "No Supabase secrets; using Config/Base.xcconfig."
           fi
       - name: Generate project
         working-directory: Walkscape
@@ -65,4 +71,10 @@ jobs:
           set -o pipefail
           xcodebuild -project Walkscape.xcodeproj -scheme Walkscape \
             -destination 'generic/platform=iOS Simulator' -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO build | tail -200
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -200
+      - name: Check bundle contents
+        working-directory: Walkscape
+        run: |
+          app=build/Build/Products/Debug-iphonesimulator/Walkscape.app
+          test -f "$app/PrivacyInfo.xcprivacy" || { echo "::error::PrivacyInfo.xcprivacy missing from the app bundle"; exit 1; }
+          /usr/libexec/PlistBuddy -c "Print :SupabaseHost" "$app/Info.plist"

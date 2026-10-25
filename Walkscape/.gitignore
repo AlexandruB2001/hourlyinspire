@@ -6,3 +6,4 @@ DerivedData/
 .DS_Store
 preview-output/
 Config/Secrets.xcconfig
+build/
