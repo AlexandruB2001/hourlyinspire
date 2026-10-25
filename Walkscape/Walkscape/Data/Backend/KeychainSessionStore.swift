@@ -5,7 +5,7 @@ import WalkscapeBackend
 /// Keeps the Supabase session in the Keychain, available after first unlock
 /// so background HealthKit deliveries can still sync.
 final class KeychainSessionStore: SessionStore, @unchecked Sendable {
-    private let service = "com.walkscape.supabase-session"
+    private let service = "com.alexandrub.walkscape.supabase-session"
     private let account = "default"
 
     func load() -> AuthSession? {

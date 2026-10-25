@@ -40,7 +40,7 @@ open Walkscape.xcodeproj
 In Xcode:
 
 1. Select the **Walkscape** target → *Signing & Capabilities* → choose your team.
-   Change the bundle identifier (`com.walkscape.app`) to one you own.
+   The bundle identifier is `com.alexandrub.walkscape`.
 2. Check that the **HealthKit** capability is listed with *Background Delivery*
    ticked (it comes from `Walkscape/Resources/Walkscape.entitlements`).
 3. Run on an iPhone simulator. The simulator defaults to **demo data**, which
