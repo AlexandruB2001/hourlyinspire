@@ -10,7 +10,22 @@ Without configuration the app runs in **local-only mode** with sample friends.
 | Swift client | `Packages/WalkscapeKit/Sources/WalkscapeBackend` |
 | App wiring | `Walkscape/App/AppModel.swift` (Account section), `Walkscape/Data/Backend/` |
 
-## Setting it up (all in the browser)
+## Current project
+
+| | |
+|---|---|
+| Project | `walkscape` (ref `tsajekigvuwoeqdfwnib`, region us-west-2) |
+| API | `https://tsajekigvuwoeqdfwnib.supabase.co` |
+| Schema | `setup.sql` applied on 2026-10-25 via the Management API and verified (RLS on every table, 16 policies, seed data) |
+| Auth | Sign in with Apple only (client ID `com.alexandrub.walkscape`, email optional); email/password sign-up disabled |
+| App key | publishable key in `Config/Base.xcconfig` |
+
+The migrations were applied by hand, not with the Supabase CLI, so the
+project has no CLI migration history yet. Before using `supabase db push`,
+mark them as applied with `supabase migration repair --status applied 20261025000001 20261025000002`.
+Apply future schema changes as new files in `supabase/migrations/`.
+
+## Setting it up from scratch (all in the browser)
 
 ### 1. Create the project
 

@@ -1,10 +1,15 @@
 // Shared build settings for all configurations.
 //
-// Supabase connection. Leave empty to run with local sample friends.
-// Put real values in Config/Secrets.xcconfig (git-ignored); see
-// Config/Secrets.example.xcconfig. CI writes that file from repository secrets.
-SUPABASE_HOST =
+// Supabase connection (project "walkscape"). The publishable key is meant to
+// ship inside the app: row level security protects the data. Never put a
+// secret / service_role key in this file.
+//
+// To point a build somewhere else, override these in Config/Secrets.xcconfig
+// (git-ignored; see Config/Secrets.example.xcconfig). CI writes that file
+// from the SUPABASE_HOST / SUPABASE_ANON_KEY repository secrets if they exist.
+// Empty values run the app in local-only mode with sample friends.
+SUPABASE_HOST = tsajekigvuwoeqdfwnib.supabase.co
 SUPABASE_SCHEME = https
-SUPABASE_ANON_KEY =
+SUPABASE_ANON_KEY = sb_publishable_8vSaQhFayoptNJ9tiC-Fww_xbRiTSNc
 
 #include? "Secrets.xcconfig"

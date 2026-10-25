@@ -37,7 +37,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ `SupabaseFriendRepository`; sample friends only when no backend is configured
 - ✅ Sign in with Apple, sign-out, account deletion, username/avatar/sharing sync
 - ✅ Daily totals sync after each Health refresh (never demo data; skipped when unchanged or sharing is off)
-- ⬜ Create the Supabase project, run the migrations, enable the Apple provider, add the GitHub secrets (see docs/BACKEND.md)
+- ✅ Supabase project `walkscape` set up: schema applied and verified, Apple sign-in enabled, app pointed at it
 - ⬜ End-to-end test on device with two accounts
 - ⬜ Sync discoveries/achievements to the server
 
