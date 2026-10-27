@@ -25,6 +25,8 @@
 - Per-day best distance, discovered zones and collected items. This is what
   the lifetime total and achievements are computed from.
 - Demo-mode progress, kept separately from Apple Health progress.
+- Coins, shop items you own and your current outfit. Coins are earned only by
+  walking; there are no real-money purchases.
 
 ## Server (when signed in)
 
