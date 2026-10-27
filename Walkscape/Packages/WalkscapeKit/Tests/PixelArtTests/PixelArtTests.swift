@@ -51,6 +51,37 @@ final class PixelArtTests: XCTestCase {
         XCTAssertEqual(CharacterSprites.walkFrame(0, avatarID: "unknown"), CharacterSprites.walkFrame(0, avatarID: "fern"))
     }
 
+    func testEveryShopItemHasArtThatChangesTheWalker() {
+        XCTAssertEqual(Set(EquipmentArt.allIDs), Set(ShopCatalog.items.map(\.id)))
+        let plain = CharacterSprites.idleFrame(avatarID: "fern", outfit: [])
+        for item in ShopCatalog.items {
+            let dressed = CharacterSprites.idleFrame(avatarID: "fern", outfit: [item.id])
+            XCTAssertEqual(dressed.height, CharacterSprites.outfittedHeight)
+            XCTAssertNotEqual(dressed, plain, "\(item.id) is invisible")
+        }
+    }
+
+    func testOutfitArtUsesOnlyPaletteKeys() {
+        for id in EquipmentArt.allIDs {
+            let art = EquipmentArt.art(for: id)!
+            XCTAssertEqual(Set(art.overlay.map(\.count)).count <= 1, true, "\(id) has ragged rows")
+            for key in art.overlay.joined() where key != "." {
+                XCTAssertNotNil(EquipmentArt.palette[key], "\(id) uses unknown key \(key)")
+            }
+        }
+    }
+
+    func testAnEmptyOutfitIsThePlainWalkerWithHeadroom() {
+        let headroom = CharacterSprites.outfitHeadroom
+        for frame in 0..<CharacterSprites.walkFrameCount {
+            let plain = CharacterSprites.walkFrame(frame, avatarID: "sky")
+            let outfitted = CharacterSprites.walkFrame(frame, avatarID: "sky", outfit: [])
+            for y in 0..<CharacterSprites.height {
+                for x in 0..<CharacterSprites.width { XCTAssertEqual(outfitted[x, y + headroom], plain[x, y]) }
+            }
+        }
+    }
+
     func testEveryCollectibleAndAchievementHasASprite() {
         let ids = ZoneCatalog.standard.allCollectibles.map(\.spriteID) + AchievementCatalog.standard.map(\.spriteID)
         for id in ids { XCTAssertNotNil(ItemSprites.sprite(id), "missing sprite \(id)") }

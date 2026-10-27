@@ -35,7 +35,7 @@ Apply future schema changes as new files in `supabase/migrations/`.
 ### 2. Create the tables
 
 1. Dashboard → **SQL Editor** → *New query*. The quickest way: paste all of
-   `supabase/setup.sql` (both migrations in one file) and click **Run**. Or run
+   `supabase/setup.sql` (every migration in one file) and click **Run**. Or run
    them one at a time:
 2. Paste all of `supabase/migrations/20261025000001_initial_schema.sql` and click **Run**.
 3. Do the same with `supabase/migrations/20261025000002_seed_reference_data.sql`.

@@ -37,7 +37,8 @@ private struct JourneyHero: View {
 
     var body: some View {
         let zone = model.zoneProgress.currentZone
-        PixelSceneView(biome: zone.biome, avatarID: model.settings.avatarID, walking: model.distanceMeters > 0)
+        PixelSceneView(biome: zone.biome, avatarID: model.settings.avatarID, outfit: model.outfit,
+                       walking: model.distanceMeters > 0)
             .id(zone.biome)
             .transition(.opacity)
             .frame(height: 330 + topInset)
@@ -48,13 +49,72 @@ private struct JourneyHero: View {
             .overlay(alignment: .top) {
                 VStack(spacing: Theme.Spacing.s) {
                     ZoneSign(zone: zone)
-                    DataSourceChip()
+                    HStack(spacing: Theme.Spacing.s) {
+                        DataSourceChip()
+                        CoinBadge(coins: model.wallet.coins)
+                    }
                 }
                 .padding(.top, topInset + Theme.Spacing.s)
+            }
+            .overlay(alignment: .bottomTrailing) {
+                ChestPopUp()
+                    .padding(.trailing, Theme.Spacing.xl)
+                    .padding(.bottom, Theme.Spacing.xxl + Theme.Spacing.xl)
             }
             .animation(.easeInOut(duration: 0.8), value: zone.biome)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("You are in \(zone.name). \(zone.tagline)")
+    }
+}
+
+/// A chest found on today's walk. It bounces on the path until it's opened.
+private struct ChestPopUp: View {
+    @Environment(AppModel.self) private var model
+    @State private var bounce = false
+    @State private var reward: Int?
+    @State private var opened = 0
+
+    var body: some View {
+        let pending = model.wallet.pendingChests
+        VStack(spacing: Theme.Spacing.xs) {
+            if let reward {
+                Text("+\(reward) coins")
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(Theme.Palette.gold)
+                    .shadow(color: Theme.Palette.ink, radius: 0, x: 0, y: 2)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            if pending > 0 {
+                Button {
+                    if let coins = model.openChest() {
+                        reward = coins
+                        opened += 1
+                    }
+                } label: {
+                    VStack(spacing: Theme.Spacing.xs) {
+                        ItemIcon(spriteID: "chest", pixel: 4)
+                            .offset(y: bounce ? -6 : 0)
+                        StatusChip(text: pending > 1 ? "\(pending) chests · tap" : "Chest! Tap to open",
+                                   systemImage: "hand.tap.fill", tint: Theme.Palette.gold)
+                    }
+                }
+                .buttonStyle(.plain)
+                .transition(.scale.combined(with: .opacity))
+                .accessibilityLabel(pending > 1 ? "\(pending) chests found on your walk" : "A chest found on your walk")
+                .accessibilityHint("Opens a chest for \(CoinRules.standard.coinsPerChest) coins")
+            }
+        }
+        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: pending)
+        .animation(.easeOut(duration: 0.3), value: reward)
+        .sensoryFeedback(.success, trigger: opened)
+        .task(id: opened) {
+            guard opened > 0 else { return }
+            try? await Task.sleep(for: .seconds(1.4))
+            reward = nil
+        }
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.45).repeatForever(autoreverses: true)) { bounce = true }
+        }
     }
 }
 

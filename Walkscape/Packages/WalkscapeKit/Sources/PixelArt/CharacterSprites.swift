@@ -127,12 +127,40 @@ public enum CharacterSprites {
         return sprite.render()
     }
 
-    private static func compose(legs: [String], bob: Int, palette: SpritePalette) -> PixelCanvas {
-        var canvas = PixelCanvas(width: width, height: height)
+    // MARK: Outfits
+
+    /// Extra rows above the head so hats fit. Outfitted frames are
+    /// `width` x `outfittedHeight`, with the feet on the bottom row as usual.
+    public static let outfitHeadroom = 4
+    public static var outfittedHeight: Int { height + outfitHeadroom }
+
+    /// Walk frame wearing shop items (see `EquipmentArt`). Unknown ids are ignored.
+    public static func walkFrame(_ index: Int, avatarID: String, outfit: [String]) -> PixelCanvas {
+        let frame = ((index % walkFrameCount) + walkFrameCount) % walkFrameCount
+        let bob = frame % 2 == 1 ? -1 : 0
+        return compose(legs: legs[frame], bob: bob, palette: palette(for: avatarID), outfit: outfit, canvasHeight: outfittedHeight)
+    }
+
+    public static func idleFrame(avatarID: String, outfit: [String]) -> PixelCanvas {
+        compose(legs: idleLegs, bob: 0, palette: palette(for: avatarID), outfit: outfit, canvasHeight: outfittedHeight)
+    }
+
+    private static func compose(legs: [String], bob: Int, palette: SpritePalette, outfit: [String] = [],
+                                canvasHeight: Int = height) -> PixelCanvas {
+        let pieces = outfit.compactMap(EquipmentArt.art(for:))
+        var palette = palette
+        for piece in pieces where !piece.recolor.isEmpty { palette = palette.overriding(piece.recolor) }
+
+        var canvas = PixelCanvas(width: width, height: canvasHeight)
         let body = Sprite(name: "body", palette: palette, rows: upperBody)
         let legSprite = Sprite(name: "legs", palette: palette, rows: legs)
-        canvas.draw(legSprite, x: 0, y: height - legs.count)
-        canvas.draw(body, x: 0, y: height - legs.count - upperBody.count + 1 + bob)
+        let bodyY = canvasHeight - legs.count - upperBody.count + 1 + bob
+        canvas.draw(legSprite, x: 0, y: canvasHeight - legs.count)
+        canvas.draw(body, x: 0, y: bodyY)
+        for piece in pieces where !piece.overlay.isEmpty {
+            let sprite = Sprite(name: "equipment", palette: EquipmentArt.palette, rows: piece.overlay)
+            canvas.draw(sprite, x: piece.x, y: bodyY + piece.y)
+        }
         return canvas
     }
 }

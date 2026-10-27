@@ -341,6 +341,30 @@ public enum ItemSprites {
             oooooooooo
             ..........
             """,
+        "coin": """
+            ..........
+            ...oooo...
+            ..oyyyyo..
+            .oyhhyyYo.
+            .oyhyyyYo.
+            .oyhyyyYo.
+            .oyyyyYYo.
+            ..oYYYYo..
+            ...oooo...
+            ..........
+            """,
+        "mystery-box": """
+            ..oo..oo..
+            .oyho.ohyo
+            ..ooyyoo..
+            oooooyoooo
+            ovvwwyvVVo
+            ovvvwyvVVo
+            ovvwvyvVVo
+            ovvvvyvVVo
+            ovvwvyvVVo
+            oooooooooo
+            """,
     ]
 
     public static let allIDs: [String] = art.keys.sorted()

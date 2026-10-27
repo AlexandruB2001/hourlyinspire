@@ -63,6 +63,17 @@ final class PixelArtCache {
         }
     }
 
+    /// A frame wearing shop items, `CharacterSprites.outfittedHeight` tall.
+    func characterFrame(_ frame: Int, avatarID: String, outfit: [String], walking: Bool) -> CGImage? {
+        let index = ((frame % CharacterSprites.walkFrameCount) + CharacterSprites.walkFrameCount) % CharacterSprites.walkFrameCount
+        let look = ([avatarID] + outfit).joined(separator: "+")
+        let key = walking ? "outfit_\(look)_walk_\(index)" : "outfit_\(look)_idle"
+        return image(key) {
+            walking ? CharacterSprites.walkFrame(index, avatarID: avatarID, outfit: outfit)
+                : CharacterSprites.idleFrame(avatarID: avatarID, outfit: outfit)
+        }
+    }
+
     func portrait(avatarID: String) -> CGImage? {
         image("portrait_\(avatarID)") { CharacterSprites.portrait(avatarID: avatarID) }
     }
@@ -137,6 +148,8 @@ struct ItemIcon: View {
 /// The walking adventurer, animated with the shared walk cycle.
 struct WalkingCharacter: View {
     let avatarID: String
+    /// Shop items to wear. Nil draws the plain walker (as friends see it).
+    var outfit: [String]?
     var walking = true
     var pixel: CGFloat = Theme.pixel
     /// Offsets the cycle so a crowd doesn't step in unison.
@@ -147,9 +160,10 @@ struct WalkingCharacter: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1 / 8, paused: !walking || reduceMotion)) { context in
             let frame = Int((context.date.timeIntervalSinceReferenceDate + phase) * 8)
-            PixelImageView(image: PixelArtCache.shared.characterFrame(frame, avatarID: avatarID,
-                                                                      walking: walking && !reduceMotion),
-                           pixel: pixel)
+            let moving = walking && !reduceMotion
+            let image = outfit.map { PixelArtCache.shared.characterFrame(frame, avatarID: avatarID, outfit: $0, walking: moving) }
+                ?? PixelArtCache.shared.characterFrame(frame, avatarID: avatarID, walking: moving)
+            PixelImageView(image: image, pixel: pixel)
         }
         .accessibilityHidden(true)
     }

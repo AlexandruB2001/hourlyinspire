@@ -8,7 +8,7 @@ import WalkscapeDomain
 @MainActor
 @Observable
 final class AppModel {
-    enum Tab: Hashable { case journey, friends, world, profile }
+    enum Tab: Hashable { case journey, friends, world, shop, profile }
 
     /// Where friends come from.
     enum AccountState: Equatable {
@@ -38,6 +38,8 @@ final class AppModel {
     }
     private(set) var sync = WalkingSyncStatus()
     private(set) var progression: ProgressionState
+    /// Coins, owned shop items and the current outfit.
+    private(set) var wallet: WalletState
     private(set) var authorization: WalkingAuthorizationState = .notDetermined
     private(set) var friends: [FriendSummary] = []
     private(set) var friendRequests = FriendRequests()
@@ -45,6 +47,8 @@ final class AppModel {
     private(set) var isLoadingFriends = false
     /// Set when a refresh crosses one or more zone boundaries; cleared by the UI.
     var celebration: ZoneCelebration?
+    /// Milestone coins earned in the update that produced `celebration`.
+    private(set) var celebrationCoins = 0
     /// The shared track's focus. Lives here so other screens can deep-link to a friend.
     var trackFocus = TrackFocusController()
     /// Ticks every 30 s so relative times and staleness stay current.
@@ -72,6 +76,7 @@ final class AppModel {
         self.settings = settings
         let source = settings.dataSource ?? Self.defaultSource
         progression = store.loadProgression(source)
+        wallet = store.loadWallet(source)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
     }
 
@@ -200,7 +205,12 @@ final class AppModel {
             store.save(lastProgress: progress, for: source)
             let event = progression.apply(progress, using: engine)
             store.save(progression, for: source)
-            if let newCelebration = event.celebration { celebration = newCelebration }
+            let coins = wallet.apply(progress)
+            store.save(wallet, for: source)
+            if let newCelebration = event.celebration {
+                celebrationCoins = coins.coinsEarned
+                celebration = newCelebration
+            }
             await uploadProgress(progress, source: source)
         } catch let error as WalkingDataError {
             sync.fail(error)
@@ -229,6 +239,7 @@ final class AppModel {
         settings.dataSource = source
         sync = WalkingSyncStatus()
         progression = store.loadProgression(source)
+        wallet = store.loadWallet(source)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
         Task { await refreshWalking() }
@@ -252,8 +263,41 @@ final class AppModel {
         demoProvider.setScenario(.fixed(steps: 3_180, meters: 2_400))
         progression = ProgressionState()
         store.save(progression, for: .demo)
+        wallet = WalletState()
+        store.save(wallet, for: .demo)
         sync = WalkingSyncStatus()
         Task { await refreshWalking() }
+    }
+
+    // MARK: Shop
+
+    /// The walker's current outfit, in draw order.
+    var outfit: [String] { wallet.outfit }
+
+    /// Opens one chest found on today's walk. Returns the coins it held.
+    func openChest() -> Int? {
+        let coins = wallet.openChest()
+        store.save(wallet, for: dataSource)
+        return coins
+    }
+
+    /// Buys `item` and puts it on straight away.
+    func buy(_ item: ShopItem) -> PurchaseResult {
+        let result = wallet.buy(item)
+        if case .purchased = result { wallet.equip(item) }
+        store.save(wallet, for: dataSource)
+        return result
+    }
+
+    func openMysteryBox() -> PurchaseResult {
+        let result = wallet.openMysteryBox()
+        store.save(wallet, for: dataSource)
+        return result
+    }
+
+    func toggleEquipped(_ item: ShopItem) {
+        if wallet.isEquipped(item) { wallet.unequip(item.slot) } else { wallet.equip(item) }
+        store.save(wallet, for: dataSource)
     }
 
     // MARK: Friends

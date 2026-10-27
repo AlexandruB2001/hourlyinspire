@@ -5,6 +5,8 @@ import WalkscapeDomain
 /// in one update arrive as a single banner.
 struct ZoneCelebrationBanner: View {
     let celebration: ZoneCelebration
+    /// Kilometre-milestone coins earned with this update.
+    var coins = 0
     let dismiss: () -> Void
 
     @State private var sparkle = false
@@ -28,6 +30,14 @@ struct ZoneCelebrationBanner: View {
                              : "Found: \(item.name)")
                             .font(Theme.Typography.caption)
                             .foregroundStyle(Theme.Palette.creamDim)
+                    }
+                }
+                if coins > 0 {
+                    HStack(spacing: Theme.Spacing.xs) {
+                        ItemIcon(spriteID: "coin", pixel: 1.6)
+                        Text("+\(coins) coins")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Palette.gold)
                     }
                 }
             }

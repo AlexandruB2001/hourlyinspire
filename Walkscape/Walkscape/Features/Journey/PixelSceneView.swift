@@ -10,6 +10,8 @@ import WalkscapeDomain
 struct PixelSceneView: View {
     let biome: Biome
     var avatarID: String?
+    /// Shop items the character wears; nil for the plain walker.
+    var outfit: [String]?
     /// Layers scroll and the character steps only while walking.
     var walking = true
     var pixel: CGFloat = Theme.pixel
@@ -58,9 +60,10 @@ struct PixelSceneView: View {
             if let frames, let idle = frames.last {
                 let walkCount = frames.count - 1
                 let image = stepping && walkCount > 0 ? frames[Int(time * 8) % walkCount] : idle
-                layer(image, width: CharacterSprites.width, height: CharacterSprites.height)
+                let characterHeight = outfit == nil ? CharacterSprites.height : CharacterSprites.outfittedHeight
+                layer(image, width: CharacterSprites.width, height: characterHeight)
                     .offset(x: (CGFloat(width) * characterPosition).rounded() * pixel,
-                            y: CGFloat(images.layers.footY - CharacterSprites.height + 1) * pixel)
+                            y: CGFloat(images.layers.footY - characterHeight + 1) * pixel)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
@@ -71,8 +74,12 @@ struct PixelSceneView: View {
     private func characterFrames() -> [CGImage]? {
         guard let avatarID else { return nil }
         let cache = PixelArtCache.shared
-        let walk = (0..<CharacterSprites.walkFrameCount).compactMap { cache.characterFrame($0, avatarID: avatarID, walking: true) }
-        let idle = cache.characterFrame(0, avatarID: avatarID, walking: false)
+        func frame(_ index: Int, walking: Bool) -> CGImage? {
+            if let outfit { return cache.characterFrame(index, avatarID: avatarID, outfit: outfit, walking: walking) }
+            return cache.characterFrame(index, avatarID: avatarID, walking: walking)
+        }
+        let walk = (0..<CharacterSprites.walkFrameCount).compactMap { frame($0, walking: true) }
+        let idle = frame(0, walking: false)
         return walk + [idle].compactMap { $0 }
     }
 

@@ -25,6 +25,9 @@ struct RootTabView: View {
             WorldView()
                 .tabItem { Label("World", systemImage: "map.fill") }
                 .tag(AppModel.Tab.world)
+            ShopView()
+                .tabItem { Label("Shop", systemImage: "bag.fill") }
+                .tag(AppModel.Tab.shop)
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle.fill") }
                 .tag(AppModel.Tab.profile)
@@ -32,7 +35,7 @@ struct RootTabView: View {
         .tint(Theme.Palette.gold)
         .overlay(alignment: .top) {
             if let celebration = model.celebration {
-                ZoneCelebrationBanner(celebration: celebration) { model.celebration = nil }
+                ZoneCelebrationBanner(celebration: celebration, coins: model.celebrationCoins) { model.celebration = nil }
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .padding(.horizontal, Theme.Spacing.l)
             }

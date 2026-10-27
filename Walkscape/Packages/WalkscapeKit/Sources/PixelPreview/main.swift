@@ -42,6 +42,13 @@ var items = PixelCanvas(width: ItemSprites.allIDs.count * 12, height: 12)
 for (i, id) in ItemSprites.allIDs.enumerated() { items.draw(ItemSprites.render(id), x: i * 12 + 1, y: 1) }
 write(items, "items", scale: 6)
 
+// Every shop item on the walker.
+var outfits = PixelCanvas(width: 10 * 18, height: ((ShopCatalog.items.count + 9) / 10) * 26)
+for (i, item) in ShopCatalog.items.enumerated() {
+    outfits.draw(CharacterSprites.idleFrame(avatarID: "fern", outfit: [item.id]), x: (i % 10) * 18 + 1, y: (i / 10) * 26 + 1)
+}
+write(outfits, "outfits", scale: 6, background: PixelColor(0x9CC2D8))
+
 // Thumbnails at the sizes the app uses.
 var thumbs = PixelCanvas(width: Biome.allCases.count * 64, height: 48)
 for (i, biome) in Biome.allCases.enumerated() {

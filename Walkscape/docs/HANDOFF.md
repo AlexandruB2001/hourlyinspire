@@ -32,23 +32,16 @@ DONE
 - TestFlight workflow written (.github/workflows/walkscape-testflight.yml) and
   a privacy manifest added. The workflow has NOT run yet.
 
-WHERE WE STOPPED: TestFlight setup (needs my Apple login)
-See Walkscape/docs/TESTFLIGHT.md. Remaining steps:
-[ ] 1. App Store Connect → Users and Access → Integrations → App Store Connect API
-       → Team Keys → +. Name "GitHub Walkscape", access Admin. Download the .p8
-       (one chance only). Note the Key ID and Issuer ID.
-[ ] 2. Team ID: developer.apple.com/account → Membership details.
-[ ] 3. GitHub repo → Settings → Secrets and variables → Actions → add:
-       APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY (full .p8 text,
-       including the BEGIN/END lines). Never paste these into a chat.
-[ ] 4. If com.alexandrub.walkscape isn't registered yet:
-       developer.apple.com → Identifiers → + → App ID, with the HealthKit and
-       Sign in with Apple capabilities. (Or let the first workflow run register it.)
-[ ] 5. App Store Connect → Apps → + → New App: iOS, name "Walkscape",
-       bundle ID com.alexandrub.walkscape, SKU walkscape.
-[ ] 6. Run GitHub → Actions → "Walkscape TestFlight" → Run workflow. Wait about
-       15 minutes for processing, then TestFlight → Internal Testing → add
-       myself → install on my iPhone.
+TESTFLIGHT (done 2026-10-27)
+- App Store name "Walkscape Journey" ("Walkscape" was taken; the home-screen name
+  is still Walkscape). App Store Connect app id 6827387213.
+- App ID com.alexandrub.walkscape registered with HealthKit + Sign in with Apple.
+- API key "GitHub Walkscape" (Admin), Key ID 63G6GMN9G2. GitHub secrets
+  APPLE_TEAM_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY are set.
+- main has a copy of walkscape-testflight.yml only so "Run workflow" exists
+  (workflow_dispatch needs the default branch). Run it with this branch selected;
+  runs use this branch's version. Remove it from main when Walkscape moves repos.
+- TestFlight internal group "Internal Testers" has automatic distribution on.
 
 AFTER TESTFLIGHT (next work)
 - Test on iPhone:

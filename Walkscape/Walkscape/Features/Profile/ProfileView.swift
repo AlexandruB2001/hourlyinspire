@@ -36,7 +36,7 @@ private struct ProfileHeader: View {
             HStack(spacing: Theme.Spacing.l) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                    WalkingCharacter(avatarID: model.settings.avatarID, walking: true, pixel: 4)
+                    WalkingCharacter(avatarID: model.settings.avatarID, outfit: model.outfit, walking: true, pixel: 4)
                 }
                 .frame(width: 92, height: 100)
                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(Theme.Palette.ink, lineWidth: 2))

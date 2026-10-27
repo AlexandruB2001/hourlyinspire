@@ -26,6 +26,7 @@ struct LocalStore {
         static let settings = "walkscape.settings.v1"
         static func progression(_ source: WalkingDataSourceKind) -> String { "walkscape.progression.v1.\(source.rawValue)" }
         static func lastProgress(_ source: WalkingDataSourceKind) -> String { "walkscape.lastProgress.v1.\(source.rawValue)" }
+        static func wallet(_ source: WalkingDataSourceKind) -> String { "walkscape.wallet.v1.\(source.rawValue)" }
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -41,6 +42,15 @@ struct LocalStore {
         save(progression, Key.progression(source))
     }
 
+    // Coins are per data source too, so demo walking can't buy real outfits.
+    func loadWallet(_ source: WalkingDataSourceKind) -> WalletState {
+        load(WalletState.self, Key.wallet(source)) ?? WalletState()
+    }
+
+    func save(_ wallet: WalletState, for source: WalkingDataSourceKind) {
+        save(wallet, Key.wallet(source))
+    }
+
     /// The last successful daily totals, shown (with their age) while offline.
     func loadLastProgress(_ source: WalkingDataSourceKind) -> DailyProgress? {
         load(DailyProgress.self, Key.lastProgress(source))
@@ -52,7 +62,7 @@ struct LocalStore {
 
     func reset() {
         var keys = [Key.settings]
-        for source in WalkingDataSourceKind.allCases { keys += [Key.progression(source), Key.lastProgress(source)] }
+        for source in WalkingDataSourceKind.allCases { keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source)] }
         keys.forEach(defaults.removeObject(forKey:))
     }
 

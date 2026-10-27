@@ -42,17 +42,21 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ⬜ Sync discoveries/achievements to the server
 
 ## Milestone 5: Game progression
-- ⬜ More character customisation (hats, colours)
+- ✅ 20 zones: ten more down the far side of the Summit to Lighthouse Point, with new scenes, discoveries and achievements
+- ✅ Coins: 10 per kilometre each day, plus 2 hidden chests per kilometre (5 coins each, tap to open on the Journey screen)
+- ✅ Shop: 30 outfit items (hats, glasses, scarves, shoes, backs) in 4 rarities, 50-coin mystery box, wear/unwear
+- ⬜ Apply `20261027000001_far_side_zones.sql` to the live Supabase project
+- ⬜ Sync coins and owned items to the server (local per data source for now)
 - ⬜ Richer scenes: day/night tint, more wildlife, zone-specific particles
 - ⬜ Achievement unlock toasts
 - ⬜ Local notifications (daily reminder, friend passed you)
 
 ## Milestone 6: Beta
 - ✅ TestFlight workflow (automatic signing via App Store Connect API key) + privacy manifest
-- ⬜ API key + GitHub secrets + App Store Connect app record (docs/TESTFLIGHT.md)
+- ✅ API key + GitHub secrets + App Store Connect app record (docs/TESTFLIGHT.md)
 - ⬜ Physical-device test pass, offline/stale states, relaunch persistence
 - ⬜ Accessibility audit (VoiceOver, Dynamic Type at XXL)
-- ⬜ TestFlight
+- ✅ TestFlight (build 3 installed and played on device)
 
 ## Milestone 7: Monetisation
 - ⬜ Walkscape Plus (StoreKit 2): cosmetics only, never extra distance
