@@ -54,9 +54,15 @@ jobs:
         run: xcodegen generate
 
       - name: Write API key
+        # Rebuilds the PEM so a key pasted with lost or Windows line breaks still works.
         run: |
           key_path="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          printf '%s\n' "$ASC_PRIVATE_KEY" > "$key_path"
+          body=$(printf '%s' "$ASC_PRIVATE_KEY" | sed -e 's/-----BEGIN PRIVATE KEY-----//' -e 's/-----END PRIVATE KEY-----//' | tr -d ' \r\n\t')
+          { echo "-----BEGIN PRIVATE KEY-----"; echo "$body" | fold -w 64; echo "-----END PRIVATE KEY-----"; } > "$key_path"
+          if ! openssl pkey -in "$key_path" -noout 2>/dev/null; then
+            echo "::error::ASC_PRIVATE_KEY is not a valid .p8 key (${#body} base64 characters after cleanup, expected about 200). Paste the whole AuthKey_${ASC_KEY_ID}.p8 file again."
+            exit 1
+          fi
           echo "ASC_KEY_PATH=$key_path" >> "$GITHUB_ENV"
 
       - name: Archive
