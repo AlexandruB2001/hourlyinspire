@@ -43,7 +43,7 @@ for (i, id) in ItemSprites.allIDs.enumerated() { items.draw(ItemSprites.render(i
 write(items, "items", scale: 6)
 
 // Thumbnails at the sizes the app uses.
-var thumbs = PixelCanvas(width: 10 * 64, height: 48)
+var thumbs = PixelCanvas(width: Biome.allCases.count * 64, height: 48)
 for (i, biome) in Biome.allCases.enumerated() {
     thumbs.draw(SceneRenderer.thumbnail(biome, width: 60, height: 44), x: i * 64, y: 0)
 }

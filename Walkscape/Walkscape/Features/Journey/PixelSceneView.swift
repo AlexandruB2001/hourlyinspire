@@ -52,7 +52,7 @@ struct PixelSceneView: View {
             tiled(images.far, offset: time * speeds.far * move, width: width, height: height)
             tiled(images.mid, offset: time * speeds.mid * move, width: width, height: height)
             tiled(images.ground, offset: time * speeds.ground * move, width: width, height: height)
-            if animated && !reduceMotion && (biome == .snowyRidge || biome == .summit) {
+            if animated && !reduceMotion && [Biome.snowyRidge, .summit, .starlightPass].contains(biome) {
                 SnowfallLayer(time: time, density: biome == .snowyRidge ? 40 : 12, pixel: pixel)
             }
             if let frames, let idle = frames.last {

@@ -19,6 +19,11 @@ final class PixelArtTests: XCTestCase {
                        SceneRenderer.render(.village, width: 120, height: 90))
     }
 
+    func testEveryBiomeLooksDifferent() {
+        let thumbnails = Biome.allCases.map { SceneRenderer.thumbnail($0) }
+        XCTAssertEqual(Set(thumbnails).count, Biome.allCases.count)
+    }
+
     func testScrollingLayersTile() {
         let layers = SceneRenderer.render(.meadow, width: 100, height: 80)
         XCTAssertTrue(layers.ground.wrapsHorizontally)

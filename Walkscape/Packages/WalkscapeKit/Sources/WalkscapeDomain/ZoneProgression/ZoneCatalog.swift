@@ -70,7 +70,7 @@ public struct ZoneCatalog: Codable, Hashable, Sendable {
         let biome = beyondBiomes[beyond % beyondBiomes.count]
         return Zone(id: "beyond-\(beyond + 1)",
                     name: "Wanderer's Road \(beyond + 1)",
-                    tagline: "Past the summit, the road keeps going.",
+                    tagline: "Past the lighthouse, the road keeps going.",
                     detail: "Uncharted country for walkers who never stop. Every extra kilometre adds a new stretch.",
                     biome: biome,
                     startMeters: start,
@@ -89,7 +89,8 @@ public struct ZoneCatalog: Codable, Hashable, Sendable {
 }
 
 public extension ZoneCatalog {
-    /// The launch journey: ten 1 km zones from Meadow to Summit.
+    /// The journey: twenty 1 km zones, up from the Meadow to the Summit and
+    /// down the far side to Lighthouse Point.
     static let standard: ZoneCatalog = {
         func km(_ index: Int) -> (Int, Int) { (index * 1_000, (index + 1) * 1_000) }
         let entries: [(String, String, String, String, Biome, Collectible)] = [
@@ -123,6 +124,37 @@ public extension ZoneCatalog {
             ("summit", "The Summit", "The whole world, all at once.",
              "Above the clouds, the path you walked today stretches out below you.", .summit,
              Collectible(id: "summit-flag", name: "Summit Flag", detail: "Proof you made it all the way up.", spriteID: "flag")),
+            // The far side: down from the Summit to the sea.
+            ("starlight-pass", "Starlight Pass", "Ribbons of light dance over the pass.",
+             "Lanterns guide you down the far side while the aurora ripples green above the snow.", .starlightPass,
+             Collectible(id: "fallen-star", name: "Fallen Star", detail: "Still warm from its trip across the sky.", spriteID: "starfall")),
+            ("hot-springs", "Hot Springs", "Steam curls from turquoise pools.",
+             "Stone lanterns line the stepping stones, and the water is just the right kind of warm.", .hotSprings,
+             Collectible(id: "spring-egg", name: "Spring Egg", detail: "Slow-cooked in the hot spring. A walker's snack.", spriteID: "egg")),
+            ("maple-woods", "Maple Woods", "Every tree is on fire with colour.",
+             "Red, orange and gold leaves crunch underfoot, and a few still spin down from above.", .autumnWoods,
+             Collectible(id: "maple-leaf", name: "Maple Leaf", detail: "The reddest leaf in the whole wood.", spriteID: "maple")),
+            ("bamboo-grove", "Bamboo Grove", "Tall stalks creak softly in the wind.",
+             "Green light filters down through a forest of bamboo, and the path is cool and quiet.", .bambooGrove,
+             Collectible(id: "bamboo-flute", name: "Bamboo Flute", detail: "It plays one perfect note.", spriteID: "flute")),
+            ("blossom-orchard", "Blossom Orchard", "Pink petals drift on the breeze.",
+             "Rows of cherry trees in full bloom. The ground is dusted pink wherever you step.", .blossomOrchard,
+             Collectible(id: "cherries", name: "Twin Cherries", detail: "Picked fresh from the orchard.", spriteID: "cherry")),
+            ("lavender-fields", "Lavender Fields", "Purple rows roll out to an old windmill.",
+             "Bees hum over the lavender and the windmill's sails turn lazily on the hill.", .lavenderFields,
+             Collectible(id: "lavender", name: "Lavender Sprig", detail: "Tied with a yellow ribbon. Smells wonderful.", spriteID: "lavender")),
+            ("red-canyon", "Red Rock Canyon", "Sun-baked mesas glow orange.",
+             "Striped cliffs tower over a dusty trail, and cacti stand guard along the way.", .redCanyon,
+             Collectible(id: "canyon-agate", name: "Canyon Agate", detail: "Banded red and gold, like a tiny sunset.", spriteID: "agate")),
+            ("firefly-marsh", "Firefly Marsh", "Dusk falls and the fireflies wake.",
+             "A wooden boardwalk crosses still water. Frogs croak and little lights blink in the reeds.", .fireflyMarsh,
+             Collectible(id: "firefly-jar", name: "Firefly Jar", detail: "Borrowed for the night. Let them go at dawn.", spriteID: "jar")),
+            ("sandy-shore", "Sandy Shore", "Salt air and the sound of waves.",
+             "Dune grass sways over a wide beach, and the surf rolls in, again and again.", .sandyShore,
+             Collectible(id: "message-bottle", name: "Message in a Bottle", detail: "The note inside says: keep walking.", spriteID: "bottle")),
+            ("lighthouse-point", "Lighthouse Point", "The end of the land, the start of the sea.",
+             "A striped lighthouse stands on the clifftop, its beam sweeping out across a sunset sea.", .lighthousePoint,
+             Collectible(id: "spyglass", name: "Keeper's Spyglass", detail: "Look back: you can see the Summit from here.", spriteID: "spyglass")),
         ]
         let zones = entries.enumerated().map { index, entry in
             let (start, end) = km(index)

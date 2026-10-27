@@ -139,6 +139,16 @@ struct ScenePainter {
         case .snowyRidge: paintSnowyRidge(&far, &mid, &ground, style, footY)
         case .cloudForest: paintCloudForest(&far, &mid, &ground, style, footY)
         case .summit: paintSummit(&far, &mid, &ground, style, footY)
+        case .starlightPass: paintStarlightPass(&clouds, &far, &mid, &ground, style, footY)
+        case .hotSprings: paintHotSprings(&far, &mid, &ground, style, footY)
+        case .autumnWoods: paintAutumnWoods(&far, &mid, &ground, style, footY)
+        case .bambooGrove: paintBambooGrove(&far, &mid, &ground, style, footY)
+        case .blossomOrchard: paintBlossomOrchard(&far, &mid, &ground, style, footY)
+        case .lavenderFields: paintLavenderFields(&far, &mid, &ground, style, footY)
+        case .redCanyon: paintRedCanyon(&far, &mid, &ground, style, footY)
+        case .fireflyMarsh: paintFireflyMarsh(&far, &mid, &ground, style, footY)
+        case .sandyShore: paintSandyShore(&far, &mid, &ground, style, footY)
+        case .lighthousePoint: paintLighthousePoint(&far, &mid, &ground, style, footY)
         }
         return SceneLayers(biome: biome, width: width, height: height, sky: sky, clouds: clouds, far: far,
                            mid: mid, ground: ground, footY: footY)

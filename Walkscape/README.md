@@ -4,7 +4,8 @@
 
 Walkscape is a cozy pixel-art walking game for iPhone. Apple Health step and
 walking-distance totals move your character through a continuous world: each
-kilometre walked today reaches a new zone, from Sunny Meadow to the Summit.
+kilometre walked today reaches a new zone, from Sunny Meadow up to the Summit and down
+the far side to Lighthouse Point (20 km).
 Friends share a daily track ordered by distance walked. The game never uses
 location.
 

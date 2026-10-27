@@ -38,6 +38,37 @@ struct BiomeStyle {
             return BiomeStyle(sky: [PixelColor(0x3F4A86), PixelColor(0x7A5E9A), PixelColor(0xD88A9A), PixelColor(0xF4B98A)],
                               sun: PixelColor(0xFFE0A0), cloud: PixelColor(0xFFE6D0), cloudShade: PixelColor(0xE8A8A8),
                               stars: true)
+        case .starlightPass:
+            // The "sun" is a moon; the cloud layer carries the aurora instead.
+            return BiomeStyle(sky: [PixelColor(0x161A3E), PixelColor(0x252A5C), PixelColor(0x3E3A78), PixelColor(0x6A5290)],
+                              sun: PixelColor(0xF4EFD8), clouds: false, stars: true)
+        case .hotSprings:
+            return BiomeStyle(sky: [PixelColor(0x86AED4), PixelColor(0xA6C4DE), PixelColor(0xCAD9E4), PixelColor(0xEAEDE6)],
+                              sun: PixelColor(0xFFF4D0))
+        case .autumnWoods:
+            return BiomeStyle(sky: [PixelColor(0x86AED4), PixelColor(0xA8C2D6), PixelColor(0xD8CDB4), PixelColor(0xF2D8AE)],
+                              sun: PixelColor(0xFFE0A0), cloud: PixelColor(0xFFF4E4), cloudShade: PixelColor(0xF0D4B4))
+        case .bambooGrove:
+            return BiomeStyle(sky: [PixelColor(0x9CC4AE), PixelColor(0xB2D2B4), PixelColor(0xCAE0C0), PixelColor(0xE2EED2)],
+                              sun: nil, cloud: PixelColor(0xF4FAEE), cloudShade: PixelColor(0xD8E8D0))
+        case .blossomOrchard:
+            return BiomeStyle(sky: [PixelColor(0x88B8E2), PixelColor(0xA6CAE8), PixelColor(0xCADEEE), PixelColor(0xF4E4EE)],
+                              sun: PixelColor(0xFFF1C8), cloudShade: PixelColor(0xF2D8E4))
+        case .lavenderFields:
+            return BiomeStyle(sky: [PixelColor(0x7AA4D8), PixelColor(0x9EB8E0), PixelColor(0xCEC4E2), PixelColor(0xF2DCCC)],
+                              sun: PixelColor(0xFFE8B0), cloudShade: PixelColor(0xE6D4E8))
+        case .redCanyon:
+            return BiomeStyle(sky: [PixelColor(0x5E9CD6), PixelColor(0x8CB8DE), PixelColor(0xE2C496), PixelColor(0xF4D6A4)],
+                              sun: PixelColor(0xFFEAB0), cloud: PixelColor(0xFFF6E6), cloudShade: PixelColor(0xF0D6B8))
+        case .fireflyMarsh:
+            return BiomeStyle(sky: [PixelColor(0x2E3468), PixelColor(0x4A4C86), PixelColor(0x8A6A98), PixelColor(0xD8968A)],
+                              sun: nil, cloud: PixelColor(0x6A6A9A), cloudShade: PixelColor(0x54568A), stars: true)
+        case .sandyShore:
+            return BiomeStyle(sky: [PixelColor(0x5EA8DE), PixelColor(0x84C0E8), PixelColor(0xAED8F0), PixelColor(0xDCF0F4)],
+                              sun: PixelColor(0xFFF6D0))
+        case .lighthousePoint:
+            return BiomeStyle(sky: [PixelColor(0x4E5296), PixelColor(0x9A74A6), PixelColor(0xEC9C8A), PixelColor(0xF8D29A)],
+                              sun: PixelColor(0xFFD890), cloud: PixelColor(0xFFE0CC), cloudShade: PixelColor(0xE8A8A0))
         }
     }
 }

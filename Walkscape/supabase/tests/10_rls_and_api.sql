@@ -187,7 +187,7 @@ reset role;
 
 -- ------------------------------------------------- reference data & unlocks
 select tests.as_user('dave');
-select tests.ok(tests.count('select * from public.zone_definitions') = 10, 'zones are readable');
+select tests.ok(tests.count('select * from public.zone_definitions') = 20, 'zones are readable');
 select tests.fails($$insert into public.zone_definitions values ('x', 99, 'x', 'x', 'x', 0, 1, null, null)$$,
                    'permission denied', 'zones are read-only');
 insert into public.user_discoveries (user_id, zone_id) values (auth.uid(), 'meadow');

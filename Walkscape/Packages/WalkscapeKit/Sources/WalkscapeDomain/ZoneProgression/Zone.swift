@@ -4,6 +4,9 @@ import Foundation
 public enum Biome: String, Codable, Sendable, Hashable, CaseIterable {
     case meadow, riverside, pineForest, rollingHills, lakeside
     case village, crystalCaves, snowyRidge, cloudForest, summit
+    // The far side of the Summit, down to the coast.
+    case starlightPass, hotSprings, autumnWoods, bambooGrove, blossomOrchard
+    case lavenderFields, redCanyon, fireflyMarsh, sandyShore, lighthousePoint
 }
 
 /// A permanent discovery found the first time a zone is reached.

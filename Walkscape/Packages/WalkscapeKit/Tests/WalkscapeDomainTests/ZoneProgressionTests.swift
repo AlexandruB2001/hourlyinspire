@@ -46,14 +46,28 @@ final class ZoneProgressionTests: XCTestCase {
         XCTAssertEqual(DistanceFormatting.remaining(p.metersToNextZone), "600 m")
     }
 
-    func testLargeDistancesContinueBeyondCatalog() {
+    func testTheJourneyContinuesPastTheSummit() {
         let summit = engine.progress(forMeters: 9_500)
         XCTAssertEqual(summit.currentZone.id, "summit")
-        XCTAssertEqual(summit.nextZone.id, "beyond-1")
+        XCTAssertEqual(summit.nextZone.id, "starlight-pass")
+        XCTAssertEqual(engine.progress(forMeters: 10_000).currentZone.id, "starlight-pass")
+        XCTAssertEqual(engine.progress(forMeters: 14_200).currentZone.id, "blossom-orchard")
+        XCTAssertEqual(engine.progress(forMeters: 19_999).currentZone.id, "lighthouse-point")
+        XCTAssertEqual(engine.catalog.zones.count, 20)
+        XCTAssertEqual(engine.catalog.definedEndMeters, 20_000)
+        // Every zone has its own biome and discovery.
+        XCTAssertEqual(Set(engine.catalog.zones.map(\.biome)).count, 20)
+        XCTAssertEqual(Set(engine.catalog.allCollectibles.map(\.id)).count, 20)
+    }
 
-        let beyond = engine.progress(forMeters: 10_000)
+    func testLargeDistancesContinueBeyondCatalog() {
+        let lighthouse = engine.progress(forMeters: 19_500)
+        XCTAssertEqual(lighthouse.currentZone.id, "lighthouse-point")
+        XCTAssertEqual(lighthouse.nextZone.id, "beyond-1")
+
+        let beyond = engine.progress(forMeters: 20_000)
         XCTAssertEqual(beyond.currentZone.id, "beyond-1")
-        XCTAssertEqual(beyond.zoneIndex, 10)
+        XCTAssertEqual(beyond.zoneIndex, 20)
 
         let huge = engine.progress(forMeters: 1_000_000_000)
         XCTAssertEqual(huge.zoneIndex, 1_000_000)
@@ -161,9 +175,9 @@ final class ZoneProgressionTests: XCTestCase {
     func testBeyondCatalogUnlocksDoNotCrash() {
         var state = ProgressionState()
         let event = state.apply(progress(25_000), using: engine)
-        XCTAssertEqual(event.celebration?.zone.id, "beyond-16")
+        XCTAssertEqual(event.celebration?.zone.id, "beyond-6")
         XCTAssertEqual(event.celebration?.boundariesCrossed, 25)
-        XCTAssertEqual(state.collectedItemIDs.count, 10)
+        XCTAssertEqual(state.collectedItemIDs.count, 20)
     }
 
     func testStateRoundTripsThroughJSON() throws {

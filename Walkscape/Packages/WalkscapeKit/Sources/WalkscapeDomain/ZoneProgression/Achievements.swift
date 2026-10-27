@@ -46,8 +46,13 @@ public enum AchievementCatalog {
                     spriteID: "lantern", requirement: .singleDayMeters(5_000)),
         Achievement(id: "summiteer", name: "Summiteer", detail: "Reach the Summit in a single day (9 km).",
                     spriteID: "flag", requirement: .singleDayMeters(9_000)),
-        Achievement(id: "beyond", name: "Beyond the Map", detail: "Walk 10 km in a single day.",
+        // Kept its id from when the map ended at 10 km, so existing unlocks stay valid.
+        Achievement(id: "beyond", name: "Double Digits", detail: "Walk 10 km in a single day.",
                     spriteID: "star", requirement: .singleDayMeters(10_000)),
+        Achievement(id: "lightkeeper", name: "Lightkeeper", detail: "Reach Lighthouse Point in a single day (19 km).",
+                    spriteID: "spyglass", requirement: .singleDayMeters(19_000)),
+        Achievement(id: "off-the-map", name: "Off the Map", detail: "Walk 20 km in a single day.",
+                    spriteID: "starfall", requirement: .singleDayMeters(20_000)),
         Achievement(id: "regular", name: "Regular Rambler", detail: "Walk at least 1 km on 3 different days.",
                     spriteID: "boot", requirement: .activeDays(count: 3, minimumMeters: 1_000)),
         Achievement(id: "wanderer", name: "Wanderer", detail: "Walk 25 km in total.",
@@ -56,7 +61,9 @@ public enum AchievementCatalog {
                     spriteID: "medal", requirement: .lifetimeMeters(42_195)),
         Achievement(id: "collector", name: "Collector", detail: "Find 5 discoveries.",
                     spriteID: "pouch", requirement: .collectedItems(5)),
-        Achievement(id: "completionist", name: "Cartographer", detail: "Find all 10 discoveries.",
+        Achievement(id: "completionist", name: "Cartographer", detail: "Find 10 discoveries.",
                     spriteID: "map", requirement: .collectedItems(10)),
+        Achievement(id: "curator", name: "Curator", detail: "Find all 20 discoveries.",
+                    spriteID: "chest", requirement: .collectedItems(20)),
     ]
 }

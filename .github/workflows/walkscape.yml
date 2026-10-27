@@ -17,6 +17,15 @@ jobs:
       - name: swift test
         working-directory: Walkscape/Packages/WalkscapeKit
         run: swift test
+      - name: Render art previews
+        # Lets the art be reviewed without a Mac: download the "art-preview" artifact (PPM images).
+        working-directory: Walkscape/Packages/WalkscapeKit
+        run: swift run pixel-preview "$GITHUB_WORKSPACE/art-preview"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: art-preview
+          path: art-preview
+          retention-days: 14
 
   database-tests:
     name: Supabase schema + RLS tests

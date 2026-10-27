@@ -12,6 +12,8 @@ public enum ItemSprites {
         "c": PixelColor(0x7FE0E8), "C": PixelColor(0x3FA8C0), "m": PixelColor(0xE58AD8),
         "r": PixelColor(0xC0583E), "R": PixelColor(0x93402D), "u": PixelColor(0x4D7FB0), "U": PixelColor(0x37608A),
         "k": PixelColor(0x8FC3C9),
+        "a": PixelColor(0xE8893A), "A": PixelColor(0xB5602A),
+        "v": PixelColor(0x9A78D0), "V": PixelColor(0x6E52A8), "l": PixelColor(0xC8B4F0),
     ])
 
     static let art: [String: String] = [
@@ -204,6 +206,138 @@ public enum ItemSprites {
             owwwowrwwo
             owuuowwrwo
             owwwowwwwo
+            oooooooooo
+            ..........
+            """,
+        "starfall": """
+            .........h
+            ........hw
+            .......hw.
+            ...oo.hw..
+            ...oyow...
+            oooyhyooo.
+            oyyhhhyyo.
+            .oyyhyyo..
+            .oyyoyyo..
+            .ooo.ooo..
+            """,
+        "egg": """
+            ...w...w..
+            ..w...w...
+            ...w...w..
+            ...oooo...
+            ..onwnno..
+            .onwnnnno.
+            .onnnnnno.
+            .onnnnnBo.
+            ..oBnnBo..
+            ...oooo...
+            """,
+        "maple": """
+            ....oo....
+            ...oao....
+            .oooaooo..
+            oaoaaaoao.
+            oaaaaaaao.
+            .oaaAaao..
+            oaaaAaaao.
+            .ooaAaoo..
+            ...oBo....
+            ...oBo....
+            """,
+        "flute": """
+            ........oo
+            .......oLo
+            ......oLgo
+            .....oLoo.
+            ....oLgo..
+            ...oLoo...
+            ..oLgo....
+            .oLgo.....
+            oLgo......
+            ooo.......
+            """,
+        "cherry": """
+            ....oooo..
+            ...oGGGGo.
+            ....oGoo..
+            ...oGooGo.
+            ..oGo..oGo
+            .ooo..ooo.
+            orwroorwro
+            orrRoorrRo
+            oRRRooRRRo
+            .ooo..ooo.
+            """,
+        "lavender": """
+            ..l..l..l.
+            .lv.lv.lv.
+            .vV.vV.vV.
+            .lv.lv.lv.
+            .vV.vV.vV.
+            ..g..g..g.
+            ..g..g..g.
+            ...g.g.g..
+            ...oyyyo..
+            ....g.g...
+            """,
+        "agate": """
+            ..........
+            ...oooo...
+            ..oaarro..
+            .oahaarRo.
+            .orwrhaRo.
+            .oaarrRAo.
+            ..oRRAAo..
+            ...oooo...
+            ..........
+            ..........
+            """,
+        "jar": """
+            ...oooo...
+            ..oBBBBo..
+            ...owwo...
+            ..okkkko..
+            .okhkkkko.
+            .okkkkhko.
+            .okkhkkko.
+            .okkkkhko.
+            ..okkkko..
+            ...oooo...
+            """,
+        "bottle": """
+            ....oo....
+            ....bb....
+            ...okko...
+            ...okko...
+            ..okkkko..
+            ..okwwko..
+            ..okwRko..
+            ..okwwko..
+            ..okkkko..
+            ...oooo...
+            """,
+        "spyglass": """
+            .......ooo
+            ......oyhy
+            .....oyyYo
+            ....oyYYo.
+            ...oBBoo..
+            ..oBbBo...
+            .oBbBo....
+            oBbBo.....
+            obBo......
+            ooo.......
+            """,
+        "chest": """
+            ..........
+            .oooooooo.
+            obnnnnnnbo
+            obbbbbbbbo
+            ooooyyoooo
+            obbbyhbbbo
+            obnnnnnnbo
+            obbbbbbbbo
             oooooooooo
             ..........
             """,

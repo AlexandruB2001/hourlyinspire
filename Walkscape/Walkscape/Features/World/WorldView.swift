@@ -131,7 +131,7 @@ private struct BeyondCard: View {
             Text("Wanderer's Road")
                 .font(Theme.Typography.title)
                 .foregroundStyle(Theme.Palette.cream)
-            Text("Past the summit the road keeps going. Your best day reached \(DistanceFormatting.kilometres(model.progression.bestDayMeters)).")
+            Text("Past the lighthouse the road keeps going. Your best day reached \(DistanceFormatting.kilometres(model.progression.bestDayMeters)).")
                 .font(Theme.Typography.body)
                 .foregroundStyle(Theme.Palette.creamDim)
         }
