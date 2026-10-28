@@ -12,6 +12,8 @@ struct PixelSceneView: View {
     var avatarID: String?
     /// Shop items the character wears; nil for the plain walker.
     var outfit: [String]?
+    /// The companion trotting behind the walker.
+    var companionImage: CGImage?
     /// Layers scroll and the character steps only while walking.
     var walking = true
     var pixel: CGFloat = Theme.pixel
@@ -56,6 +58,13 @@ struct PixelSceneView: View {
             tiled(images.ground, offset: time * speeds.ground * move, width: width, height: height)
             if animated && !reduceMotion && [Biome.snowyRidge, .summit, .starlightPass].contains(biome) {
                 SnowfallLayer(time: time, density: biome == .snowyRidge ? 40 : 12, pixel: pixel)
+            }
+            if let companionImage, avatarID != nil {
+                // Walks just behind the character and hops along while walking.
+                let hop = stepping && Int(time * 4) % 2 == 0 ? -1 : 0
+                layer(companionImage, width: CompanionSprites.canvasSize, height: CompanionSprites.canvasSize)
+                    .offset(x: ((CGFloat(width) * characterPosition).rounded() - CGFloat(CompanionSprites.canvasSize) + 2) * pixel,
+                            y: CGFloat(images.layers.footY - CompanionSprites.canvasSize + 1 + hop) * pixel)
             }
             if let frames, let idle = frames.last {
                 let walkCount = frames.count - 1

@@ -2,7 +2,14 @@ import SwiftUI
 import WalkscapeDomain
 
 struct FriendsView: View {
+    enum Mode: String, CaseIterable, Identifiable {
+        case friends = "Friends"
+        case team = "Team"
+        var id: String { rawValue }
+    }
+
     @Environment(AppModel.self) private var model
+    @State private var mode: Mode = .friends
     @State private var showingAddFriend = false
     @State private var pendingRemoval: TrackParticipant?
     @State private var pendingBlock: TrackParticipant?
@@ -11,19 +18,24 @@ struct FriendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
-                    if model.account == .signedOut { SignInCard() }
-                    trackSection
-                    FocusCard()
-                    if model.account != .signedOut {
-                        leaderboardSection
-                        FriendRequestsSection()
+                    modePicker
+                    if mode == .team {
+                        TeamSection()
+                    } else {
+                        if model.account == .signedOut { SignInCard() }
+                        trackSection
+                        FocusCard()
+                        if model.account != .signedOut {
+                            leaderboardSection
+                            FriendRequestsSection()
+                        }
+                        privacyNote
                     }
-                    privacyNote
                 }
                 .padding(Theme.Spacing.l)
             }
             .background(Theme.Palette.night.ignoresSafeArea())
-            .navigationTitle("Friends")
+            .navigationTitle(mode.rawValue)
             .toolbarBackground(Theme.Palette.night, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -32,9 +44,12 @@ struct FriendsView: View {
                     }
                     .tint(Theme.Palette.gold)
                     .disabled(model.account == .signedOut)
+                    .opacity(mode == .friends ? 1 : 0)
                 }
             }
-            .refreshable { await model.refreshFriends() }
+            .refreshable {
+                if mode == .team { await model.refreshTeam() } else { await model.refreshFriends() }
+            }
             .sheet(isPresented: $showingAddFriend) { AddFriendSheet() }
             .confirmationDialog("Remove \(pendingRemoval?.name ?? "friend")?", isPresented: removalBinding,
                                 titleVisibility: .visible, presenting: pendingRemoval) { friend in
@@ -49,6 +64,28 @@ struct FriendsView: View {
                 Text("\(friend.name) will be removed and can't send you requests.")
             }
         }
+    }
+
+    /// Switches between the friend track and your team.
+    private var modePicker: some View {
+        Menu {
+            Picker("View", selection: $mode) {
+                ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
+            }
+        } label: {
+            HStack(spacing: Theme.Spacing.s) {
+                ItemIcon(spriteID: mode == .team ? "team-badge" : "boot", pixel: 2)
+                Text(mode == .team ? "Team view" : "Friends view")
+                    .font(Theme.Typography.headline)
+                Image(systemName: "chevron.down").font(.caption.weight(.heavy))
+            }
+            .foregroundStyle(Theme.Palette.cream)
+            .padding(.horizontal, Theme.Spacing.m)
+            .padding(.vertical, Theme.Spacing.s)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.forestRaised))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
+        }
+        .accessibilityLabel("Showing \(mode.rawValue). Switch view")
     }
 
     private var removalBinding: Binding<Bool> {

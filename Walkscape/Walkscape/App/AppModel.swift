@@ -40,6 +40,18 @@ final class AppModel {
     private(set) var progression: ProgressionState
     /// Coins, owned shop items and the current outfit.
     private(set) var wallet: WalletState
+    /// Permanent log of milestones.
+    private(set) var journal: JourneyJournal
+    /// Nil until the player picks a companion.
+    private(set) var companion: CompanionState?
+    /// Nil when not in a team (or not loaded yet; see `hasLoadedTeam`).
+    private(set) var team: TeamDashboard?
+    private(set) var teamInvites: [TeamInvite] = []
+    private(set) var teamError: String?
+    private(set) var isLoadingTeam = false
+    private(set) var hasLoadedTeam = false
+    private(set) var referral: ReferralStatus?
+    private(set) var referralError: String?
     private(set) var authorization: WalkingAuthorizationState = .notDetermined
     private(set) var friends: [FriendSummary] = []
     private(set) var friendRequests = FriendRequests()
@@ -77,7 +89,21 @@ final class AppModel {
         let source = settings.dataSource ?? Self.defaultSource
         progression = store.loadProgression(source)
         wallet = store.loadWallet(source)
+        journal = store.loadJournal(source)
+        companion = Self.companion(for: source, store: store, progression: progression,
+                                   today: LocalDay(date: Date(), timeZone: .current))
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
+    }
+
+    /// The saved companion for `source`, adopting the chosen species there
+    /// (starting from that source's current lifetime) if it's new to it.
+    private static func companion(for source: WalkingDataSourceKind, store: LocalStore, progression: ProgressionState,
+                                  today: LocalDay) -> CompanionState? {
+        guard let speciesID = store.companionSpeciesID else { return nil }
+        if let saved = store.loadCompanion(source), saved.speciesID == speciesID { return saved }
+        let adopted = CompanionState(speciesID: speciesID, adoptedOn: today, lifetimeMeters: progression.lifetimeMeters)
+        store.save(adopted, for: source)
+        return adopted
     }
 
     // MARK: Derived
@@ -177,7 +203,9 @@ final class AppModel {
         lastAutoRefresh = Date()
         async let walking: Void = refreshWalking()
         async let social: Void = refreshFriends()
-        _ = await (walking, social)
+        async let team: Void = refreshTeam()
+        async let referrals: Void = refreshReferrals()
+        _ = await (walking, social, team, referrals)
     }
 
     // MARK: Walking data
@@ -207,6 +235,7 @@ final class AppModel {
             store.save(progression, for: source)
             let coins = wallet.apply(progress)
             store.save(wallet, for: source)
+            updateJournal(source: source)
             if let newCelebration = event.celebration {
                 celebrationCoins = coins.coinsEarned
                 celebration = newCelebration
@@ -240,6 +269,8 @@ final class AppModel {
         sync = WalkingSyncStatus()
         progression = store.loadProgression(source)
         wallet = store.loadWallet(source)
+        journal = store.loadJournal(source)
+        companion = Self.companion(for: source, store: store, progression: progression, today: today)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
         Task { await refreshWalking() }
@@ -265,8 +296,254 @@ final class AppModel {
         store.save(progression, for: .demo)
         wallet = WalletState()
         store.save(wallet, for: .demo)
+        journal = JourneyJournal()
+        store.save(journal, for: .demo)
+        store.save(nil, for: .demo)
+        companion = Self.companion(for: .demo, store: store, progression: progression, today: today)
         sync = WalkingSyncStatus()
         Task { await refreshWalking() }
+    }
+
+    // MARK: Companion & journal
+
+    var needsCompanionChoice: Bool { companion == nil }
+
+    var companionGrowth: CompanionGrowth? { companion?.growth(lifetimeMeters: progression.lifetimeMeters) }
+
+    func chooseCompanion(_ species: CompanionSpecies) {
+        store.companionSpeciesID = species.id
+        let adopted = CompanionState(speciesID: species.id, adoptedOn: today, lifetimeMeters: progression.lifetimeMeters)
+        companion = adopted
+        store.save(adopted, for: dataSource)
+        recordInJournal([JournalEvents.adoption(of: adopted)])
+    }
+
+    /// Records any new milestones. Safe to call repeatedly: entries are keyed by event.
+    private func updateJournal(source: WalkingDataSourceKind) {
+        var entries = JournalEvents.entries(progression: progression, catalog: engine.catalog, today: today)
+        if var current = companion {
+            for stage in current.newEvolutions(lifetimeMeters: progression.lifetimeMeters) {
+                entries.append(JournalEvents.evolution(stage, of: current, on: today))
+            }
+            if current != companion {
+                companion = current
+                store.save(current, for: source)
+            }
+        }
+        if !journal.record(entries).isEmpty { store.save(journal, for: source) }
+    }
+
+    private func recordInJournal(_ entries: [JournalEntry]) {
+        if !journal.record(entries).isEmpty { store.save(journal, for: dataSource) }
+    }
+
+    // MARK: Day history
+
+    /// Totals for a past (or the current) day, read without touching progression.
+    struct DayRecord: Equatable {
+        let day: LocalDay
+        let steps: Int?
+        let meters: Int?
+        let isEstimated: Bool
+        /// True when the numbers came straight from Apple Health.
+        let fromHealth: Bool
+    }
+
+    /// How far back the World screen lets you browse.
+    var historyEarliestDay: LocalDay {
+        DayBrowser.earliestDay(today: today, recordedDays: progression.dailyBestMeters.keys, lookback: isDemo ? 0 : 89)
+    }
+
+    /// Reads a day's totals. Never applies them: browsing can't grant rewards
+    /// or change today's journey.
+    func dayRecord(for day: LocalDay) async -> DayRecord {
+        let recorded = progression.dailyBestMeters[day.isoString]
+        if day == today, let progress = todayProgress {
+            return DayRecord(day: day, steps: progress.steps, meters: progress.distanceMeters,
+                             isEstimated: progress.isEstimated, fromHealth: !isDemo)
+        }
+        let fallback = DayRecord(day: day, steps: nil, meters: recorded, isEstimated: false, fromHealth: false)
+        guard !isDemo, authorization == .requested else { return fallback }
+        do {
+            let snapshot = try await healthProvider.fetchDailyTotals(for: day, timeZone: timeZone, now: Date())
+            guard snapshot.steps != nil || snapshot.recordedDistanceMeters != nil else { return fallback }
+            let progress = DailyProgress(snapshot: snapshot, userID: currentUserID)
+            return DayRecord(day: day, steps: progress.steps, meters: progress.distanceMeters,
+                             isEstimated: progress.isEstimated, fromHealth: true)
+        } catch {
+            return fallback
+        }
+    }
+
+    // MARK: Referrals
+
+    /// Referral rewards always go to the Apple Health wallet, whatever source is showing.
+    private func updateHealthWallet(_ change: (inout WalletState) -> Void) {
+        if dataSource == .appleHealth {
+            change(&wallet)
+            store.save(wallet, for: .appleHealth)
+        } else {
+            var healthWallet = store.loadWallet(.appleHealth)
+            change(&healthWallet)
+            store.save(healthWallet, for: .appleHealth)
+        }
+    }
+
+    /// Referral chests ready to open (from the Apple Health wallet).
+    var referralChests: [ReferralChest] {
+        dataSource == .appleHealth ? wallet.referralChests : store.loadWallet(.appleHealth).referralChests
+    }
+
+    var pendingReferralCode: String? { store.pendingReferralCode }
+
+    func refreshReferrals() async {
+        guard let backend, isSignedIn else {
+            referral = nil
+            referralError = nil
+            return
+        }
+        if let code = store.pendingReferralCode { await redeemReferral(code: code, refresh: false) }
+        do {
+            async let status = backend.referrals.status()
+            async let ready = backend.referrals.readyChests()
+            let (newStatus, chests) = try await (status, ready)
+            referral = newStatus
+            var alreadyOpened: [ReferralChest] = []
+            updateHealthWallet { wallet in
+                wallet.receiveReferralChests(chests)
+                alreadyOpened = chests.filter { wallet.openedReferralChestIDs.contains($0.id) }
+            }
+            // A chest opened while offline: tell the server now.
+            for chest in alreadyOpened { try? await backend.referrals.markOpened(chest) }
+            referralError = nil
+        } catch ReferralError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            referralError = "Couldn't load your invites right now."
+        }
+    }
+
+    /// Saves a code entered before signing in; it's redeemed once you have an account.
+    func rememberReferralCode(_ code: String) {
+        let clean = ReferralRules.normalize(code)
+        store.pendingReferralCode = clean.isEmpty ? nil : clean
+    }
+
+    /// Uses a friend's code. Returns an error message, or nil on success.
+    @discardableResult
+    func redeemReferral(code: String, refresh: Bool = true) async -> String? {
+        let clean = ReferralRules.normalize(code)
+        guard !clean.isEmpty else { return "Enter a code." }
+        guard let backend, isSignedIn else {
+            store.pendingReferralCode = clean
+            return nil
+        }
+        do {
+            try await backend.referrals.redeem(code: clean)
+            store.pendingReferralCode = nil
+            if refresh { await refreshReferrals() }
+            return nil
+        } catch let error as ReferralError {
+            if case .network = error { return "Couldn't check that code. Try again in a moment." }
+            // Anything else is final: don't keep retrying a code that can't work.
+            store.pendingReferralCode = nil
+            switch error {
+            case .codeNotFound: return "No walker has that code."
+            case .ownCode: return "That's your own code."
+            case .alreadyRedeemed: return "You've already used an invite code."
+            case .accountTooOld: return "Invite codes are for accounts in their first \(ReferralRules.redeemWithinDays) days."
+            case .circular: return "You invited this walker, so you can't use their code."
+            case .notSignedIn: return "Sign in to use an invite code."
+            case .network: return nil
+            }
+        } catch {
+            return "Couldn't check that code."
+        }
+    }
+
+    /// Opens a referral chest. Returns its coins.
+    func openReferralChest(_ chest: ReferralChest) -> Int? {
+        var coins: Int?
+        updateHealthWallet { coins = $0.openReferralChest(id: chest.id) }
+        guard let coins else { return nil }
+        recordInJournal([JournalEvents.referralChest(id: chest.id, coins: coins, on: today)])
+        if let backend { Task { try? await backend.referrals.markOpened(chest) } }
+        return coins
+    }
+
+    // MARK: Teams
+
+    func refreshTeam() async {
+        guard let backend, isSignedIn else {
+            team = nil
+            teamInvites = []
+            teamError = nil
+            hasLoadedTeam = false
+            return
+        }
+        isLoadingTeam = true
+        defer {
+            isLoadingTeam = false
+            hasLoadedTeam = true
+        }
+        do {
+            async let dashboard = backend.teams.dashboard(for: today, now: Date())
+            async let invites = backend.teams.invites()
+            let (newTeam, newInvites) = try await (dashboard, invites)
+            team = newTeam
+            teamInvites = newInvites
+            teamError = nil
+            if let newTeam { recordTeamMilestones(newTeam) }
+        } catch TeamRepositoryError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            teamError = "Couldn't reach your team right now. Showing the last update."
+        }
+    }
+
+    private func recordTeamMilestones(_ dashboard: TeamDashboard) {
+        let entries = dashboard.badges.map { badge -> JournalEntry in
+            let isExpedition = badge.id.hasPrefix("expedition-")
+            // Weekly badges can be earned again each week; expeditions once per team.
+            let key = isExpedition ? badge.id : "\(badge.id)-\(dashboard.weekStart.isoString)"
+            let title = isExpedition ? "\(dashboard.team.name) completed \(badge.name)" : "\(dashboard.team.name): \(badge.name)"
+            return JournalEntry(id: "team-\(dashboard.team.id)-\(key)", kind: isExpedition ? .expedition : .team,
+                                day: today, title: title, detail: badge.detail, iconID: badge.spriteID)
+        }
+        recordInJournal(entries)
+    }
+
+    /// Runs a team action and refreshes. Returns an error message, or nil on success.
+    private func teamAction(_ action: (TeamRepository) async throws -> Void) async -> String? {
+        guard let backend, isSignedIn else { return "Sign in to use teams." }
+        do {
+            try await action(backend.teams)
+            await refreshTeam()
+            return nil
+        } catch let error as TeamRepositoryError {
+            switch error {
+            case .teamNotFound: return "No team has that code."
+            case .alreadyInTeam: return "You're already in a team. Leave it first."
+            case .notInTeam: return "You're not in a team."
+            case .notFriends: return "You can only invite friends."
+            case .invalidName: return "Team names need 3–24 letters, numbers or spaces."
+            case .notSignedIn:
+                handleSessionExpired()
+                return "Please sign in again."
+            case .notConfigured: return "Teams aren't set up in this build."
+            case .network(let message): return message.isEmpty ? "That didn't go through." : message
+            }
+        } catch {
+            return "That didn't go through. Check your connection and try again."
+        }
+    }
+
+    func createTeam(named name: String) async -> String? { await teamAction { try await $0.createTeam(named: name) } }
+    func joinTeam(code: String) async -> String? { await teamAction { try await $0.joinTeam(code: code) } }
+    func leaveTeam() async -> String? { await teamAction { try await $0.leaveTeam() } }
+    func inviteToTeam(_ friend: UserID) async -> String? { await teamAction { try await $0.invite(friend: friend) } }
+    func respond(to invite: TeamInvite, accept: Bool) async -> String? {
+        await teamAction { try await $0.respond(to: invite, accept: accept) }
     }
 
     // MARK: Shop
@@ -495,6 +772,8 @@ final class AppModel {
         account = .signedOut
         trackFocus.backToMe()
         await refreshFriends()
+        await refreshTeam()
+        await refreshReferrals()
     }
 
     /// Deletes the account and all server data. Returns an error message, or nil on success.
@@ -508,6 +787,8 @@ final class AppModel {
         account = .signedOut
         trackFocus.backToMe()
         await refreshFriends()
+        await refreshTeam()
+        await refreshReferrals()
         return nil
     }
 
@@ -516,6 +797,9 @@ final class AppModel {
         account = .signedOut
         friends = []
         friendRequests = FriendRequests()
+        team = nil
+        teamInvites = []
+        referral = nil
         accountError = "You've been signed out. Sign in again to see your friends."
     }
 }

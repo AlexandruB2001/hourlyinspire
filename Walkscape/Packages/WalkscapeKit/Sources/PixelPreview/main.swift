@@ -49,6 +49,17 @@ for (i, item) in ShopCatalog.items.enumerated() {
 }
 write(outfits, "outfits", scale: 6, background: PixelColor(0x9CC2D8))
 
+// Companions at 0, 3, 5, 12, 20, 35, 50, 80 and 100 km.
+let companionKilometres = [0, 3, 5, 12, 20, 35, 50, 80, 100]
+var companions = PixelCanvas(width: companionKilometres.count * 22, height: CompanionCatalog.starters.count * 22)
+for (row, species) in CompanionCatalog.starters.enumerated() {
+    for (column, km) in companionKilometres.enumerated() {
+        companions.draw(CompanionSprites.render(speciesID: species.id, growth: CompanionGrowth(kilometres: km)),
+                        x: column * 22 + 1, y: row * 22 + 1)
+    }
+}
+write(companions, "companions", scale: 6, background: PixelColor(0x9CC2D8))
+
 // Thumbnails at the sizes the app uses.
 var thumbs = PixelCanvas(width: Biome.allCases.count * 64, height: 48)
 for (i, biome) in Biome.allCases.enumerated() {

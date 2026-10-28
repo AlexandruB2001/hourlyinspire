@@ -127,3 +127,43 @@ DATABASE_URL=postgres://... run.sh         # or an empty Postgres 15+ database
 The tests stub Supabase's `auth` schema and default grants on plain Postgres,
 then check cross-user access, friendship rules, validation, idempotent sync,
 blocking and account deletion. CI runs them on every push.
+
+## Referrals and teams (migration 20261028000001)
+
+What the server enforces (all tested in `supabase/tests/20_referrals_and_teams.sql`):
+
+- **Codes**: every profile gets a unique 8-character `referral_code`. Codes are
+  redeemed only through `redeem_referral_code`, only by accounts less than 14
+  days old, once per account, never your own code, and never the code of
+  someone you invited.
+- **Qualification**: the invitee must walk 5 km on at least 2 different days
+  within 30 days. This is computed in `ready_referral_chests` from the
+  invitee's uploaded `daily_progress`, so they must be signed in with sharing on.
+- **Reward**: the 25–100 coin amount is chosen once on the server when the
+  referral qualifies and never changes; chests are marked opened with
+  `mark_referral_chest_opened`. The app also keeps opened chest ids, so a chest
+  is never paid twice even offline. At most 20 rewards per walker.
+- **Deleted accounts**: the referral row is kept (with a null invitee), so
+  deleting and re-creating an account doesn't earn a second chest for the
+  same referral.
+- **Teams**: one team per walker, at most 12 members, joined by code or by a
+  friend's invite. Teammates see each other's day/week distance only while
+  sharing is on; other teams see only names, sizes and combined distance.
+
+Known limits (be honest about these):
+
+- Walking totals are client-reported (see above), so a determined cheater can
+  fake qualification. Plausibility limits on `daily_progress` still apply.
+- Duplicate *people* are only detected per account. Someone with several Apple
+  IDs can create several accounts. Stronger options: compare
+  `auth.identities.provider_id` in `redeem_referral_code`, or add Apple
+  DeviceCheck on the client.
+- Coins and owned items live on the device (per data source); they are not
+  synced to the server yet.
+
+### Applying it to the live project
+
+Paste `supabase/migrations/20261028000001_referrals_and_teams.sql` (and
+`20261027000001_far_side_zones.sql` if it hasn't been applied) into the
+Supabase SQL Editor and run it. Until then the app shows teams and invites as
+unavailable ("Couldn't reach your team right now").

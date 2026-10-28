@@ -11,6 +11,7 @@ struct ProfileView: View {
                     ProfileHeader()
                     AchievementsSection()
                     CollectionSection()
+                    ReferralSection()
                     HealthSection()
                     SettingsSection()
                     AccountSection()

@@ -27,6 +27,10 @@ struct LocalStore {
         static func progression(_ source: WalkingDataSourceKind) -> String { "walkscape.progression.v1.\(source.rawValue)" }
         static func lastProgress(_ source: WalkingDataSourceKind) -> String { "walkscape.lastProgress.v1.\(source.rawValue)" }
         static func wallet(_ source: WalkingDataSourceKind) -> String { "walkscape.wallet.v1.\(source.rawValue)" }
+        static func journal(_ source: WalkingDataSourceKind) -> String { "walkscape.journal.v1.\(source.rawValue)" }
+        static func companion(_ source: WalkingDataSourceKind) -> String { "walkscape.companion.v1.\(source.rawValue)" }
+        static let companionSpecies = "walkscape.companionSpecies.v1"
+        static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -51,6 +55,35 @@ struct LocalStore {
         save(wallet, Key.wallet(source))
     }
 
+    func loadJournal(_ source: WalkingDataSourceKind) -> JourneyJournal {
+        load(JourneyJournal.self, Key.journal(source)) ?? JourneyJournal()
+    }
+
+    func save(_ journal: JourneyJournal, for source: WalkingDataSourceKind) {
+        save(journal, Key.journal(source))
+    }
+
+    // The chosen species is shared; growth is per data source so demo walking
+    // never grows the real companion.
+    var companionSpeciesID: String? {
+        get { defaults.string(forKey: Key.companionSpecies) }
+        nonmutating set { defaults.set(newValue, forKey: Key.companionSpecies) }
+    }
+
+    func loadCompanion(_ source: WalkingDataSourceKind) -> CompanionState? {
+        load(CompanionState.self, Key.companion(source))
+    }
+
+    func save(_ companion: CompanionState?, for source: WalkingDataSourceKind) {
+        if let companion { save(companion, Key.companion(source)) } else { defaults.removeObject(forKey: Key.companion(source)) }
+    }
+
+    /// A referral code entered before signing in, redeemed once an account exists.
+    var pendingReferralCode: String? {
+        get { defaults.string(forKey: Key.pendingReferralCode) }
+        nonmutating set { defaults.set(newValue, forKey: Key.pendingReferralCode) }
+    }
+
     /// The last successful daily totals, shown (with their age) while offline.
     func loadLastProgress(_ source: WalkingDataSourceKind) -> DailyProgress? {
         load(DailyProgress.self, Key.lastProgress(source))
@@ -61,8 +94,10 @@ struct LocalStore {
     }
 
     func reset() {
-        var keys = [Key.settings]
-        for source in WalkingDataSourceKind.allCases { keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source)] }
+        var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode]
+        for source in WalkingDataSourceKind.allCases {
+            keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source)]
+        }
         keys.forEach(defaults.removeObject(forKey:))
     }
 

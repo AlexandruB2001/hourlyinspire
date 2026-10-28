@@ -11,6 +11,8 @@ struct WorldView: View {
                 VStack(spacing: 0) {
                     LifetimeHeader()
                         .padding(.bottom, Theme.Spacing.l)
+                    DayHistoryCard()
+                        .padding(.bottom, Theme.Spacing.l)
                     let zones = model.engine.catalog.zones
                     ForEach(Array(zones.enumerated()), id: \.element.id) { index, zone in
                         ZoneCard(zone: zone, index: index)

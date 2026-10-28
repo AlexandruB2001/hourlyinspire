@@ -13,10 +13,13 @@ struct JourneyView: View {
                     VStack(spacing: Theme.Spacing.l) {
                         DistanceCard()
                         HealthStatusCard()
+                        CompanionCard()
                         TrailStrip()
                         NextZoneCard()
                         FriendsPreviewCard()
                         if model.isDemo { DemoControlsCard() }
+                        ShareJourneyButton()
+                        JourneyJournalSection()
                     }
                     .padding(.horizontal, Theme.Spacing.l)
                     .padding(.top, -Theme.Spacing.xxl - Theme.Spacing.l)
@@ -38,6 +41,9 @@ private struct JourneyHero: View {
     var body: some View {
         let zone = model.zoneProgress.currentZone
         PixelSceneView(biome: zone.biome, avatarID: model.settings.avatarID, outfit: model.outfit,
+                       companionImage: model.companion.flatMap {
+                           PixelArtCache.shared.companion($0.speciesID, kilometres: model.companionGrowth?.kilometres ?? 0)
+                       },
                        walking: model.distanceMeters > 0)
             .id(zone.biome)
             .transition(.opacity)
@@ -59,6 +65,11 @@ private struct JourneyHero: View {
             .overlay(alignment: .bottomTrailing) {
                 ChestPopUp()
                     .padding(.trailing, Theme.Spacing.xl)
+                    .padding(.bottom, Theme.Spacing.xxl + Theme.Spacing.xl)
+            }
+            .overlay(alignment: .bottomLeading) {
+                ReferralChestPopUp()
+                    .padding(.leading, Theme.Spacing.xl)
                     .padding(.bottom, Theme.Spacing.xxl + Theme.Spacing.xl)
             }
             .animation(.easeInOut(duration: 0.8), value: zone.biome)

@@ -74,6 +74,22 @@ final class PixelArtCache {
         }
     }
 
+    /// A companion as it looks after `kilometres` walked together.
+    func companion(_ speciesID: String, kilometres: Int) -> CGImage? {
+        let growth = CompanionGrowth(kilometres: kilometres)
+        // Keyed by what's actually drawn, so 200 km and 300 km share an image.
+        let detail = growth.stage == .elder ? 0 : min(growth.kilometresIntoStage, 60)
+        return image("companion_\(speciesID)_\(growth.stage.rawValue)_\(detail)") {
+            CompanionSprites.render(speciesID: speciesID, growth: growth)
+        }
+    }
+
+    /// A companion at the start of `stage` with all of that stage's details.
+    func companion(_ speciesID: String, stage: CompanionGrowth.Stage) -> CGImage? {
+        let km = stage.next.map { $0.startKilometres - 1 } ?? stage.startKilometres
+        return companion(speciesID, kilometres: km)
+    }
+
     func portrait(avatarID: String) -> CGImage? {
         image("portrait_\(avatarID)") { CharacterSprites.portrait(avatarID: avatarID) }
     }
@@ -165,6 +181,33 @@ struct WalkingCharacter: View {
                 ?? PixelArtCache.shared.characterFrame(frame, avatarID: avatarID, walking: moving)
             PixelImageView(image: image, pixel: pixel)
         }
+        .accessibilityHidden(true)
+    }
+}
+
+/// Icon for a journal entry: an item sprite, a zone thumbnail ("zone:<biome>")
+/// or a companion ("companion:<species>:<stage>").
+struct JournalIcon: View {
+    let iconID: String
+    var size: CGFloat = 36
+
+    var body: some View {
+        let parts = iconID.split(separator: ":").map(String.init)
+        ZStack {
+            RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.forestRaised)
+            if parts.first == "zone", parts.count == 2, let biome = Biome(rawValue: parts[1]) {
+                PixelImageView(image: PixelArtCache.shared.thumbnail(biome, width: 24, height: 24), pixel: size / 24)
+            } else if parts.first == "companion", parts.count == 3,
+                      let stage = Int(parts[2]).flatMap(CompanionGrowth.Stage.init(rawValue:)) {
+                PixelImageView(image: PixelArtCache.shared.companion(parts[1], stage: stage),
+                               pixel: (size - 4) / CGFloat(CompanionSprites.canvasSize))
+            } else {
+                ItemIcon(spriteID: iconID, pixel: (size - 6) / 10)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.s))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
         .accessibilityHidden(true)
     }
 }

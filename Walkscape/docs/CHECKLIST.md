@@ -45,7 +45,14 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ 20 zones: ten more down the far side of the Summit to Lighthouse Point, with new scenes, discoveries and achievements
 - ✅ Coins: 10 per kilometre each day, plus 2 hidden chests per kilometre (5 coins each, tap to open on the Journey screen)
 - ✅ Shop: 30 outfit items (hats, glasses, scarves, shoes, backs) in 4 rarities, 50-coin mystery box, wear/unwear
-- ⬜ Apply `20261027000001_far_side_zones.sql` to the live Supabase project
+- ✅ World tab: browse earlier days (Apple Health totals, read-only, never re-rewarded)
+- ✅ Journey journal: permanent, de-duplicated log of zones, relics, distance milestones, companion growth, team and referral events
+- ✅ Starter companions (Mossling, Emberfox, Moonmoth) that grow with real walking: a detail per km, new shapes at 5/20/50/100 km
+- ✅ Shareable milestone cards (current progress or any journal entry) via the share sheet / Save Image
+- ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
+- ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
+- ⬜ Apply `20261027000001_far_side_zones.sql` and `20261028000001_referrals_and_teams.sql` to the live Supabase project
+- ⬜ Referral fraud hardening: Apple-ID-level duplicate detection (auth.identities) and/or DeviceCheck
 - ⬜ Sync coins and owned items to the server (local per data source for now)
 - ⬜ Richer scenes: day/night tint, more wildlife, zone-specific particles
 - ⬜ Achievement unlock toasts
