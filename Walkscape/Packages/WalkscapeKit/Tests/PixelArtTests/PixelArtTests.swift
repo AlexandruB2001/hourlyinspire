@@ -82,6 +82,38 @@ final class PixelArtTests: XCTestCase {
         }
     }
 
+    func testCompanionsGrowVisiblyAtEveryStage() {
+        XCTAssertEqual(CompanionSprites.speciesIDs, CompanionCatalog.starters.map(\.id).sorted())
+        for species in CompanionCatalog.starters {
+            var previous: PixelCanvas?
+            for km in [0, 3, 5, 12, 20, 35, 50, 80, 100] {
+                let canvas = CompanionSprites.render(speciesID: species.id, growth: CompanionGrowth(kilometres: km))
+                XCTAssertEqual(canvas.width, CompanionSprites.canvasSize)
+                XCTAssertTrue(canvas.pixels.contains { $0.a > 0 }, "\(species.id) at \(km) km is blank")
+                if let previous { XCTAssertNotEqual(canvas, previous, "\(species.id) didn't change by \(km) km") }
+                previous = canvas
+            }
+        }
+    }
+
+    func testCompanionArtIsInBoundsAndUsesPaletteKeys() {
+        let palette = ItemSprites.palette.overriding(["e": PixelColor(0xFF8A3D)])
+        for (species, stages) in CompanionSprites.art {
+            XCTAssertEqual(stages.count, 4, species)
+            for stage in stages {
+                XCTAssertEqual(Set(stage.rows.map(\.count)).count, 1, "\(species) has ragged rows")
+                XCTAssertLessThanOrEqual(stage.rows.count, CompanionSprites.canvasSize)
+                for key in stage.rows.joined() + stage.details.map(\.key) where key != "." {
+                    XCTAssertNotNil(palette[key], "\(species) uses unknown key \(key)")
+                }
+                for detail in stage.details {
+                    XCTAssertTrue(stage.rows.indices.contains(detail.y) && detail.x < stage.rows[detail.y].count,
+                                  "\(species) detail out of bounds")
+                }
+            }
+        }
+    }
+
     func testEveryCollectibleAndAchievementHasASprite() {
         let ids = ZoneCatalog.standard.allCollectibles.map(\.spriteID) + AchievementCatalog.standard.map(\.spriteID)
         for id in ids { XCTAssertNotNil(ItemSprites.sprite(id), "missing sprite \(id)") }

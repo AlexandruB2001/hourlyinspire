@@ -23,5 +23,7 @@ fi
     for migration in "$root"/migrations/*.sql; do cat "$migration"; done
 } | "${psql_cmd[@]}"
 
-"${psql_cmd[@]}" < "$here/10_rls_and_api.sql" 2>&1 | sed -n 's/^.*NOTICE:  //p; /ERROR/p'
+for test in "$here"/[1-9]*.sql; do
+    "${psql_cmd[@]}" < "$test" 2>&1 | sed -n 's/^.*NOTICE:  //p; /ERROR/p'
+done
 echo "All database tests passed."

@@ -9,15 +9,20 @@ public final class WalkscapeBackend: Sendable {
     public let friends: SupabaseFriendRepository
     public let profiles: ProfileService
     public let progressSync: DailyProgressSyncer
+    public let teams: SupabaseTeamRepository
+    public let referrals: SupabaseReferralRepository
 
     public init(config: SupabaseConfig, transport: HTTPTransport = URLSessionTransport(), sessionStore: SessionStore,
                 catalog: ZoneCatalog = .standard) {
         self.config = config
-        auth = SupabaseAuth(config: config, transport: transport, store: sessionStore)
+        let auth = SupabaseAuth(config: config, transport: transport, store: sessionStore)
+        self.auth = auth
         api = SupabaseAPI(config: config, transport: transport, auth: auth)
         friends = SupabaseFriendRepository(api: api, catalog: catalog)
         profiles = ProfileService(api: api)
         progressSync = DailyProgressSyncer(api: api)
+        teams = SupabaseTeamRepository(api: api) { await auth.currentSession?.userID }
+        referrals = SupabaseReferralRepository(api: api)
     }
 
     /// Permanently deletes the account and everything stored for it, then signs out locally.

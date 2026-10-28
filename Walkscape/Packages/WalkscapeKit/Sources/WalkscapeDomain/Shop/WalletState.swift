@@ -30,6 +30,18 @@ public struct WalletEvent: Hashable, Sendable {
     public static let none = WalletEvent(coinsEarned: 0, newChests: 0)
 }
 
+/// A chest earned when someone you invited starts walking. Its coin amount
+/// is decided by the server (25-100) when the referral qualifies.
+public struct ReferralChest: Identifiable, Codable, Hashable, Sendable {
+    public let id: String
+    public let coins: Int
+
+    public init(id: String, coins: Int) {
+        self.id = id
+        self.coins = coins
+    }
+}
+
 public enum PurchaseResult: Hashable, Sendable {
     case purchased(ShopItem)
     case notEnoughCoins(needed: Int)
@@ -54,6 +66,10 @@ public struct WalletState: Codable, Hashable, Sendable {
     public private(set) var day: LocalDay?
     public private(set) var kilometresRewardedToday: Int
     public private(set) var chestsFoundToday: Int
+    /// Referral chests waiting to be opened.
+    public private(set) var referralChests: [ReferralChest]
+    /// Referral chests already opened; a chest id is only ever paid once.
+    public private(set) var openedReferralChestIDs: Set<String>
 
     public init(rules: CoinRules = .standard) {
         coins = rules.starterCoins
@@ -64,6 +80,29 @@ public struct WalletState: Codable, Hashable, Sendable {
         day = nil
         kilometresRewardedToday = 0
         chestsFoundToday = 0
+        referralChests = []
+        openedReferralChestIDs = []
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case coins, lifetimeCoins, ownedItemIDs, equipped, pendingChests, day, kilometresRewardedToday, chestsFoundToday
+        case referralChests, openedReferralChestIDs
+    }
+
+    /// Fields added after the first release decode as empty, so an app update
+    /// never resets anyone's coins or items.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        coins = try container.decode(Int.self, forKey: .coins)
+        lifetimeCoins = try container.decode(Int.self, forKey: .lifetimeCoins)
+        ownedItemIDs = try container.decode(Set<String>.self, forKey: .ownedItemIDs)
+        equipped = try container.decode([String: String].self, forKey: .equipped)
+        pendingChests = try container.decode(Int.self, forKey: .pendingChests)
+        day = try container.decodeIfPresent(LocalDay.self, forKey: .day)
+        kilometresRewardedToday = try container.decode(Int.self, forKey: .kilometresRewardedToday)
+        chestsFoundToday = try container.decode(Int.self, forKey: .chestsFoundToday)
+        referralChests = try container.decodeIfPresent([ReferralChest].self, forKey: .referralChests) ?? []
+        openedReferralChestIDs = try container.decodeIfPresent(Set<String>.self, forKey: .openedReferralChestIDs) ?? []
     }
 
     // MARK: Earning
@@ -101,6 +140,27 @@ public struct WalletState: Codable, Hashable, Sendable {
         pendingChests -= 1
         earn(rules.coinsPerChest)
         return rules.coinsPerChest
+    }
+
+    /// Adds chests the server says are ready. Chests already waiting or
+    /// opened are ignored, so this can be called on every refresh.
+    @discardableResult
+    public mutating func receiveReferralChests(_ chests: [ReferralChest]) -> [ReferralChest] {
+        var added: [ReferralChest] = []
+        for chest in chests where !openedReferralChestIDs.contains(chest.id) && !referralChests.contains(where: { $0.id == chest.id }) {
+            referralChests.append(chest)
+            added.append(chest)
+        }
+        return added
+    }
+
+    /// Opens a referral chest. Returns its coins, or nil if it isn't waiting.
+    public mutating func openReferralChest(id: String) -> Int? {
+        guard let index = referralChests.firstIndex(where: { $0.id == id }) else { return nil }
+        let chest = referralChests.remove(at: index)
+        openedReferralChestIDs.insert(chest.id)
+        earn(chest.coins)
+        return chest.coins
     }
 
     private mutating func earn(_ amount: Int) {

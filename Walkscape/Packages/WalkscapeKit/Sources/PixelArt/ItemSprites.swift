@@ -365,6 +365,42 @@ public enum ItemSprites {
             ovvwvyvVVo
             oooooooooo
             """,
+        "referral-chest": """
+            ..........
+            .oooooooo.
+            ovvvvvvvvo
+            oVvvhvvvVo
+            oooohhoooo
+            oWWWyhWWWo
+            oWsWwwWsWo
+            oWWWWWWWWo
+            oooooooooo
+            ..........
+            """,
+        "team-badge": """
+            .oooooooo.
+            oyuuuuuuyo
+            ouuuwwuuuo
+            ouuwhhwuuo
+            ouuuwwuuuo
+            ouuwuuwuuo
+            .ouuuuuuo.
+            ..ouuuuo..
+            ...ouuo...
+            ....oo....
+            """,
+        "journal": """
+            ..........
+            .ooooooo..
+            obbbbbbbo.
+            obwwwwwbBo
+            obwSSSwbBo
+            obwwwwwbBo
+            obwSSwwbBo
+            obwwwwwbBo
+            obbbbbbbBo
+            .oooooooo.
+            """,
     ]
 
     public static let allIDs: [String] = art.keys.sorted()
