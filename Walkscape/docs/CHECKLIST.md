@@ -51,7 +51,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Shareable milestone cards (current progress or any journal entry) via the share sheet / Save Image
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
-- ⬜ Apply `20261027000001_far_side_zones.sql` and `20261028000001_referrals_and_teams.sql` to the live Supabase project
+- ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)
 - ⬜ Referral fraud hardening: Apple-ID-level duplicate detection (auth.identities) and/or DeviceCheck
 - ⬜ Sync coins and owned items to the server (local per data source for now)
 - ⬜ Richer scenes: day/night tint, more wildlife, zone-specific particles

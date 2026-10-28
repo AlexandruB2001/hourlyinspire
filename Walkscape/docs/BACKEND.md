@@ -163,7 +163,7 @@ Known limits (be honest about these):
 
 ### Applying it to the live project
 
-Paste `supabase/migrations/20261028000001_referrals_and_teams.sql` (and
-`20261027000001_far_side_zones.sql` if it hasn't been applied) into the
-Supabase SQL Editor and run it. Until then the app shows teams and invites as
-unavailable ("Couldn't reach your team right now").
+Applied to the live project on 2026-10-28 through the SQL Editor, together
+with `20261027000001_far_side_zones.sql`, and verified (20 zones, 12
+achievements, a referral code on every profile, 20 RLS policies). Before using
+`supabase db push`, also mark these two as applied with `supabase migration repair`.
