@@ -6,7 +6,7 @@ final class AdRulesTests: XCTestCase {
     let hour: TimeInterval = 60 * 60
     let today = LocalDay(year: 2026, month: 10, day: 29)
 
-    var afterGrace: Date { installed.addingTimeInterval(3 * 24 * hour) }
+    var afterGrace: Date { installed.addingTimeInterval(5 * 24 * hour) }
 
     func testRewardedAdsAreWorthLessThanTheWalkTheyCouldReplace() {
         let rules = AdRules.standard

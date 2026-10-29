@@ -15,7 +15,7 @@ public struct AdRules: Hashable, Sendable {
     public var minimumTimeAway: TimeInterval
 
     public init(rewardedCoins: Int = 15, rewardedPerDay: Int = 3, appOpenCooldown: TimeInterval = 4 * 60 * 60,
-                gracePeriodDays: Int = 3, minimumTimeAway: TimeInterval = 60) {
+                gracePeriodDays: Int = 5, minimumTimeAway: TimeInterval = 60) {
         self.rewardedCoins = rewardedCoins
         self.rewardedPerDay = rewardedPerDay
         self.appOpenCooldown = appOpenCooldown
