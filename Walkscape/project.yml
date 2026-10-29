@@ -24,7 +24,7 @@ packages:
   GoogleMobileAds:
     url: https://github.com/googleads/swift-package-manager-google-mobile-ads
     majorVersion: 11.0.0
-  UserMessagingPlatform:
+  GoogleUserMessagingPlatform:
     url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform
     majorVersion: 2.0.0
 targets:
@@ -41,7 +41,7 @@ targets:
       - package: WalkscapeKit
         product: WalkscapeBackend
       - package: GoogleMobileAds
-      - package: UserMessagingPlatform
+      - package: GoogleUserMessagingPlatform
       - sdk: HealthKit.framework
     settings:
       base:
