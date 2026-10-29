@@ -25,8 +25,30 @@
 - Per-day best distance, discovered zones and collected items. This is what
   the lifetime total and achievements are computed from.
 - Demo-mode progress, kept separately from Apple Health progress.
-- Coins, shop items you own and your current outfit. Coins are earned only by
-  walking; there are no real-money purchases.
+- Coins, shop items you own and your current outfit. Coins are earned by
+  walking, referral chests and rewarded ads; there are no real-money purchases.
+- Ad limits: first launch date, when the last app-open ad was shown and how
+  many rewarded ads were watched today.
+
+## Ads
+
+- Ads are served by **Google AdMob** (Google Mobile Ads SDK). The SDK collects
+  device and usage data such as the IDFA (only if you allow tracking), IP
+  address, coarse location derived from IP, and ad interactions, as described
+  in Google's own privacy manifest and policies.
+- Walkscape never passes Health data, walks, usernames or friends to the ad SDK.
+- iOS asks before any tracking (App Tracking Transparency). In the EEA and UK,
+  Google's consent form is shown first, and **Profile → Ad privacy choices**
+  lets you change your answer.
+- Consent prompts only appear after you've picked a companion.
+- Debug, simulator and TestFlight builds always show Google test ads.
+
+### App Store privacy label (update before App Store release)
+
+With AdMob, the label needs: Identifiers → Device ID, Usage Data → Advertising
+Data and Product Interaction, Location → Coarse Location, and Diagnostics,
+marked as used for Third-Party Advertising and, for Device ID, Tracking.
+See Google's "Prepare for Apple's App Store data disclosure requirements".
 
 ## Server (when signed in)
 

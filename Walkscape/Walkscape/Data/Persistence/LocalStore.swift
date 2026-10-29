@@ -31,6 +31,7 @@ struct LocalStore {
         static func companion(_ source: WalkingDataSourceKind) -> String { "walkscape.companion.v1.\(source.rawValue)" }
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
+        static let ads = "walkscape.ads.v1"
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -83,6 +84,16 @@ struct LocalStore {
         get { defaults.string(forKey: Key.pendingReferralCode) }
         nonmutating set { defaults.set(newValue, forKey: Key.pendingReferralCode) }
     }
+
+    // Ad limits are per device, not per data source.
+    func loadAdState() -> AdState {
+        if let saved = load(AdState.self, Key.ads) { return saved }
+        let fresh = AdState(firstLaunch: Date())
+        save(fresh)
+        return fresh
+    }
+
+    func save(_ ads: AdState) { save(ads, Key.ads) }
 
     /// The last successful daily totals, shown (with their age) while offline.
     func loadLastProgress(_ source: WalkingDataSourceKind) -> DailyProgress? {

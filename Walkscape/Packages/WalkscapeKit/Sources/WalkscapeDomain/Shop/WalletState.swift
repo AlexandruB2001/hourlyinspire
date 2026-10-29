@@ -163,6 +163,11 @@ public struct WalletState: Codable, Hashable, Sendable {
         return chest.coins
     }
 
+    /// Pays for a finished rewarded ad. The daily limit lives in `AdState`.
+    public mutating func earnAdReward(_ coins: Int) {
+        earn(max(0, coins))
+    }
+
     private mutating func earn(_ amount: Int) {
         coins += amount
         lifetimeCoins += amount

@@ -12,4 +12,11 @@ SUPABASE_HOST = tsajekigvuwoeqdfwnib.supabase.co
 SUPABASE_SCHEME = https
 SUPABASE_ANON_KEY = sb_publishable_8vSaQhFayoptNJ9tiC-Fww_xbRiTSNc
 
+// AdMob. These are Google's test ids until the real ones are added. Ad unit
+// ids are only used in App Store builds; Debug and TestFlight always show
+// test ads (see AdConfig in AdService.swift).
+ADMOB_APP_ID = ca-app-pub-3940256099942544~1458002511
+ADMOB_APP_OPEN_UNIT = ca-app-pub-3940256099942544/5575463023
+ADMOB_REWARDED_UNIT = ca-app-pub-3940256099942544/1712485313
+
 #include? "Secrets.xcconfig"

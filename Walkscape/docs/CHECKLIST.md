@@ -49,6 +49,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Journey journal: permanent, de-duplicated log of zones, relics, distance milestones, companion growth, team and referral events
 - ✅ Starter companions (Mossling, Emberfox, Moonmoth) that grow with real walking: a detail per km, new shapes at 5/20/50/100 km
 - ✅ Shareable milestone cards (current progress or any journal entry) via the share sheet / Save Image
+- ✅ Ads (AdMob): app-open ad at most every 4 hours, none in the first 3 days or after a quick glance (<1 min away); rewarded ads for 15 coins, 3 per day; UMP consent + ATT
+- ⬜ Ads: real AdMob ids in `Config/Base.xcconfig`, App Store privacy label, `app-ads.txt` on a developer website, GDPR message in AdMob → Privacy & messaging
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
 - ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)

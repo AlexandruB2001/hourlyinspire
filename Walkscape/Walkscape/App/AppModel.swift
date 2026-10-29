@@ -27,6 +27,9 @@ final class AppModel {
     let backend: WalkscapeBackend?
     private let sampleFriends: FriendRepository
     private let store: LocalStore
+    let ads = AdService()
+    @ObservationIgnored private var adsStarted = false
+    @ObservationIgnored private var backgroundedAt: Date?
     @ObservationIgnored private var tickerTask: Task<Void, Never>?
     @ObservationIgnored private var lastAutoRefresh = Date.distantPast
 
@@ -42,6 +45,9 @@ final class AppModel {
     private(set) var wallet: WalletState
     /// Permanent log of milestones.
     private(set) var journal: JourneyJournal
+    /// Ad frequency limits for this device.
+    private(set) var adState: AdState
+    private(set) var isWatchingAd = false
     /// Nil until the player picks a companion.
     private(set) var companion: CompanionState?
     /// Nil when not in a team (or not loaded yet; see `hasLoadedTeam`).
@@ -90,6 +96,7 @@ final class AppModel {
         progression = store.loadProgression(source)
         wallet = store.loadWallet(source)
         journal = store.loadJournal(source)
+        adState = store.loadAdState()
         companion = Self.companion(for: source, store: store, progression: progression,
                                    today: LocalDay(date: Date(), timeZone: .current))
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
@@ -180,11 +187,21 @@ final class AppModel {
             await refreshAll()
             startHealthObservationIfPossible()
         }
+        startAdsIfReady()
     }
 
     /// Call when the app becomes active.
     func didBecomeActive() {
         Task { await refreshAll() }
+        if let backgroundedAt {
+            self.backgroundedAt = nil
+            showAppOpenAdIfAllowed(timeAway: Date().timeIntervalSince(backgroundedAt))
+        }
+    }
+
+    /// Call when the app goes to the background.
+    func didEnterBackground() {
+        if !isWatchingAd && !ads.isShowingAd { backgroundedAt = Date() }
     }
 
     private func tick() async {
@@ -316,6 +333,7 @@ final class AppModel {
         companion = adopted
         store.save(adopted, for: dataSource)
         recordInJournal([JournalEvents.adoption(of: adopted)])
+        startAdsIfReady()
     }
 
     /// Records any new milestones. Safe to call repeatedly: entries are keyed by event.
@@ -575,6 +593,46 @@ final class AppModel {
     func toggleEquipped(_ item: ShopItem) {
         if wallet.isEquipped(item) { wallet.unequip(item.slot) } else { wallet.equip(item) }
         store.save(wallet, for: dataSource)
+    }
+
+    // MARK: Ads
+
+    var rewardedAdsLeft: Int { adState.rewardedAdsLeft(on: today) }
+
+    /// Consent prompts wait until the companion is chosen, so the first
+    /// thing a new player sees is the game.
+    private func startAdsIfReady() {
+        guard !adsStarted, !needsCompanionChoice else { return }
+        adsStarted = true
+        let launchedAt = Date()
+        Task {
+            await ads.start()
+            // On a cold launch, only show the ad if it was ready quickly,
+            // so it never interrupts someone who has already started playing.
+            if Date().timeIntervalSince(launchedAt) < 6 { showAppOpenAdIfAllowed(timeAway: nil) }
+        }
+    }
+
+    private func showAppOpenAdIfAllowed(timeAway: TimeInterval?) {
+        let now = Date()
+        guard ads.canRequestAds, !isWatchingAd, celebration == nil,
+              adState.mayShowAppOpenAd(now: now, timeAway: timeAway, isOnboarded: !needsCompanionChoice),
+              ads.presentAppOpenAd() else { return }
+        adState.recordAppOpenAd(at: now)
+        store.save(adState)
+    }
+
+    /// Plays a rewarded ad. Returns the coins earned, or nil if it wasn't
+    /// finished, failed to load, or today's limit is used up. Coins go to the
+    /// Apple Health wallet, like referral rewards.
+    func watchRewardedAd() async -> Int? {
+        guard rewardedAdsLeft > 0, !isWatchingAd else { return nil }
+        isWatchingAd = true
+        defer { isWatchingAd = false }
+        guard await ads.presentRewardedAd(), let coins = adState.recordRewardedAd(on: today) else { return nil }
+        store.save(adState)
+        updateHealthWallet { $0.earnAdReward(coins) }
+        return coins
     }
 
     // MARK: Friends

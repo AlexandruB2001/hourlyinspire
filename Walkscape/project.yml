@@ -21,6 +21,12 @@ configFiles:
 packages:
   WalkscapeKit:
     path: Packages/WalkscapeKit
+  GoogleMobileAds:
+    url: https://github.com/googleads/swift-package-manager-google-mobile-ads
+    majorVersion: 11.0.0
+  UserMessagingPlatform:
+    url: https://github.com/googleads/swift-package-manager-google-user-messaging-platform
+    majorVersion: 2.0.0
 targets:
   Walkscape:
     type: application
@@ -34,6 +40,8 @@ targets:
         product: PixelArt
       - package: WalkscapeKit
         product: WalkscapeBackend
+      - package: GoogleMobileAds
+      - package: UserMessagingPlatform
       - sdk: HealthKit.framework
     settings:
       base:

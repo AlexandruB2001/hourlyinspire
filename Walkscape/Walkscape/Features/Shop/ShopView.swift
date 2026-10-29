@@ -14,6 +14,7 @@ struct ShopView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     WardrobeHeader()
                     MysteryBoxCard { revealed = $0 }
+                    RewardedAdCard()
                     SlotPicker(selection: $slot)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: Theme.Spacing.m)],
                               spacing: Theme.Spacing.m) {
@@ -101,6 +102,64 @@ private struct MysteryBoxCard: View {
             Spacer(minLength: 0)
         }
         .pixelPanel(fill: Theme.Palette.forestRaised)
+    }
+}
+
+/// Watch a short ad for a few coins, a few times a day.
+private struct RewardedAdCard: View {
+    @Environment(AppModel.self) private var model
+    @State private var earned: Int?
+    @State private var failed = false
+
+    var body: some View {
+        let rules = AdRules.standard
+        let left = model.rewardedAdsLeft
+        HStack(spacing: Theme.Spacing.m) {
+            ItemIcon(spriteID: "coin", pixel: 4)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Text("Watch an ad")
+                    .font(Theme.Typography.headline)
+                    .foregroundStyle(Theme.Palette.cream)
+                Text(left > 0
+                     ? "A short video for \(rules.rewardedCoins) coins. \(left) of \(rules.rewardedPerDay) left today."
+                     : "That's all for today. More tomorrow, or earn coins on a walk!")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                if let earned {
+                    Text("+\(earned) coins. Thanks for supporting Walkscape!")
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(Theme.Palette.gold)
+                } else if failed {
+                    Text("No ad was ready, or it closed early. Try again in a moment.")
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(Theme.Palette.ember)
+                }
+                if left > 0 {
+                    Button {
+                        earned = nil
+                        failed = false
+                        Task {
+                            earned = await model.watchRewardedAd()
+                            failed = earned == nil
+                        }
+                    } label: {
+                        if model.isWatchingAd {
+                            ProgressView().tint(Theme.Palette.ink)
+                        } else {
+                            Label("Watch for \(rules.rewardedCoins)", systemImage: "play.rectangle.fill")
+                        }
+                    }
+                    .buttonStyle(.pixelSecondary)
+                    .disabled(model.isWatchingAd || !model.ads.canRequestAds)
+                    .opacity(model.ads.canRequestAds ? 1 : 0.5)
+                    .padding(.top, Theme.Spacing.xs)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .pixelPanel()
+        .sensoryFeedback(.success, trigger: earned)
+        .accessibilityElement(children: .contain)
     }
 }
 

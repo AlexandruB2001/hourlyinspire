@@ -233,6 +233,13 @@ private struct SettingsSection: View {
             Text("Only today's step count and distance are shared, never raw Health data or location.")
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
+            if model.ads.needsPrivacyOptions {
+                Button("Ad privacy choices") { Task { await model.ads.presentPrivacyOptions() } }
+                    .buttonStyle(.pixelQuiet)
+            }
+            Text("Ads keep Walkscape free. They never see your Health data, walks or friends.")
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.creamDim)
         }
         .tint(Theme.Palette.leaf)
         .font(Theme.Typography.body)
