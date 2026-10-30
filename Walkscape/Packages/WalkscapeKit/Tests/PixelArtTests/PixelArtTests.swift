@@ -162,4 +162,21 @@ final class PixelArtTests: XCTestCase {
             XCTAssertNotNil(ItemSprites.sprite(id), "missing sprite \(id)")
         }
     }
+
+    func testCompanionAccessoriesAreDrawnOnEveryStage() {
+        for accessory in CompanionAccessoryCatalog.all {
+            XCTAssertNotNil(CompanionAccessoryArt.sprite(accessory.id), "missing art for \(accessory.id)")
+        }
+        for species in CompanionSprites.speciesIDs {
+            for km in [0, 5, 20, 50, 100] {
+                let growth = CompanionGrowth(kilometres: km)
+                let plain = CompanionSprites.render(speciesID: species, growth: growth)
+                for accessory in CompanionAccessoryCatalog.all {
+                    let dressed = CompanionSprites.render(speciesID: species, growth: growth, accessories: [accessory.id])
+                    XCTAssertNotEqual(dressed, plain, "\(accessory.id) shows on \(species) at \(km) km")
+                    XCTAssertEqual(dressed.width, CompanionSprites.canvasSize)
+                }
+            }
+        }
+    }
 }

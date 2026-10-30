@@ -239,6 +239,17 @@ public struct WalletState: Codable, Hashable, Sendable {
     // MARK: Shopping
 
     public func owns(_ item: ShopItem) -> Bool { ownedItemIDs.contains(item.id) }
+    public func owns(itemID: String) -> Bool { ownedItemIDs.contains(itemID) }
+
+    /// Buys something that isn't a walker outfit (e.g. a companion accessory).
+    /// Returns false if it's already owned or there aren't enough coins.
+    @discardableResult
+    public mutating func buy(itemID: String, price: Int) -> Bool {
+        guard !ownedItemIDs.contains(itemID), coins >= price else { return false }
+        coins -= price
+        ownedItemIDs.insert(itemID)
+        return true
+    }
 
     public mutating func buy(_ item: ShopItem) -> PurchaseResult {
         guard !owns(item) else { return .alreadyOwned }

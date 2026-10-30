@@ -62,7 +62,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Collections (World tab): Relics, 27 Wildlife (deterministic daily sightings by rarity in zones reached that day), 12 Postcards (return visits), 8 Treasures (trail chests 4 %, weekly chest), 12 Memories (from walking history); filters, detail cards, discovery dates, completion rewards at 25/50/75/100 %; collection titles
 - ✅ World events: 12 events (shooting star, merchant, fireflies, rainbow, footprints, forest spirit, lost chest, aurora, blossom festival, harvest moon, whale song, crystal bloom) with zones, rarity, evening/season windows, max 2 a day, fixed per day for everyone, found once per day; Journey card and in-scene marker
 - ✅ Seasons: one recolour pass + seasonal weather (snow, leaves, petals, fireflies) for every zone; hemisphere from time zone
-- ⬜ Companion personalities, reactions, idle animations and accessories (Phase 4b)
+- ✅ Companion personalities: daily finds (Mossling stones, Emberfox coins/treasure, Moonmoth night wildlife), voice lines for zones, level-ups and walks, species-specific motion
+- ✅ Companion accessories: 10 hats, scarves, bells, backpacks and capes drawn on any species and stage; 7 in the shop, 3 as Explorer Level gifts (5, 10, 15)
 - ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges

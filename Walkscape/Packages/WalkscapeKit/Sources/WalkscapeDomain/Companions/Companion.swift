@@ -102,12 +102,40 @@ public struct CompanionState: Codable, Hashable, Sendable {
     public let baselineMeters: Int
     /// Highest stage already celebrated (so evolutions are recorded once).
     public private(set) var celebratedStage: Int
+    /// Worn accessory id per `CompanionAccessory.Slot`.
+    public private(set) var accessories: [String: String]
 
     public init(speciesID: String, adoptedOn: LocalDay, lifetimeMeters: Int) {
         self.speciesID = speciesID
         self.adoptedOn = adoptedOn
         baselineMeters = max(0, lifetimeMeters)
         celebratedStage = CompanionGrowth.Stage.hatchling.rawValue
+        accessories = [:]
+    }
+
+    enum CodingKeys: String, CodingKey { case speciesID, adoptedOn, baselineMeters, celebratedStage, accessories }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        speciesID = try container.decode(String.self, forKey: .speciesID)
+        adoptedOn = try container.decode(LocalDay.self, forKey: .adoptedOn)
+        baselineMeters = try container.decode(Int.self, forKey: .baselineMeters)
+        celebratedStage = try container.decode(Int.self, forKey: .celebratedStage)
+        accessories = try container.decodeIfPresent([String: String].self, forKey: .accessories) ?? [:]
+    }
+
+    /// Accessory ids in draw order (back, neck, head).
+    public var wornAccessories: [String] {
+        [CompanionAccessory.Slot.back, .neck, .head].compactMap { accessories[$0.rawValue] }
+    }
+
+    /// Wears `accessory`, or takes it off if it's already worn.
+    public mutating func toggle(_ accessory: CompanionAccessory) {
+        if accessories[accessory.slot.rawValue] == accessory.id {
+            accessories[accessory.slot.rawValue] = nil
+        } else {
+            accessories[accessory.slot.rawValue] = accessory.id
+        }
     }
 
     public var species: CompanionSpecies? { CompanionCatalog.species(withID: speciesID) }
@@ -124,6 +152,7 @@ public struct CompanionState: Codable, Hashable, Sendable {
         }
         var result = self
         result.celebratedStage = max(celebratedStage, other.celebratedStage)
+        if accessories.isEmpty { result.accessories = other.accessories }
         return result
     }
 

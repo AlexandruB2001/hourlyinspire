@@ -21,7 +21,7 @@ public enum CompanionSprites {
     ]
 
     /// The companion at `growth`, centred at the bottom of a `canvasSize` square.
-    public static func render(speciesID: String, growth: CompanionGrowth) -> PixelCanvas {
+    public static func render(speciesID: String, growth: CompanionGrowth, accessories: [String] = []) -> PixelCanvas {
         var canvas = PixelCanvas(width: canvasSize, height: canvasSize)
         guard let stages = art[speciesID] else { return canvas }
         let isElder = growth.stage == .elder
@@ -40,7 +40,26 @@ public enum CompanionSprites {
             canvas.fillEllipse(cx: canvasSize / 2, cy: y + sprite.height / 2, rx: sprite.width / 2 + 2,
                                ry: sprite.height / 2 + 2, glow)
         }
+        // Accessories sit on the drawing's outline, so they fit every species and stage.
+        let opaque = sprite.rows.enumerated().flatMap { row, keys in
+            keys.enumerated().compactMap { column, key in key == "." ? nil : (column, row) }
+        }
+        let top = y + (opaque.map(\.1).min() ?? 0)
+        let bottom = y + (opaque.map(\.1).max() ?? sprite.height - 1)
+        let left = x + (opaque.map(\.0).min() ?? 0)
+        let centre = x + sprite.width / 2
+        let worn = accessories.compactMap { id in CompanionAccessoryArt.sprite(id).map { (id, $0) } }
+        for (id, piece) in worn where CompanionAccessoryArt.slot(of: id) == .back {
+            canvas.draw(piece, x: left - piece.width / 2, y: top + (bottom - top) / 3)
+        }
         canvas.draw(sprite, x: x, y: y)
+        for (id, piece) in worn {
+            switch CompanionAccessoryArt.slot(of: id) {
+            case .head: canvas.draw(piece, x: centre - piece.width / 2, y: max(0, top - piece.height + 1))
+            case .neck: canvas.draw(piece, x: centre - piece.width / 2, y: top + (bottom - top) * 9 / 20)
+            default: break
+            }
+        }
         return canvas
     }
 

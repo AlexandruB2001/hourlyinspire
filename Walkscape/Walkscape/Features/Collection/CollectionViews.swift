@@ -20,6 +20,12 @@ struct DiscoveryNews: Equatable {
         spriteID = event.spriteID
     }
 
+    init(find: CompanionFind) {
+        title = "Your companion found something!"
+        subtitle = find.title
+        spriteID = find.treasure?.spriteID ?? find.creature?.spriteID ?? "coin"
+    }
+
     init(treasure: Treasure) {
         title = "Treasure found!"
         subtitle = "\(treasure.name) · \(treasure.rarity.displayName)"

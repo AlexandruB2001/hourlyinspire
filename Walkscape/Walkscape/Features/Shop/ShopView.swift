@@ -15,6 +15,7 @@ struct ShopView: View {
                     WardrobeHeader()
                     MysteryBoxCard { revealed = $0 }
                     RewardedAdCard()
+                    CompanionAccessoriesCard()
                     SlotPicker(selection: $slot)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: Theme.Spacing.m)],
                               spacing: Theme.Spacing.m) {
@@ -160,6 +161,66 @@ private struct RewardedAdCard: View {
         .pixelPanel()
         .sensoryFeedback(.success, trigger: earned)
         .accessibilityElement(children: .contain)
+    }
+}
+
+/// Hats, scarves and backpacks for your companion.
+private struct CompanionAccessoriesCard: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        if let companion = model.companion, let species = companion.species {
+            VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                SectionHeader(title: "For \(species.name)")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Theme.Spacing.m) {
+                        ForEach(CompanionAccessoryCatalog.all) { accessory in
+                            tile(accessory, companion: companion)
+                        }
+                    }
+                }
+                Text("Some accessories are gifts for reaching Explorer Levels 5, 10 and 15.")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.creamDim)
+            }
+            .pixelPanel()
+        }
+    }
+
+    private func tile(_ accessory: CompanionAccessory, companion: CompanionState) -> some View {
+        let owned = model.wallet.owns(itemID: accessory.id)
+        let wearing = companion.wornAccessories.contains(accessory.id)
+        let growth = model.companionGrowth?.kilometres ?? 0
+        return VStack(spacing: Theme.Spacing.xs) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
+                PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID, kilometres: growth,
+                                                                    accessories: [accessory.id]), pixel: 3)
+            }
+            .frame(width: 84, height: 72)
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
+                .strokeBorder(wearing ? Theme.Palette.gold : Theme.Palette.ink, lineWidth: 2))
+            Text(accessory.name)
+                .font(Theme.Typography.micro)
+                .foregroundStyle(Theme.Palette.cream)
+                .lineLimit(1)
+                .frame(width: 84)
+            if owned {
+                Button(wearing ? "Wearing" : "Wear") { model.toggleAccessory(accessory) }
+                    .buttonStyle(PixelButtonStyle(kind: wearing ? .secondary : .quiet))
+            } else if let price = accessory.price {
+                Button { _ = model.buyAccessory(accessory) } label: { PriceLabel(price: price) }
+                    .buttonStyle(.pixel)
+                    .disabled(model.wallet.coins < price)
+                    .opacity(model.wallet.coins < price ? 0.5 : 1)
+            } else if let level = accessory.unlockLevel {
+                Text("Level \(level)")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.creamDim)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessory.name)
     }
 }
 

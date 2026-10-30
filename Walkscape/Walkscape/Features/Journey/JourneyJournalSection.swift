@@ -10,7 +10,8 @@ struct CompanionCard: View {
             HStack(spacing: Theme.Spacing.m) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                    PixelImageView(image: PixelArtCache.shared.companion(species.id, kilometres: growth.kilometres), pixel: 3.4)
+                    PixelImageView(image: PixelArtCache.shared.companion(species.id, kilometres: growth.kilometres,
+                                                                        accessories: companion.wornAccessories), pixel: 3.4)
                 }
                 .frame(width: 76, height: 76)
                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(Theme.Palette.ink, lineWidth: 2))
@@ -30,9 +31,9 @@ struct CompanionCard: View {
                             .font(Theme.Typography.caption)
                             .foregroundStyle(Theme.Palette.gold)
                     }
-                    Text(species.growthHint)
-                        .font(Theme.Typography.micro)
-                        .foregroundStyle(Theme.Palette.creamDim.opacity(0.85))
+                    Text("\u{201C}\(model.companionLine)\u{201D}")
+                        .font(Theme.Typography.micro.italic())
+                        .foregroundStyle(Theme.Palette.cream.opacity(0.9))
                 }
                 Spacer(minLength: 0)
             }

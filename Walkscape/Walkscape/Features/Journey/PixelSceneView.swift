@@ -14,6 +14,8 @@ struct PixelSceneView: View {
     var outfit: [String]?
     /// The companion trotting behind the walker.
     var companionImage: CGImage?
+    /// Picks the companion's way of moving (steady, bouncy or floating).
+    var companionSpeciesID: String?
     /// Layers scroll and the character steps only while walking.
     var walking = true
     var pixel: CGFloat = Theme.pixel
@@ -71,8 +73,8 @@ struct PixelSceneView: View {
                             y: CGFloat(images.layers.footY - 16 + Int(bob)) * pixel)
             }
             if let companionImage, avatarID != nil {
-                // Walks just behind the character and hops along while walking.
-                let hop = stepping && Int(time * 4) % 2 == 0 ? -1 : 0
+                // Walks just behind the character, each species in its own way.
+                let hop = companionOffset(time: time, stepping: stepping)
                 layer(companionImage, width: CompanionSprites.canvasSize, height: CompanionSprites.canvasSize)
                     .offset(x: ((CGFloat(width) * characterPosition).rounded() - CGFloat(CompanionSprites.canvasSize) + 2) * pixel,
                             y: CGFloat(images.layers.footY - CompanionSprites.canvasSize + 1 + hop) * pixel)
@@ -88,6 +90,21 @@ struct PixelSceneView: View {
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .clipped()
+    }
+
+    /// Mossling plods, Emberfox bounces (and hops on the spot when resting),
+    /// Moonmoth floats up and down all the time.
+    private func companionOffset(time: Double, stepping: Bool) -> Int {
+        let moving = animated && !reduceMotion
+        switch companionSpeciesID {
+        case "emberfox":
+            if stepping { return Int(time * 6) % 2 == 0 ? -2 : 0 }
+            return moving && Int(time * 2) % 6 == 0 ? -2 : 0
+        case "moonmoth":
+            return moving ? Int((sin(time * 2.2) * 1.6 - 2).rounded()) : -2
+        default:
+            return stepping && Int(time * 2) % 2 == 0 ? -1 : 0
+        }
     }
 
     /// Walk frames followed by the idle frame.

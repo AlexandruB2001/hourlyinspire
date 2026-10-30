@@ -310,6 +310,7 @@ final class AppModel {
             updateJournal(source: source)
             processCollections(on: progress.localDate, source: source)
             processWorldEvents(on: progress.localDate, source: source)
+            processCompanionFind(on: progress.localDate, meters: progress.distanceMeters, source: source)
             processLevelUps(source: source)
             announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
                      + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
@@ -699,6 +700,11 @@ final class AppModel {
     private func processLevelUps(source: WalkingDataSourceKind) {
         let levels = ledger.levelUps(totalXP: explorerXP.total, into: &wallet)
         guard let top = levels.last else { return }
+        // Some levels also give a companion accessory.
+        for level in levels {
+            let gifts = CompanionAccessoryCatalog.unlocked(atLevel: level).map(\.id)
+            if !gifts.isEmpty { ledger.claim(Reward(id: "level-\(level)-companion", itemIDs: gifts), into: &wallet) }
+        }
         store.save(ledger, for: source)
         store.save(wallet, for: source)
         // One entry and one banner, even if several levels arrived at once.
@@ -714,6 +720,60 @@ final class AppModel {
         store.save(wallet, for: dataSource)
         processLevelUps(source: dataSource)
         return true
+    }
+
+    // MARK: Companion life
+
+    /// What the companion is saying right now.
+    var companionLine: String {
+        guard let companion else { return "" }
+        let situation: CompanionVoice.Situation
+        if let celebration { situation = .newZone(celebration.zone.name) }
+        else if let levelUp { situation = .levelUp(levelUp) }
+        else { situation = distanceMeters > 0 ? .walking : .resting }
+        return CompanionVoice.line(speciesID: companion.speciesID, situation: situation, day: today)
+    }
+
+    /// Now and then the companion finds something on the walk, in its own way.
+    private func processCompanionFind(on day: LocalDay, meters: Int, source: WalkingDataSourceKind) {
+        guard day == today, let companion,
+              let find = CompanionPersonality.find(speciesID: companion.speciesID, day: day, metersToday: meters,
+                                                   ownedTreasures: Set(collections.treasures.keys),
+                                                   seenCreatures: Set(collections.wildlife.keys)),
+              ledger.claim(find.reward, into: &wallet) else { return }
+        if let treasure = find.treasure, collections.recordTreasure(treasure, on: day) {
+            _ = ledger.claim(treasure.reward, into: &wallet)
+            recordInJournal([JournalEvents.treasure(treasure, on: day)])
+        }
+        if let creature = find.creature, !collections.recordSightings([creature], on: day).isEmpty {
+            _ = ledger.claim(creature.reward, into: &wallet)
+            recordInJournal([JournalEvents.wildlife(creature, on: day)])
+        }
+        store.save(collections, for: source)
+        store.save(ledger, for: source)
+        store.save(wallet, for: source)
+        recordInJournal([JournalEvents.companionFind(find)])
+        discovery = DiscoveryNews(find: find)
+    }
+
+    func buyAccessory(_ accessory: CompanionAccessory) -> Bool {
+        guard let price = accessory.price, wallet.buy(itemID: accessory.id, price: price) else { return false }
+        store.save(wallet, for: dataSource)
+        if var current = companion, !current.wornAccessories.contains(where: {
+            CompanionAccessoryCatalog.accessory(withID: $0)?.slot == accessory.slot
+        }) {
+            current.toggle(accessory)
+            companion = current
+            store.save(current, for: dataSource)
+        }
+        return true
+    }
+
+    func toggleAccessory(_ accessory: CompanionAccessory) {
+        guard wallet.owns(itemID: accessory.id), var current = companion else { return }
+        current.toggle(accessory)
+        companion = current
+        store.save(current, for: dataSource)
     }
 
     // MARK: Seasons and world events

@@ -48,7 +48,8 @@ struct ProfilePortrait: View {
                 WalkingCharacter(avatarID: model.settings.avatarID, outfit: model.outfit, walking: true, pixel: 3.5)
                 if showcase.showsCompanion, let companion = model.companion {
                     PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID,
-                                                                        kilometres: companion.growth(lifetimeMeters: model.progression.lifetimeMeters).kilometres),
+                                                                        kilometres: companion.growth(lifetimeMeters: model.progression.lifetimeMeters).kilometres,
+                                                                        accessories: companion.wornAccessories),
                                    pixel: 1.6)
                 }
             }
