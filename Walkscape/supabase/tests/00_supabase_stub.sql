@@ -101,11 +101,13 @@ begin
 end $$;
 
 -- Coins the signed-in test player has left in their cloud save.
+-- (plpgsql, so the body is only checked when called, after the migrations.)
 create function tests.coins() returns bigint
-language sql security definer as $$
-    select (select coalesce(sum(value::bigint), 0) from jsonb_each_text(s.save -> 'wallet' -> 'earned'))
-         - (select coalesce(sum(value::bigint), 0) from jsonb_each_text(coalesce(s.save -> 'wallet' -> 'spent', '{}'::jsonb)))
-    from public.player_saves s where s.user_id = auth.uid()
-$$;
+language plpgsql security definer as $$
+begin
+    return (select (select coalesce(sum(value::bigint), 0) from jsonb_each_text(s.save -> 'wallet' -> 'earned'))
+                 - (select coalesce(sum(value::bigint), 0) from jsonb_each_text(coalesce(s.save -> 'wallet' -> 'spent', '{}'::jsonb)))
+            from public.player_saves s where s.user_id = auth.uid());
+end $$;
 
 grant execute on all functions in schema tests to anon, authenticated;
