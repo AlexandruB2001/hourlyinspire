@@ -11,6 +11,7 @@ name: Walkscape TestFlight
 #
 # Signing is fully automatic: Xcode uses the API key to register the App ID
 # (with HealthKit and Sign in with Apple), create certificates and profiles.
+# Leftover development certificates from earlier runs are revoked first.
 
 on:
   workflow_dispatch:
@@ -64,6 +65,38 @@ jobs:
             exit 1
           fi
           echo "ASC_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: Remove old CI development certificates
+        # Automatic signing creates a development certificate on every run, on a
+        # throwaway machine whose private key is then gone. Apple allows only a
+        # few, so remove the unusable ones ("Created via API" development
+        # certificates only; distribution certificates are never touched).
+        run: |
+          python3 -m pip install --quiet --break-system-packages pyjwt cryptography 2>/dev/null \
+            || python3 -m pip install --quiet pyjwt cryptography
+          python3 - <<'PY'
+          import json, os, time, urllib.request
+          import jwt
+
+          now = int(time.time())
+          token = jwt.encode({"iss": os.environ["ASC_ISSUER_ID"], "iat": now, "exp": now + 600, "aud": "appstoreconnect-v1"},
+                             open(os.environ["ASC_KEY_PATH"]).read(), algorithm="ES256",
+                             headers={"kid": os.environ["ASC_KEY_ID"], "typ": "JWT"})
+
+          def call(method, url):
+              request = urllib.request.Request(url, method=method, headers={"Authorization": f"Bearer {token}"})
+              with urllib.request.urlopen(request) as response:
+                  body = response.read()
+                  return json.loads(body) if body else None
+
+          base = "https://api.appstoreconnect.apple.com/v1/certificates"
+          for cert in call("GET", f"{base}?limit=200")["data"]:
+              a = cert["attributes"]
+              made_by_ci = "Created via API" in f"{a.get('displayName') or ''} {a.get('name') or ''}"
+              if a.get("certificateType") in ("DEVELOPMENT", "IOS_DEVELOPMENT") and made_by_ci:
+                  call("DELETE", f"{base}/{cert['id']}")
+                  print("Revoked development certificate expiring", a.get("expirationDate"))
+          PY
 
       - name: Archive
         working-directory: Walkscape
