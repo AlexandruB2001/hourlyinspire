@@ -205,14 +205,45 @@ public struct WalletState: Codable, Hashable, Sendable {
         return event
     }
 
+    // MARK: Opening chests
+
+    /// Every chest has a permanent id: the day it was found and its number that
+    /// day ("2026-10-27#3"; "legacy#0" for chests waiting in older saves).
+    /// Chests of a day open in order, so the opened count says which are opened.
+    public static func chestID(day key: String, index: Int) -> String { "\(key)#\(index)" }
+
+    /// Waiting chests, oldest first.
+    public var pendingChestIDs: [String] {
+        chestsFound.keys.sorted().flatMap { key in
+            ((chestsOpened[key] ?? 0)..<max(chestsOpened[key] ?? 0, chestsFound[key] ?? 0)).map { Self.chestID(day: key, index: $0) }
+        }
+    }
+
+    public func isChestOpened(_ id: String) -> Bool {
+        guard let chest = Self.parseChestID(id) else { return false }
+        return chest.index < (chestsOpened[chest.day] ?? 0)
+    }
+
     /// Opens one waiting chest (the oldest first). Returns the coins it held, or nil if there were none.
     public mutating func openChest(rules: CoinRules = .standard) -> Int? {
-        guard let key = chestsFound.keys.sorted().first(where: { (chestsFound[$0] ?? 0) > (chestsOpened[$0] ?? 0) }) else {
-            return nil
-        }
-        chestsOpened[key, default: 0] += 1
-        earned[Self.chestKey(key), default: 0] += rules.coinsPerChest
+        guard let id = pendingChestIDs.first else { return nil }
+        return openChest(id: id, rules: rules)
+    }
+
+    /// Opens the chest with `id`. Opening it again, or a chest that was never
+    /// found, pays nothing, so a repeated tap or retry can't pay twice.
+    @discardableResult
+    public mutating func openChest(id: String, rules: CoinRules = .standard) -> Int? {
+        guard let chest = Self.parseChestID(id), chest.index == (chestsOpened[chest.day] ?? 0),
+              chest.index < (chestsFound[chest.day] ?? 0) else { return nil }
+        chestsOpened[chest.day] = chest.index + 1
+        earned[Self.chestKey(chest.day)] = (chest.index + 1) * rules.coinsPerChest
         return rules.coinsPerChest
+    }
+
+    static func parseChestID(_ id: String) -> (day: String, index: Int)? {
+        guard let hash = id.lastIndex(of: "#"), let index = Int(id[id.index(after: hash)...]) else { return nil }
+        return (String(id[..<hash]), index)
     }
 
     /// Adds chests the server says are ready. Chests already waiting or

@@ -677,15 +677,17 @@ final class AppModel {
 
     /// Opens one chest found on today's walk. Returns the coins it held.
     func openChest() -> Int? {
-        let coins = wallet.openChest()
+        // Each chest has a permanent id; opening the same one again pays nothing.
+        guard let id = wallet.pendingChestIDs.first else { return nil }
+        let coins = wallet.openChest(id: id)
         store.save(wallet, for: dataSource)
         if coins != nil {
             rollQuests()
             questTracker.recordChestOpened()
             store.save(questTracker, for: dataSource)
             // Now and then a chest also holds a treasure. The roll is fixed per
-            // day and chest, so reopening the app can't re-roll it.
-            let seed = "chest#\(today.isoString)#\(questTracker.chestsOpenedToday)"
+            // chest, so reopening the app can't re-roll it.
+            let seed = "chest#\(id)"
             if WildlifeCatalog.roll(seed) < TreasureCatalog.chestTreasureChance {
                 awardTreasure(seed: seed)
             }
