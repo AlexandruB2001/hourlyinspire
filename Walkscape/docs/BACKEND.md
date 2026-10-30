@@ -168,7 +168,7 @@ with `20261027000001_far_side_zones.sql`, and verified (20 zones, 12
 achievements, a referral code on every profile, 20 RLS policies). Before using
 `supabase db push`, also mark these two as applied with `supabase migration repair`.
 
-## Push notifications (migration 20261030000001, not live yet)
+## Push notifications (migration 20261030000001, applied 2026-10-30)
 
 Game events (chests, zones, relics, achievements, companion growth, referral
 chests, the daily reminder) are **local** notifications: the app posts them
@@ -205,7 +205,7 @@ To switch it on:
 6. The app's entitlements already ask for push (`aps-environment`); automatic
    signing adds the capability to the App ID on the next TestFlight build.
 
-## Cloud save (migration 20261031000001, not live yet)
+## Cloud save (migration 20261031000001, applied 2026-10-30)
 
 `player_saves` holds one private JSON row per player: the Apple Health
 progression, wallet, journal, reward ledger and companion (`CloudSave` in
@@ -226,7 +226,7 @@ WalkscapeDomain). Demo data is never uploaded.
 Limits: the save is written by the app, so (like walking totals) it can't be
 verified by the server. Shared rewards are always granted server-side.
 
-## Profile showcase (migration 20261101000001, not live yet)
+## Profile showcase (migration 20261101000001, applied 2026-10-30)
 
 `profiles` gains `title_id`, `frame_id` and `favorite_zone_id` (id format
 checked). `set_my_showcase` updates the caller's; `friend_showcases()` lists
@@ -234,7 +234,7 @@ the caller's, their friends' and their teammates'. Which titles are unlocked
 is decided by the app from Apple Health progress (`Titles.swift`), so like
 walking totals it can't be verified by the server.
 
-## Social (migration 20261102000001, not live yet)
+## Social (migration 20261102000001, applied 2026-10-30)
 
 - `discoveries` (user, discovery id, date): world events and rare+ sightings,
   reported by the app for today ±1 day. `my_shared_discoveries(since)` joins
@@ -245,7 +245,7 @@ walking totals it can't be verified by the server.
   friend per milestone), `my_milestone_reactions(since)`.
 - `walked_together()`: both friends' shared distance since becoming friends.
 
-## Team ledger and Campfire (migration 20261103000001, not live yet)
+## Team ledger and Campfire (migration 20261103000001, applied 2026-10-30)
 
 - `team_contributions` (user, day → team, metres ≤ 25 km), primary key
   (user, day): a day counts for one team only. `sync_team_contributions()`

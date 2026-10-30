@@ -68,7 +68,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Friend milestones feed with reactions (🎉 👏 ⭐ 💛), and rewards for 100/250/500 km walked together with a friend
 - ✅ Team ledger: every member's day credited to one team once (capped 25 km), kept when they leave; expeditions and totals never go backwards (migration 20261103000001)
 - ✅ Team Campfire: 5 levels (campfire → tent & lantern → gathering place → camp village → expedition HQ) from team distance + expeditions, 10 shared decorations, contributor list, per-player level rewards
-- ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
+- ✅ Cloud save (migration 20261031000001, live)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
 - ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)
