@@ -35,7 +35,6 @@ final class WalletTests: XCTestCase {
         let counts = Dictionary(grouping: items, by: \.rarity).mapValues(\.count)
         XCTAssertEqual(counts, [.common: 12, .rare: 9, .epic: 6, .legendary: 3])
         XCTAssertEqual(Set(items.map(\.slot)), Set(EquipmentSlot.allCases))
-        XCTAssertEqual(ShopCatalog.item(withID: "straw-hat")?.price, 100)
         XCTAssertEqual(Rarity.allCases.map(\.mysteryBoxWeight).reduce(0, +), 100)
         XCTAssertLessThan(Rarity.rare, Rarity.legendary)
     }
@@ -112,45 +111,62 @@ final class WalletTests: XCTestCase {
 
     // MARK: Shopping
 
-    func testBuyingDeductsCoinsAndCanOnlyHappenOnce() {
-        var wallet = wallet(coins: 250)
-        let hat = ShopCatalog.item(withID: "straw-hat")!
-        let crown = ShopCatalog.item(withID: "golden-crown")!
-        XCTAssertEqual(wallet.buy(crown), .notEnoughCoins(needed: 350))
-        XCTAssertEqual(wallet.buy(hat), .purchased(hat))
-        XCTAssertEqual(wallet.coins, 150)
-        XCTAssertEqual(wallet.buy(hat), .alreadyOwned)
-        XCTAssertEqual(wallet.coins, 150)
+    /// Bought for `price` through a one-prize box, as a test shortcut.
+    func give(_ itemID: String, to wallet: inout WalletState, price: Int = 0) {
+        let prize: MysteryBoxPrize = ShopCatalog.item(withID: itemID).map(MysteryBoxPrize.outfit)
+            ?? .accessory(CompanionAccessoryCatalog.accessory(withID: itemID)!, rarity: .common)
+        var generator = SeededGenerator(state: 3)
+        _ = wallet.openMysteryBox(from: [prize], price: price, using: &generator)
     }
 
-    func testMysteryBoxOnlyGivesNewItemsUntilSoldOut() {
-        var wallet = wallet(coins: 50 * 31)
+    func testTheMysteryBoxIsTheOnlyWayToGetItems() {
+        let day = LocalDay(year: 2026, month: 12, day: 1)
+        let prizes = MysteryBox.prizes(on: day)
+        XCTAssertEqual(ShopCatalog.mysteryBoxPrice, 150)
+        XCTAssertEqual(Set(ShopCatalog.items.map(\.id)).subtracting(prizes.map(\.id)), [], "every outfit piece")
+        let accessories = Set(prizes.compactMap { prize -> String? in
+            if case .accessory(let accessory, _) = prize { return accessory.id }
+            return nil
+        })
+        XCTAssertTrue(accessories.contains("pet-straw-hat"))
+        XCTAssertTrue(accessories.contains("pet-pumpkin-hat"), "festival accessories join after the festival")
+        XCTAssertFalse(accessories.contains("pet-bow"), "level gifts stay gifts")
+        XCTAssertFalse(accessories.contains(where: { $0.hasPrefix("pet-plus-") }), "Plus gifts never")
+        XCTAssertFalse(MysteryBox.prizes(on: LocalDay(year: 2026, month: 10, day: 30)).contains { $0.id == "pet-pumpkin-hat" },
+                       "not while the Great Harvest is on")
+    }
+
+    func testMysteryBoxOnlyGivesNewPrizesUntilSoldOut() {
+        let prizes = MysteryBox.prizes(on: LocalDay(year: 2026, month: 12, day: 1))
+        var wallet = wallet(coins: 150 * (prizes.count + 1))
         var generator = SeededGenerator(state: 42)
         var won = Set<String>()
-        for _ in 0..<30 {
-            guard case .purchased(let item) = wallet.openMysteryBox(using: &generator) else {
-                return XCTFail("expected an item")
+        for _ in prizes {
+            guard case .won(let prize) = wallet.openMysteryBox(from: prizes, using: &generator) else {
+                return XCTFail("expected a prize")
             }
-            XCTAssertTrue(won.insert(item.id).inserted, "duplicate \(item.id)")
+            XCTAssertTrue(won.insert(prize.id).inserted, "duplicate \(prize.id)")
         }
-        XCTAssertEqual(won.count, 30)
-        XCTAssertEqual(wallet.openMysteryBox(using: &generator), .soldOut)
-        XCTAssertEqual(wallet.coins, 50, "a sold-out box costs nothing")
+        XCTAssertEqual(won, Set(prizes.map(\.id)))
+        XCTAssertEqual(wallet.openMysteryBox(from: prizes, using: &generator), .soldOut)
+        XCTAssertEqual(wallet.coins, 150, "a sold-out box costs nothing")
     }
 
-    func testMysteryBoxNeedsFiftyCoins() {
-        var wallet = wallet(coins: 49)
+    func testMysteryBoxNeedsItsPrice() {
+        var wallet = wallet(coins: 149)
         var generator = SeededGenerator(state: 1)
-        XCTAssertEqual(wallet.openMysteryBox(using: &generator), .notEnoughCoins(needed: 1))
+        let prizes = MysteryBox.prizes(on: LocalDay(year: 2026, month: 12, day: 1))
+        XCTAssertEqual(wallet.openMysteryBox(from: prizes, using: &generator), .notEnoughCoins(needed: 1))
         XCTAssertTrue(wallet.ownedItemIDs.isEmpty)
     }
 
     func testMysteryBoxOddsFollowRarity() {
         var generator = SeededGenerator(state: 7)
         var counts: [Rarity: Int] = [:]
+        let prizes = MysteryBox.prizes(on: LocalDay(year: 2026, month: 12, day: 1))
         for _ in 0..<5_000 {
-            var wallet = wallet(coins: 50)
-            if case .purchased(let item) = wallet.openMysteryBox(using: &generator) { counts[item.rarity, default: 0] += 1 }
+            var wallet = wallet(coins: 150)
+            if case .won(let prize) = wallet.openMysteryBox(from: prizes, using: &generator) { counts[prize.rarity, default: 0] += 1 }
         }
         XCTAssertEqual(Double(counts[.common] ?? 0) / 5_000, 0.60, accuracy: 0.03)
         XCTAssertEqual(Double(counts[.rare] ?? 0) / 5_000, 0.28, accuracy: 0.03)
@@ -166,9 +182,9 @@ final class WalletTests: XCTestCase {
         let beanie = ShopCatalog.item(withID: "red-beanie")!
         let boots = ShopCatalog.item(withID: "golden-boots")!
         XCTAssertFalse(wallet.equip(straw))
-        _ = wallet.buy(straw)
-        _ = wallet.buy(beanie)
-        _ = wallet.buy(boots)
+        give("straw-hat", to: &wallet)
+        give("red-beanie", to: &wallet)
+        give("golden-boots", to: &wallet)
         XCTAssertTrue(wallet.equip(straw))
         XCTAssertTrue(wallet.equip(boots))
         XCTAssertTrue(wallet.equip(beanie))
@@ -181,7 +197,7 @@ final class WalletTests: XCTestCase {
     func testWalletRoundTripsThroughJSON() throws {
         var wallet = wallet(coins: 500)
         _ = wallet.apply(progress(2_600))
-        _ = wallet.buy(ShopCatalog.item(withID: "sunglasses")!)
+        give("sunglasses", to: &wallet, price: 150)
         wallet.equip(ShopCatalog.item(withID: "sunglasses")!)
         let decoded = try JSONDecoder().decode(WalletState.self, from: JSONEncoder().encode(wallet))
         XCTAssertEqual(decoded, wallet)
@@ -192,8 +208,9 @@ final class WalletTests: XCTestCase {
     func testSpendingOnTwoPhonesIsNeverRefunded() {
         var phoneA = wallet(coins: 300)
         var phoneB = phoneA
-        XCTAssertEqual(phoneA.buy(ShopCatalog.item(withID: "straw-hat")!), .purchased(ShopCatalog.item(withID: "straw-hat")!))
-        XCTAssertTrue(phoneB.buy(itemID: "pet-straw-hat", price: 120))
+        give("straw-hat", to: &phoneA, price: 150)
+        give("pet-straw-hat", to: &phoneB, price: 120)
+        XCTAssertTrue(phoneA.owns(itemID: "straw-hat") && phoneB.owns(itemID: "pet-straw-hat"))
         let merged = phoneA.merged(with: phoneB)
         XCTAssertEqual(merged.spentCoins, phoneA.spentCoins + phoneB.spentCoins, "both purchases are paid for")
         XCTAssertEqual(merged.coins, 300 - phoneA.spentCoins - 120)

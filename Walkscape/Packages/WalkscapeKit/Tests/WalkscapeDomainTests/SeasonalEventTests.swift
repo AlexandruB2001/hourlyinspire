@@ -62,8 +62,8 @@ final class SeasonalEventTests: XCTestCase {
 
     func testEventCosmeticsAreEarnedDuringTheEventAndSoldAfter() {
         let hat = CompanionAccessoryCatalog.accessory(withID: "pet-pumpkin-hat")!
-        XCTAssertFalse(hat.isForSale(on: LocalDay(year: 2026, month: 10, day: 30)))
-        XCTAssertTrue(hat.isForSale(on: LocalDay(year: 2026, month: 12, day: 1)))
+        XCTAssertFalse(hat.isInMysteryBox(on: LocalDay(year: 2026, month: 10, day: 30)))
+        XCTAssertTrue(hat.isInMysteryBox(on: LocalDay(year: 2026, month: 12, day: 1)))
         for event in SeasonalEventCatalog.all {
             for item in event.tiers.flatMap(\.itemIDs) {
                 XCTAssertEqual(CompanionAccessoryCatalog.accessory(withID: item)?.eventID, event.id, item)

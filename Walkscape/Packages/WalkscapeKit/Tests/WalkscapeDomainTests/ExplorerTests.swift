@@ -106,7 +106,9 @@ final class ExplorerTests: XCTestCase {
         var phoneA = WalletState(rules: CoinRules(starterCoins: 50))
         var ledgerA = RewardLedger()
         ledgerA.claim(Reward(id: "a", coins: 100, xp: 10), into: &phoneA)     // earned 150 total
-        _ = phoneA.buy(ShopCatalog.item(withID: "straw-hat")!)                  // spent 100 → 50 left
+        var generator = SeededGenerator(state: 5)
+        _ = phoneA.openMysteryBox(from: [.outfit(ShopCatalog.item(withID: "straw-hat")!)], price: 100,
+                                  using: &generator)                             // spent 100 → 50 left
 
         var phoneB = WalletState(rules: CoinRules(starterCoins: 50))
         var ledgerB = RewardLedger()

@@ -75,12 +75,14 @@ final class CompanionLifeTests: XCTestCase {
         XCTAssertEqual(again, companion)
     }
 
-    func testBuyingByIDSpendsCoinsOnce() {
+    func testTheMysteryBoxCanGiveAccessories() {
         var wallet = WalletState(rules: CoinRules(starterCoins: 150))
-        XCTAssertTrue(wallet.buy(itemID: "pet-straw-hat", price: 120))
-        XCTAssertFalse(wallet.buy(itemID: "pet-straw-hat", price: 120))
-        XCTAssertFalse(wallet.buy(itemID: "pet-cape", price: 250), "not enough coins")
-        XCTAssertEqual(wallet.coins, 30)
+        let hat = CompanionAccessoryCatalog.accessory(withID: "pet-straw-hat")!
+        var generator = SeededGenerator(state: 9)
+        XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator),
+                       .won(.accessory(hat, rarity: .common)))
         XCTAssertTrue(wallet.owns(itemID: "pet-straw-hat"))
+        XCTAssertEqual(wallet.coins, 0)
+        XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator), .soldOut)
     }
 }

@@ -8,7 +8,7 @@ public struct CoinRules: Hashable, Sendable {
     public var coinsPerChest: Int
     /// Chests are hidden at random points, this many per kilometre.
     public var chestsPerKilometre: Int
-    /// A new wallet starts with enough for one mystery box.
+    /// Coins a new wallet starts with.
     public var starterCoins: Int
 
     public init(coinsPerKilometre: Int = 10, coinsPerChest: Int = 5, chestsPerKilometre: Int = 2, starterCoins: Int = 50) {
@@ -42,13 +42,11 @@ public struct ReferralChest: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-public enum PurchaseResult: Hashable, Sendable {
-    case purchased(ShopItem)
+public enum MysteryBoxResult: Hashable, Sendable {
+    case won(MysteryBoxPrize)
     case notEnoughCoins(needed: Int)
-    case alreadyOwned
-    /// A mystery box with nothing left to give.
+    /// Nothing left to give.
     case soldOut
-    case unknownItem
 }
 
 /// Coins, owned items and the current outfit. Like `ProgressionState`,
@@ -345,31 +343,14 @@ public struct WalletState: Codable, Hashable, Sendable {
     public func owns(_ item: ShopItem) -> Bool { ownedItemIDs.contains(item.id) }
     public func owns(itemID: String) -> Bool { ownedItemIDs.contains(itemID) }
 
-    /// Buys something that isn't a walker outfit (e.g. a companion accessory).
-    /// Returns false if it's already owned or there aren't enough coins.
-    @discardableResult
-    public mutating func buy(itemID: String, price: Int) -> Bool {
-        guard !ownedItemIDs.contains(itemID), coins >= price else { return false }
-        spent["item-\(itemID)"] = price
-        ownedItemIDs.insert(itemID)
-        return true
-    }
-
-    public mutating func buy(_ item: ShopItem) -> PurchaseResult {
-        guard !owns(item) else { return .alreadyOwned }
-        guard coins >= item.price else { return .notEnoughCoins(needed: item.price - coins) }
-        spent["item-\(item.id)"] = item.price
-        ownedItemIDs.insert(item.id)
-        return .purchased(item)
-    }
-
-    /// Spends `ShopCatalog.mysteryBoxPrice` on a random item you don't own yet.
-    /// A rarity is rolled by `Rarity.mysteryBoxWeight` (among rarities that
-    /// still have unowned items), then an item of that rarity is picked evenly.
-    public mutating func openMysteryBox<G: RandomNumberGenerator>(from catalog: [ShopItem] = ShopCatalog.items,
+    /// Spends `ShopCatalog.mysteryBoxPrice` on a random prize you don't own
+    /// yet: the only way to get outfits and companion accessories. A rarity is
+    /// rolled by `Rarity.mysteryBoxWeight` (among rarities that still have
+    /// unowned prizes), then a prize of that rarity is picked evenly.
+    public mutating func openMysteryBox<G: RandomNumberGenerator>(from prizes: [MysteryBoxPrize],
                                                                   price: Int = ShopCatalog.mysteryBoxPrice,
-                                                                  using generator: inout G) -> PurchaseResult {
-        let unowned = catalog.filter { !owns($0) }
+                                                                  using generator: inout G) -> MysteryBoxResult {
+        let unowned = prizes.filter { !owns(itemID: $0.id) }
         guard !unowned.isEmpty else { return .soldOut }
         guard coins >= price else { return .notEnoughCoins(needed: price - coins) }
 
@@ -383,15 +364,15 @@ public struct WalletState: Codable, Hashable, Sendable {
             }
             roll -= rarity.mysteryBoxWeight
         }
-        let item = unowned.filter { $0.rarity == chosen }.randomElement(using: &generator)!
-        spent["box-\(item.id)"] = price
-        ownedItemIDs.insert(item.id)
-        return .purchased(item)
+        let prize = unowned.filter { $0.rarity == chosen }.randomElement(using: &generator)!
+        spent["box-\(prize.id)"] = price
+        ownedItemIDs.insert(prize.id)
+        return .won(prize)
     }
 
-    public mutating func openMysteryBox() -> PurchaseResult {
+    public mutating func openMysteryBox(on day: LocalDay) -> MysteryBoxResult {
         var generator = SystemRandomNumberGenerator()
-        return openMysteryBox(using: &generator)
+        return openMysteryBox(from: MysteryBox.prizes(on: day), using: &generator)
     }
 
     // MARK: Outfit

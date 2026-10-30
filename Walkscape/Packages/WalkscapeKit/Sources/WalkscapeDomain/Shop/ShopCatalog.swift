@@ -15,21 +15,11 @@ public enum EquipmentSlot: String, Codable, Sendable, Hashable, CaseIterable {
     }
 }
 
-/// Rarer items cost more in the shop and are less likely from a mystery box.
+/// Rarer items are less likely to come out of the Mystery Box.
 public enum Rarity: String, Codable, Sendable, Hashable, CaseIterable, Comparable {
     case common, rare, epic, legendary
 
     public var displayName: String { rawValue.capitalized }
-
-    /// Shop price in coins.
-    public var price: Int {
-        switch self {
-        case .common: return 100
-        case .rare: return 200
-        case .epic: return 350
-        case .legendary: return 600
-        }
-    }
 
     /// Relative chance of a mystery box landing on this rarity (out of 100).
     public var mysteryBoxWeight: Int {
@@ -61,11 +51,11 @@ public struct ShopItem: Identifiable, Hashable, Sendable {
         self.rarity = rarity
     }
 
-    public var price: Int { rarity.price }
 }
 
 public enum ShopCatalog {
-    public static let mysteryBoxPrice = 50
+    /// Outfits and companion accessories only come out of the Mystery Box.
+    public static let mysteryBoxPrice = 150
 
     /// 30 items: 12 common, 9 rare, 6 epic, 3 legendary.
     public static let items: [ShopItem] = [
@@ -109,5 +99,44 @@ public enum ShopCatalog {
     /// Coin-shop items and premium outfit pieces (which are never sold for coins).
     public static func item(withID id: String) -> ShopItem? {
         items.first { $0.id == id } ?? PremiumOutfits.items.first { $0.id == id }
+    }
+}
+
+/// Something the Mystery Box can give: a walker outfit piece or a companion accessory.
+public enum MysteryBoxPrize: Identifiable, Hashable, Sendable {
+    case outfit(ShopItem)
+    case accessory(CompanionAccessory, rarity: Rarity)
+
+    public var id: String {
+        switch self {
+        case .outfit(let item): return item.id
+        case .accessory(let accessory, _): return accessory.id
+        }
+    }
+
+    public var name: String {
+        switch self {
+        case .outfit(let item): return item.name
+        case .accessory(let accessory, _): return accessory.name
+        }
+    }
+
+    public var rarity: Rarity {
+        switch self {
+        case .outfit(let item): return item.rarity
+        case .accessory(_, let rarity): return rarity
+        }
+    }
+}
+
+public enum MysteryBox {
+    /// Everything the box can give on `day`. Festival accessories join once
+    /// their festival is over; level gifts and Plus gifts never do.
+    public static func prizes(on day: LocalDay) -> [MysteryBoxPrize] {
+        ShopCatalog.items.map(MysteryBoxPrize.outfit)
+            + CompanionAccessoryCatalog.all.compactMap { accessory in
+                guard accessory.isInMysteryBox(on: day), let rarity = accessory.rarity else { return nil }
+                return .accessory(accessory, rarity: rarity)
+            }
     }
 }

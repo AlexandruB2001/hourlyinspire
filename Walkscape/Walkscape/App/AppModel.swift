@@ -756,17 +756,17 @@ final class AppModel {
         return coins
     }
 
-    /// Buys `item` and puts it on straight away.
-    func buy(_ item: ShopItem) -> PurchaseResult {
-        let result = wallet.buy(item)
-        if case .purchased = result { wallet.equip(item) }
+    /// Opens a Mystery Box: the only way to get outfits and companion accessories.
+    /// A new accessory goes straight on if that slot is free.
+    func openMysteryBox() -> MysteryBoxResult {
+        let result = wallet.openMysteryBox(on: today)
         store.save(wallet, for: dataSource)
-        return result
-    }
-
-    func openMysteryBox() -> PurchaseResult {
-        let result = wallet.openMysteryBox()
-        store.save(wallet, for: dataSource)
+        if case .won(.accessory(let accessory, _)) = result, var current = companion,
+           !current.wornAccessories.contains(where: { CompanionAccessoryCatalog.accessory(withID: $0)?.slot == accessory.slot }) {
+            current.toggle(accessory)
+            companion = current
+            store.save(current, for: dataSource)
+        }
         return result
     }
 
@@ -981,19 +981,6 @@ final class AppModel {
         store.save(wallet, for: source)
         recordInJournal([JournalEvents.companionFind(find)])
         discovery = DiscoveryNews(find: find)
-    }
-
-    func buyAccessory(_ accessory: CompanionAccessory) -> Bool {
-        guard let price = accessory.price, wallet.buy(itemID: accessory.id, price: price) else { return false }
-        store.save(wallet, for: dataSource)
-        if var current = companion, !current.wornAccessories.contains(where: {
-            CompanionAccessoryCatalog.accessory(withID: $0)?.slot == accessory.slot
-        }) {
-            current.toggle(accessory)
-            companion = current
-            store.save(current, for: dataSource)
-        }
-        return true
     }
 
     func toggleAccessory(_ accessory: CompanionAccessory) {

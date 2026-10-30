@@ -1,12 +1,13 @@
 import SwiftUI
 import WalkscapeDomain
 
-/// Spend coins from walking on outfits for your walker.
+/// Spend coins from walking on Mystery Boxes: the only way to get outfits
+/// for your walker and accessories for your companion.
 struct ShopView: View {
     @Environment(AppModel.self) private var model
     /// Nil shows every slot.
     @State private var slot: EquipmentSlot?
-    @State private var revealed: ShopItem?
+    @State private var revealed: MysteryBoxPrize?
 
     var body: some View {
         NavigationStack {
@@ -31,7 +32,7 @@ struct ShopView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { CoinBadge(coins: model.wallet.coins) }
             }
-            .sheet(item: $revealed) { MysteryRevealSheet(item: $0) }
+            .sheet(item: $revealed) { MysteryRevealSheet(prize: $0) }
         }
     }
 
@@ -47,7 +48,7 @@ private struct WardrobeHeader: View {
 
     var body: some View {
         let rules = CoinRules.standard
-        let owned = model.wallet.ownedItemIDs.count
+        let owned = ShopCatalog.items.filter(model.wallet.owns).count
         HStack(spacing: Theme.Spacing.l) {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
@@ -61,7 +62,7 @@ private struct WardrobeHeader: View {
                 Text("Earn \(rules.coinsPerKilometre) coins every kilometre. Chests on the trail hold \(rules.coinsPerChest) more.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
-                Text("\(owned)/\(ShopCatalog.items.count) items collected")
+                Text("\(owned)/\(ShopCatalog.items.count) outfit pieces collected")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.gold)
             }
@@ -73,11 +74,11 @@ private struct WardrobeHeader: View {
 
 private struct MysteryBoxCard: View {
     @Environment(AppModel.self) private var model
-    let onReveal: (ShopItem) -> Void
+    let onReveal: (MysteryBoxPrize) -> Void
 
     var body: some View {
         let price = ShopCatalog.mysteryBoxPrice
-        let soldOut = model.wallet.ownedItemIDs.count >= ShopCatalog.items.count
+        let soldOut = MysteryBox.prizes(on: model.today).allSatisfy { model.wallet.owns(itemID: $0.id) }
         let odds = Rarity.allCases.map { "\($0.mysteryBoxWeight)% \($0.rawValue)" }.joined(separator: " · ")
         HStack(spacing: Theme.Spacing.m) {
             ItemIcon(spriteID: "mystery-box", pixel: 5)
@@ -85,14 +86,15 @@ private struct MysteryBoxCard: View {
                 Text("Mystery Box")
                     .font(Theme.Typography.headline)
                     .foregroundStyle(Theme.Palette.cream)
-                Text(soldOut ? "You own everything. Amazing!" : "A random item you don't own yet.")
+                Text(soldOut ? "You own everything. Amazing!"
+                     : "The only way to get new looks: a random outfit piece or companion accessory you don't own yet.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
                 Text(odds)
                     .font(Theme.Typography.micro)
                     .foregroundStyle(Theme.Palette.creamDim.opacity(0.8))
                 Button {
-                    if case .purchased(let item) = model.openMysteryBox() { onReveal(item) }
+                    if case .won(let prize) = model.openMysteryBox() { onReveal(prize) }
                 } label: {
                     PriceLabel(text: "Open for", price: price)
                 }
@@ -180,7 +182,7 @@ private struct CompanionAccessoriesCard: View {
                         }
                     }
                 }
-                Text("Some accessories are gifts for reaching Explorer Levels 5, 10 and 15.")
+                Text("Accessories come from the Mystery Box. A few are gifts for Explorer Levels 5, 10 and 15 or festival rewards.")
                     .font(Theme.Typography.micro)
                     .foregroundStyle(Theme.Palette.creamDim)
             }
@@ -209,17 +211,14 @@ private struct CompanionAccessoriesCard: View {
             if owned {
                 Button(wearing ? "Wearing" : "Wear") { model.toggleAccessory(accessory) }
                     .buttonStyle(PixelButtonStyle(kind: wearing ? .secondary : .quiet))
-            } else if !accessory.isForSale(on: model.today), let event = accessory.eventID.flatMap(SeasonalEventCatalog.event(withID:)) {
+            } else if !accessory.isInMysteryBox(on: model.today), let event = accessory.eventID.flatMap(SeasonalEventCatalog.event(withID:)) {
                 Text("\(event.name) reward")
                     .font(Theme.Typography.micro)
                     .foregroundStyle(Theme.Palette.gold)
                     .multilineTextAlignment(.center)
                     .frame(width: 84)
-            } else if let price = accessory.price {
-                Button { _ = model.buyAccessory(accessory) } label: { PriceLabel(price: price) }
-                    .buttonStyle(.pixel)
-                    .disabled(model.wallet.coins < price)
-                    .opacity(model.wallet.coins < price ? 0.5 : 1)
+            } else if let rarity = accessory.rarity {
+                InMysteryBoxLabel(rarity: rarity)
             } else if PlusMonthlyGift.rotation.contains(accessory.id) {
                 Text("Plus gift")
                     .font(Theme.Typography.micro)
@@ -263,7 +262,6 @@ private struct ShopItemCard: View {
     var body: some View {
         let owned = model.wallet.owns(item)
         let wearing = model.wallet.isEquipped(item)
-        let affordable = model.wallet.coins >= item.price
         VStack(spacing: Theme.Spacing.s) {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
@@ -288,50 +286,45 @@ private struct ShopItemCard: View {
                 Button(wearing ? "Wearing" : "Wear") { model.toggleEquipped(item) }
                     .buttonStyle(PixelButtonStyle(kind: wearing ? .secondary : .quiet))
             } else {
-                Button { _ = model.buy(item) } label: { PriceLabel(price: item.price) }
-                    .buttonStyle(.pixel)
-                    .disabled(!affordable)
-                    .opacity(affordable ? 1 : 0.5)
+                InMysteryBoxLabel(rarity: nil)
             }
         }
         .pixelPanel(padding: Theme.Spacing.s)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(item.name), \(item.rarity.displayName). \(item.detail)")
-        .accessibilityValue(owned ? (wearing ? "Wearing" : "Owned") : "\(item.price) coins")
+        .accessibilityValue(owned ? (wearing ? "Wearing" : "Owned") : "Not found yet. Comes from the Mystery Box")
     }
 }
 
 private struct MysteryRevealSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    let item: ShopItem
+    let prize: MysteryBoxPrize
     @State private var shown = false
 
     var body: some View {
         VStack(spacing: Theme.Spacing.l) {
-            Eyebrow("\(item.rarity.displayName) find!", color: item.rarity.color)
+            Eyebrow("\(prize.rarity.displayName) find!", color: prize.rarity.color)
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                PixelImageView(image: PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID,
-                                                                          outfit: [item.id], walking: false),
-                               pixel: 6)
+                PixelImageView(image: image, pixel: 6)
                     .scaleEffect(shown ? 1 : 0.4)
                     .rotationEffect(.degrees(shown ? 0 : -20))
             }
             .frame(width: 150, height: 170)
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(item.rarity.color, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(prize.rarity.color, lineWidth: 3))
             VStack(spacing: Theme.Spacing.xs) {
-                Text(item.name)
+                Text(prize.name)
                     .font(Theme.Typography.title)
                     .foregroundStyle(Theme.Palette.cream)
-                Text(item.detail)
+                Text(detail)
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Palette.creamDim)
                     .multilineTextAlignment(.center)
             }
             HStack(spacing: Theme.Spacing.m) {
-                Button("Wear it") {
-                    if !model.wallet.isEquipped(item) { model.toggleEquipped(item) }
+                Button(wearLabel) {
+                    wear()
                     dismiss()
                 }
                 .buttonStyle(.pixel)
@@ -345,6 +338,54 @@ private struct MysteryRevealSheet: View {
         .presentationDetents([.medium])
         .sensoryFeedback(.success, trigger: shown)
         .onAppear { withAnimation(.spring(response: 0.5, dampingFraction: 0.55)) { shown = true } }
+    }
+
+    private var image: CGImage? {
+        switch prize {
+        case .outfit(let item):
+            return PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID, outfit: [item.id], walking: false)
+        case .accessory(let accessory, _):
+            guard let companion = model.companion else { return PixelArtCache.shared.item("mystery-box") }
+            return PixelArtCache.shared.companion(companion.speciesID, kilometres: model.companionGrowth?.kilometres ?? 0,
+                                                  accessories: [accessory.id])
+        }
+    }
+
+    private var detail: String {
+        switch prize {
+        case .outfit(let item): return item.detail
+        case .accessory: return "For your companion. Find it in the Shop under your companion's accessories."
+        }
+    }
+
+    private var wearLabel: String {
+        if case .accessory = prize { return model.companion?.wornAccessories.contains(prize.id) == true ? "Lovely!" : "Put it on" }
+        return "Wear it"
+    }
+
+    private func wear() {
+        switch prize {
+        case .outfit(let item):
+            if !model.wallet.isEquipped(item) { model.toggleEquipped(item) }
+        case .accessory(let accessory, _):
+            if model.companion?.wornAccessories.contains(accessory.id) == false { model.toggleAccessory(accessory) }
+        }
+    }
+}
+
+/// "In the Mystery Box" for things not found yet.
+private struct InMysteryBoxLabel: View {
+    let rarity: Rarity?
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.xs) {
+            ItemIcon(spriteID: "mystery-box", pixel: 1.4)
+            Text("Mystery Box")
+        }
+        .font(Theme.Typography.micro)
+        .foregroundStyle(rarity?.color ?? Theme.Palette.creamDim)
+        .padding(.vertical, Theme.Spacing.xs)
+        .accessibilityLabel("Comes from the Mystery Box")
     }
 }
 

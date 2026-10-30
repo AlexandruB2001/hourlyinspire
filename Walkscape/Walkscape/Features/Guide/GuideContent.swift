@@ -62,16 +62,16 @@ enum GuideContent {
         .init(title: "Other ways to earn",
               body: "Quests, Explorer levels, collection milestones, festivals, team worlds and friends' invites all pay coins. In the Shop you can also watch a short ad for \(ads.rewardedCoins) coins, up to \(ads.rewardedPerDay) times a day."),
         .init(title: "Spending coins",
-              body: "Coins buy outfits for your walker, accessories for your companion and Mystery Boxes in the Shop."),
+              body: "Coins open Mystery Boxes in the Shop (\(ShopCatalog.mysteryBoxPrice) coins each). They're the only way to get outfits for your walker and accessories for your companion."),
     ])
 
     static let shop = GuideSection(id: .shop, title: "Items & Shop", spriteID: "mystery-box", entries: [
-        .init(title: "Outfits",
-              body: "\(ShopCatalog.items.count) outfit pieces (hats, glasses, scarves, shoes and backs) in four rarities: common \(Rarity.common.price), rare \(Rarity.rare.price), epic \(Rarity.epic.price) and legendary \(Rarity.legendary.price) coins. Tap one you own to wear it."),
         .init(title: "Mystery Box",
-              body: "For \(ShopCatalog.mysteryBoxPrice) coins you get a random outfit piece you don't own yet. Odds by rarity: common \(Rarity.common.mysteryBoxWeight)%, rare \(Rarity.rare.mysteryBoxWeight)%, epic \(Rarity.epic.mysteryBoxWeight)%, legendary \(Rarity.legendary.mysteryBoxWeight)%."),
+              body: "For \(ShopCatalog.mysteryBoxPrice) coins you get a random outfit piece or companion accessory you don't own yet: the box never repeats. Odds by rarity: common \(Rarity.common.mysteryBoxWeight)%, rare \(Rarity.rare.mysteryBoxWeight)%, epic \(Rarity.epic.mysteryBoxWeight)%, legendary \(Rarity.legendary.mysteryBoxWeight)%."),
+        .init(title: "Outfits",
+              body: "\(ShopCatalog.items.count) outfit pieces (hats, glasses, scarves, shoes and backs) in four rarities, all found in the Mystery Box. The Shop shows every piece; tap one you own to wear it."),
         .init(title: "Companion accessories",
-              body: "Hats, scarves, bells, backpacks and capes for your companion. Some are sold for coins, some are gifts for reaching Explorer levels, and festival ones are earned during the festival."),
+              body: "Hats, scarves, backpacks and capes for your companion, also from the Mystery Box. A few are gifts for reaching Explorer levels 5, 10 and 15, and festival ones are earned during their festival, then join the box afterwards."),
         .init(title: "Cosmetic only",
               body: "Everything in the Shop changes how things look. Nothing you buy moves you further, earns extra distance or changes your rewards: progress only ever comes from walking."),
     ])
@@ -85,7 +85,7 @@ enum GuideContent {
         .init(title: "Personality",
               body: "Each species has its own habits: some days your companion finds something on the walk, like a stone, coins or a creature, and it chats about zones and milestones."),
         .init(title: "Accessories",
-              body: "Dress your companion from the Shop. Accessories show on every growth stage."),
+              body: "Accessories come from the Mystery Box in the Shop, Explorer level gifts and festivals. They show on every growth stage."),
     ])
 
     static let friends = GuideSection(id: .friends, title: "Friends", spriteID: "compass", entries: [

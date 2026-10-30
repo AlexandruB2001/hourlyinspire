@@ -44,7 +44,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 ## Milestone 5: Game progression
 - ✅ 20 zones: ten more down the far side of the Summit to Lighthouse Point, with new scenes, discoveries and achievements
 - ✅ Coins: 10 per kilometre each day, plus 2 hidden chests per kilometre (5 coins each, tap to open on the Journey screen)
-- ✅ Shop: 30 outfit items (hats, glasses, scarves, shoes, backs) in 4 rarities, 50-coin mystery box, wear/unwear
+- ✅ Shop: 30 outfit items (hats, glasses, scarves, shoes, backs) in 4 rarities and companion accessories, all only from the 150-coin Mystery Box (no direct purchases since 2026-10-30); wear/unwear
 - ✅ World tab: browse earlier days (Apple Health totals, read-only, never re-rewarded)
 - ✅ Journey journal: permanent, de-duplicated log of zones, relics, distance milestones, companion growth, team and referral events
 - ✅ Starter companions (Mossling, Emberfox, Moonmoth) that grow with real walking: a detail per km, new shapes at 5/20/50/100 km
