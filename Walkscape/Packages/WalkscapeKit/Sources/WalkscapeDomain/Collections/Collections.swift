@@ -397,6 +397,12 @@ public struct CollectionProgress: Hashable, Sendable {
     public let found: Int
     public let total: Int
 
+    public init(category: CollectionCategory, found: Int, total: Int) {
+        self.category = category
+        self.found = max(0, found)
+        self.total = max(0, total)
+    }
+
     public var fraction: Double { total == 0 ? 0 : Double(found) / Double(total) }
     public var percent: Int { Int((fraction * 100).rounded(.down)) }
 

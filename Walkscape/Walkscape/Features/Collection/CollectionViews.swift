@@ -327,6 +327,35 @@ struct CollectionView: View {
     }
 }
 
+/// Completion of the selected book.
+private struct BookHeader: View {
+    let book: CollectionProgress
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(book.category.displayName)
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Palette.cream)
+                Spacer()
+                Text("\(book.found)/\(book.total) · \(book.percent)%")
+                    .font(Theme.Typography.caption.monospacedDigit())
+                    .foregroundStyle(Theme.Palette.gold)
+            }
+            PixelProgressBar(fraction: book.fraction, segments: 16, fill: Theme.Palette.leaf)
+            HStack(spacing: Theme.Spacing.s) {
+                ForEach(CollectionProgress.milestones, id: \.self) { milestone in
+                    Label("\(milestone)%", systemImage: book.percent >= milestone ? "checkmark.seal.fill" : "seal")
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(book.percent >= milestone ? Theme.Palette.gold : Theme.Palette.creamDim)
+                }
+            }
+        }
+        .pixelPanel()
+        .accessibilityElement(children: .combine)
+    }
+}
+
 struct CollectionEntry: Identifiable, Hashable {
     let id: String
     let name: String
