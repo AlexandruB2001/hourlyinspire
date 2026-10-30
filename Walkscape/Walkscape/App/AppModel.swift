@@ -3,6 +3,7 @@ import Observation
 import UIKit
 import WalkscapeBackend
 import WalkscapeDomain
+import WidgetKit
 
 /// App-wide state. Views read from it; all data flows in through `refresh*`.
 /// Game logic lives in WalkscapeDomain — this type only coordinates.
@@ -275,6 +276,34 @@ final class AppModel {
     /// Call when the app goes to the background.
     func didEnterBackground() {
         if !isWatchingAd && !ads.isShowingAd { backgroundedAt = Date() }
+        updateWidget()
+    }
+
+    // MARK: Widget
+
+    private var lastWidgetSnapshot: WidgetSnapshot?
+
+    /// Shares today's walk, the walker and the companion with the home-screen
+    /// widget, and asks it to redraw when something it shows has changed.
+    /// Demo data never reaches the widget.
+    func updateWidget() {
+        guard dataSource == .appleHealth, let defaults = UserDefaults(suiteName: WidgetSnapshot.appGroup) else { return }
+        let zone = zoneProgress
+        let snapshot = WidgetSnapshot(
+            avatarID: settings.avatarID, outfit: outfit, companionSpeciesID: companion?.speciesID,
+            companionKilometres: companionGrowth?.kilometres ?? 0, companionAccessories: companion?.wornAccessories ?? [],
+            companionSkinID: companionSkin?.id, day: today, todayMeters: distanceMeters, todaySteps: sync.progress?.steps,
+            totalMeters: progression.lifetimeMeters, zoneName: zone.currentZone.name, biome: zone.currentZone.biome,
+            nextZoneName: zone.nextZone.name, metersToNextZone: zone.metersToNextZone, updatedAt: now)
+        if let last = lastWidgetSnapshot {
+            var unchanged = snapshot
+            unchanged.updatedAt = last.updatedAt
+            guard unchanged != last else { return }
+        }
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        defaults.set(data, forKey: WidgetSnapshot.storageKey)
+        lastWidgetSnapshot = snapshot
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func tick() async {
@@ -340,6 +369,7 @@ final class AppModel {
             processCompanionFind(on: progress.localDate, meters: progress.distanceMeters, source: source)
             processSeasonalEvents(source: source)
             processLevelUps(source: source)
+            updateWidget()
             announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
                      + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
             if let newCelebration = event.celebration {

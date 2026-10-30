@@ -46,6 +46,8 @@
 			<key>NSPrivacyAccessedAPITypeReasons</key>
 			<array>
 				<string>CA92.1</string>
+				<!-- The home-screen widget's snapshot, in the shared app group. -->
+				<string>1C8F.1</string>
 			</array>
 		</dict>
 	</array>

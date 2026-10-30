@@ -43,6 +43,7 @@ targets:
       - package: GoogleMobileAds
       - package: GoogleUserMessagingPlatform
       - sdk: HealthKit.framework
+      - target: WalkscapeWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.alexandrub.walkscape
@@ -53,6 +54,27 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_PREVIEWS: YES
+  WalkscapeWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: WalkscapeWidgets
+    dependencies:
+      - package: WalkscapeKit
+        product: WalkscapeDomain
+      - package: WalkscapeKit
+        product: PixelArt
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexandrub.walkscape.widgets
+        INFOPLIST_FILE: WalkscapeWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WalkscapeWidgets/WalkscapeWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
 schemes:
   Walkscape:
     build:
