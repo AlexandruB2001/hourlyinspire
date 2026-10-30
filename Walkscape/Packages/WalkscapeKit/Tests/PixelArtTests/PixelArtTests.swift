@@ -179,4 +179,15 @@ final class PixelArtTests: XCTestCase {
             }
         }
     }
+
+    func testCampsiteGrowsWithItsLevelAndShowsDecorations() {
+        let levels = (1...5).map { CampfireRenderer.render(level: $0, decorations: []) }
+        XCTAssertEqual(Set(levels).count, 5, "every level looks different")
+        XCTAssertNotEqual(CampfireRenderer.render(level: 1, decorations: [], frame: 0),
+                          CampfireRenderer.render(level: 1, decorations: [], frame: 1), "the fire flickers")
+        for decoration in CampfireCatalog.decorations {
+            XCTAssertNotEqual(CampfireRenderer.render(level: 5, decorations: [decoration.id]), levels[4], decoration.id)
+        }
+        XCTAssertEqual(levels[0].width, CampfireRenderer.width)
+    }
 }

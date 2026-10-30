@@ -68,6 +68,10 @@ final class AppModel {
     var discovery: DiscoveryNews?
     /// Friends' recent milestones, newest first.
     private(set) var milestoneFeed: [FriendMilestone] = []
+    /// The team's shared campsite, when in a team.
+    private(set) var campsite: Campsite?
+    /// Everyone who has walked for the team, most first.
+    private(set) var teamContributions: [TeamContribution] = []
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -597,6 +601,7 @@ final class AppModel {
             teamInvites = newInvites
             teamError = nil
             announce(newInvites.map(GameNotifications.teamInvite))
+            await refreshCampsite(newTeam)
             if let newTeam { recordTeamMilestones(newTeam) }
         } catch TeamRepositoryError.notSignedIn {
             handleSessionExpired()
@@ -722,6 +727,41 @@ final class AppModel {
         store.save(wallet, for: dataSource)
         processLevelUps(source: dataSource)
         return true
+    }
+
+    // MARK: Campfire
+
+    private func refreshCampsite(_ dashboard: TeamDashboard?) async {
+        guard let backend, let dashboard else {
+            campsite = nil
+            teamContributions = []
+            return
+        }
+        let placed = (try? await backend.teams.campsiteDecorations()) ?? campsite?.decorations ?? []
+        if let contributions = try? await backend.teams.contributions() { teamContributions = contributions }
+        let site = Campsite(teamMeters: dashboard.team.totalMeters, expeditions: dashboard.expeditions.completed.count,
+                            placed: placed)
+        campsite = site
+        // Level rewards are per player, so moving teams can't collect them twice.
+        guard dataSource == .appleHealth else { return }
+        for level in CampfireCatalog.levels where level.level > 1 && level.level <= site.level.level {
+            if claim(level.reward) {
+                recordInJournal([JournalEvents.campfire(level, teamName: dashboard.team.name, on: today)])
+            }
+        }
+    }
+
+    func setCampsiteDecorations(_ decorations: [String]) async -> String? {
+        guard let backend, let site = campsite, let team else { return "Join a team first." }
+        let valid = CampfireCatalog.valid(decorations, at: site.level)
+        do {
+            try await backend.teams.setCampsiteDecorations(valid)
+            campsite = Campsite(teamMeters: site.teamMeters, expeditions: site.expeditions, placed: valid)
+            _ = team
+            return nil
+        } catch {
+            return "Couldn't update the campsite. Check your connection."
+        }
     }
 
     // MARK: Social

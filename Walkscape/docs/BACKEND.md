@@ -244,3 +244,15 @@ walking totals it can't be verified by the server.
   `friend_milestone_feed(since)`, `react_to_milestone` (friends only, one per
   friend per milestone), `my_milestone_reactions(since)`.
 - `walked_together()`: both friends' shared distance since becoming friends.
+
+## Team ledger and Campfire (migration 20261103000001, not live yet)
+
+- `team_contributions` (user, day → team, metres ≤ 25 km), primary key
+  (user, day): a day counts for one team only. `sync_team_contributions()`
+  credits the caller's team from members' shared daily totals since they
+  joined; the app calls it before loading the team. `my_team()` now returns
+  the ledger total, so leaving never lowers it.
+- `team_contribution_totals()` lists everyone who has walked for the team.
+- `team_campsites`: up to 8 decoration ids per team (`my_campsite`,
+  `set_campsite_decorations`). The Campfire level is derived in the app
+  from the ledger total and finished expeditions (`Campfire.swift`).

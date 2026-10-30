@@ -91,6 +91,12 @@ final class PixelArtCache {
         return companion(speciesID, kilometres: km)
     }
 
+    func campsite(level: Int, decorations: [String], frame: Int) -> CGImage? {
+        image("campsite_\(level)_\(decorations.joined(separator: "+"))_\(frame % 3)") {
+            CampfireRenderer.render(level: level, decorations: decorations, frame: frame)
+        }
+    }
+
     func portrait(avatarID: String) -> CGImage? {
         image("portrait_\(avatarID)") { CharacterSprites.portrait(avatarID: avatarID) }
     }

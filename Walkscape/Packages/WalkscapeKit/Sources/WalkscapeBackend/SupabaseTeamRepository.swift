@@ -64,6 +64,9 @@ public struct SupabaseTeamRepository: TeamRepository {
     }
 
     public func dashboard(for day: LocalDay, now: Date) async throws -> TeamDashboard? {
+        // Credit the team ledger first so the total includes today's walking.
+        // Ignored if the server doesn't have the ledger yet.
+        try? await api.call("sync_team_contributions")
         let teams: [TeamRow] = try await run { try await api.call("my_team") }
         guard let row = teams.first else { return nil }
         let weekStart = TeamWeek.start(of: day)
@@ -125,6 +128,32 @@ public struct SupabaseTeamRepository: TeamRepository {
     public func respond(to invite: TeamInvite, accept: Bool) async throws {
         struct Params: Encodable { let p_invite_id: String; let p_accept: Bool }
         try await run { try await api.call("respond_to_team_invite", Params(p_invite_id: invite.id, p_accept: accept)) }
+    }
+
+    /// Everyone who has walked for the team (including past members), most first.
+    public func contributions() async throws -> [TeamContribution] {
+        struct Row: Decodable {
+            let user_id: String
+            let username: String
+            let avatar_id: String
+            let meters: Int
+            let is_member: Bool
+        }
+        let rows: [Row] = try await run { try await api.call("team_contribution_totals") }
+        return rows.map {
+            TeamContribution(userID: UserID($0.user_id.lowercased()), username: $0.username, avatarID: $0.avatar_id,
+                             meters: $0.meters, isMember: $0.is_member)
+        }
+    }
+
+    /// The decorations placed at the team's campsite.
+    public func campsiteDecorations() async throws -> [String] {
+        try await run { try await api.call("my_campsite") }
+    }
+
+    public func setCampsiteDecorations(_ decorations: [String]) async throws {
+        struct Params: Encodable { let p_decorations: [String] }
+        try await run { try await api.call("set_campsite_decorations", Params(p_decorations: decorations)) }
     }
 
     private func run<T>(_ body: () async throws -> T) async throws -> T {

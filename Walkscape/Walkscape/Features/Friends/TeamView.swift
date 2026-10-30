@@ -159,6 +159,7 @@ private struct TeamDashboardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             header
+            if let site = model.campsite { CampfireCard(campsite: site, teamName: dashboard.team.name) }
             ExpeditionCard(progress: dashboard.expeditions)
             membersCard
             standingsCard

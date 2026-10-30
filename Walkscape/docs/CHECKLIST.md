@@ -66,6 +66,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Companion accessories: 10 hats, scarves, bells, backpacks and capes drawn on any species and stage; 7 in the shop, 3 as Explorer Level gifts (5, 10, 15)
 - ✅ Shared discoveries: friends finding the same event or rare creature on the same day both get a Journal entry and 25 coins (migration 20261102000001)
 - ✅ Friend milestones feed with reactions (🎉 👏 ⭐ 💛), and rewards for 100/250/500 km walked together with a friend
+- ✅ Team ledger: every member's day credited to one team once (capped 25 km), kept when they leave; expeditions and totals never go backwards (migration 20261103000001)
+- ✅ Team Campfire: 5 levels (campfire → tent & lantern → gathering place → camp village → expedition HQ) from team distance + expeditions, 10 shared decorations, contributor list, per-player level rewards
 - ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
