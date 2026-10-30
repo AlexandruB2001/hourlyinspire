@@ -10,8 +10,8 @@ select public.record_discoveries(format('[{"id":"forest-spirit","date":"%s"},{"i
 select public.record_discoveries(format('[{"id":"forest-spirit","date":"%s"}]', current_date)::jsonb);
 select tests.ok(tests.count('select * from public.my_shared_discoveries(current_date - 7)') = 0,
                 'nothing is shared until a friend finds the same thing');
-select tests.fails($$select public.record_discoveries('[{"id":"Bad Id","date":"2026-01-01"}]')$$, '',
-                   'bad ids are rejected');
+select tests.fails(format($$select public.record_discoveries('[{"id":"Bad Id","date":"%s"}]')$$, current_date),
+                   'discoveries_id_format', 'bad ids are rejected');
 reset role;
 select tests.ok((select count(*) from public.discoveries where user_id = tests.id('kim')) = 2,
                 'repeated reports are stored once');
