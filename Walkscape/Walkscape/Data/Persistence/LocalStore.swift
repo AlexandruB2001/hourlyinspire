@@ -32,6 +32,8 @@ struct LocalStore {
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
         static let ads = "walkscape.ads.v1"
+        static let notificationPreferences = "walkscape.notificationPreferences.v1"
+        static let notificationLedger = "walkscape.notificationLedger.v1"
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -94,6 +96,19 @@ struct LocalStore {
     }
 
     func save(_ ads: AdState) { save(ads, Key.ads) }
+
+    /// The old "Daily walk reminder" setting carries over the first time.
+    func loadNotificationPreferences(legacyReminder: Bool) -> NotificationPreferences {
+        load(NotificationPreferences.self, Key.notificationPreferences) ?? NotificationPreferences(dailyReminder: legacyReminder)
+    }
+
+    func save(_ preferences: NotificationPreferences) { save(preferences, Key.notificationPreferences) }
+
+    func loadNotificationLedger() -> NotificationLedger {
+        load(NotificationLedger.self, Key.notificationLedger) ?? NotificationLedger()
+    }
+
+    func save(_ ledger: NotificationLedger) { save(ledger, Key.notificationLedger) }
 
     /// The last successful daily totals, shown (with their age) while offline.
     func loadLastProgress(_ source: WalkingDataSourceKind) -> DailyProgress? {

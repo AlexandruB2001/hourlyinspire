@@ -159,6 +159,24 @@ final class BackendTests: XCTestCase {
         XCTAssertFalse(isSignedIn)
     }
 
+    // MARK: Push
+
+    func testPushTokenIsRegisteredAsHex() async throws {
+        XCTAssertEqual(PushRegistry.hex(Data([0x0a, 0xff, 0x10])), "0aff10")
+        let transport = MockTransport()
+        transport.enqueue(204, "")
+        transport.enqueue(204, "")
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let registry = PushRegistry(api: api)
+        try await registry.register(token: "abcd", environment: .production, social: false)
+        XCTAssertEqual(transport.path(0), "/rest/v1/rpc/register_push_token")
+        XCTAssertEqual(transport.body(0)["p_token"] as? String, "abcd")
+        XCTAssertEqual(transport.body(0)["p_environment"] as? String, "production")
+        XCTAssertEqual(transport.body(0)["p_social"] as? Bool, false)
+        try await registry.unregister(token: "abcd")
+        XCTAssertEqual(transport.path(1), "/rest/v1/rpc/unregister_push_token")
+    }
+
     // MARK: Friends
 
     func testFriendSummariesMapping() async throws {

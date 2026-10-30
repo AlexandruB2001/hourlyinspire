@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import UIKit
 import WalkscapeBackend
 import WalkscapeDomain
 
@@ -28,6 +29,8 @@ final class AppModel {
     private let sampleFriends: FriendRepository
     private let store: LocalStore
     let ads = AdService()
+    let notifications = NotificationService.shared
+    @ObservationIgnored private var notificationLedger: NotificationLedger
     @ObservationIgnored private var adsStarted = false
     @ObservationIgnored private var backgroundedAt: Date?
     @ObservationIgnored private var tickerTask: Task<Void, Never>?
@@ -45,6 +48,14 @@ final class AppModel {
     private(set) var wallet: WalletState
     /// Permanent log of milestones.
     private(set) var journal: JourneyJournal
+    /// Which notifications the player wants.
+    var notificationPreferences: NotificationPreferences {
+        didSet {
+            store.save(notificationPreferences)
+            scheduleDailyReminder()
+            if oldValue.social != notificationPreferences.social { Task { await registerPushToken() } }
+        }
+    }
     /// Ad frequency limits for this device.
     private(set) var adState: AdState
     private(set) var isWatchingAd = false
@@ -97,6 +108,8 @@ final class AppModel {
         wallet = store.loadWallet(source)
         journal = store.loadJournal(source)
         adState = store.loadAdState()
+        notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
+        notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
                                    today: LocalDay(date: Date(), timeZone: .current))
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
@@ -188,11 +201,19 @@ final class AppModel {
             startHealthObservationIfPossible()
         }
         startAdsIfReady()
+        notifications.onOpen = { [weak self] destination in self?.open(destination) }
+        notifications.onDeviceToken = { [weak self] _ in Task { await self?.registerPushToken() } }
+        if let destination = notifications.takePendingDestination() { open(destination) }
+        Task {
+            await notifications.refreshAuthorization()
+            scheduleDailyReminder()
+        }
     }
 
     /// Call when the app becomes active.
     func didBecomeActive() {
         Task { await refreshAll() }
+        Task { await notifications.refreshAuthorization() }
         if let backgroundedAt {
             self.backgroundedAt = nil
             showAppOpenAdIfAllowed(timeAway: Date().timeIntervalSince(backgroundedAt))
@@ -252,6 +273,9 @@ final class AppModel {
             store.save(progression, for: source)
             let coins = wallet.apply(progress)
             store.save(wallet, for: source)
+            if let chests = GameNotifications.chests(coins.newChests, on: progress.localDate, total: wallet.chestsFoundToday) {
+                announce([chests])
+            }
             updateJournal(source: source)
             if let newCelebration = event.celebration {
                 celebrationCoins = coins.coinsEarned
@@ -348,11 +372,19 @@ final class AppModel {
                 store.save(current, for: source)
             }
         }
-        if !journal.record(entries).isEmpty { store.save(journal, for: source) }
+        let added = journal.record(entries)
+        if !added.isEmpty {
+            store.save(journal, for: source)
+            announce(GameNotifications.journal(added, on: today))
+        }
     }
 
     private func recordInJournal(_ entries: [JournalEntry]) {
-        if !journal.record(entries).isEmpty { store.save(journal, for: dataSource) }
+        let added = journal.record(entries)
+        if !added.isEmpty {
+            store.save(journal, for: dataSource)
+            announce(GameNotifications.journal(added, on: today))
+        }
     }
 
     // MARK: Day history
@@ -427,10 +459,12 @@ final class AppModel {
             let (newStatus, chests) = try await (status, ready)
             referral = newStatus
             var alreadyOpened: [ReferralChest] = []
+            var added: [ReferralChest] = []
             updateHealthWallet { wallet in
-                wallet.receiveReferralChests(chests)
+                added = wallet.receiveReferralChests(chests)
                 alreadyOpened = chests.filter { wallet.openedReferralChestIDs.contains($0.id) }
             }
+            announce(added.map(GameNotifications.referralChest))
             // A chest opened while offline: tell the server now.
             for chest in alreadyOpened { try? await backend.referrals.markOpened(chest) }
             referralError = nil
@@ -511,6 +545,7 @@ final class AppModel {
             team = newTeam
             teamInvites = newInvites
             teamError = nil
+            announce(newInvites.map(GameNotifications.teamInvite))
             if let newTeam { recordTeamMilestones(newTeam) }
         } catch TeamRepositoryError.notSignedIn {
             handleSessionExpired()
@@ -595,6 +630,54 @@ final class AppModel {
         store.save(wallet, for: dataSource)
     }
 
+    // MARK: Notifications
+
+    /// Records events as announced and, while the app is in the background,
+    /// shows the ones the player wants. Events seen in the app (it's open)
+    /// are only recorded, so they are never announced later either.
+    private func announce(_ events: [GameNotification]) {
+        let fresh = notificationLedger.unannounced(events)
+        guard !fresh.isEmpty else { return }
+        store.save(notificationLedger)
+        guard UIApplication.shared.applicationState != .active else { return }
+        notifications.post(fresh.filter { event in
+            guard notificationPreferences.allows(event.category) else { return false }
+            // With a push token on the server, social news arrives as a push instead.
+            return event.category != .social || notifications.deviceToken == nil || !isSignedIn
+        })
+    }
+
+    /// Asks iOS for permission. Returns whether notifications are now allowed.
+    func enableNotifications() async -> Bool {
+        let allowed = await notifications.requestPermission()
+        scheduleDailyReminder()
+        return allowed
+    }
+
+    private func scheduleDailyReminder() {
+        let species = companion.flatMap { CompanionCatalog.species(withID: $0.speciesID) }
+        notifications.scheduleDailyReminder(
+            notificationPreferences.dailyReminder ? GameNotifications.dailyReminder(companionName: species?.name) : nil,
+            hour: notificationPreferences.reminderHour)
+    }
+
+    /// Sends this device's push token to the server, so friend requests and
+    /// team invites can be pushed with the app closed.
+    private func registerPushToken() async {
+        guard let backend, isSignedIn, let token = notifications.deviceToken else { return }
+        try? await backend.push.register(token: token, environment: NotificationService.pushEnvironment,
+                                         social: notificationPreferences.social)
+    }
+
+    private func open(_ destination: GameNotification.Destination) {
+        switch destination {
+        case .journey: selectedTab = .journey
+        case .friends: selectedTab = .friends
+        case .shop: selectedTab = .shop
+        case .profile: selectedTab = .profile
+        }
+    }
+
     // MARK: Ads
 
     var rewardedAdsLeft: Int { adState.rewardedAdsLeft(on: today) }
@@ -652,6 +735,7 @@ final class AppModel {
             async let requests = friendRepository.friendRequests()
             (friends, friendRequests) = try await (summaries, requests)
             friendsError = nil
+            announce(friendRequests.incoming.map(GameNotifications.friendRequest))
             trackFocus.reconcile(with: trackParticipants)
         } catch FriendRepositoryError.notSignedIn {
             handleSessionExpired()
@@ -764,6 +848,7 @@ final class AppModel {
         account = .signedIn(profile)
         settings.username = profile.username
         settings.shareProgressWithFriends = profile.shareProgress
+        Task { await registerPushToken() }
     }
 
     /// Changes the username. Returns an error message, or nil on success.
@@ -826,6 +911,7 @@ final class AppModel {
 
     func signOut() async {
         guard let backend else { return }
+        if let token = notifications.deviceToken { try? await backend.push.unregister(token: token) }
         await backend.signOut()
         account = .signedOut
         trackFocus.backToMe()

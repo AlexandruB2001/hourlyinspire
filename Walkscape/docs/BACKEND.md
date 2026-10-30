@@ -167,3 +167,40 @@ Applied to the live project on 2026-10-28 through the SQL Editor, together
 with `20261027000001_far_side_zones.sql`, and verified (20 zones, 12
 achievements, a referral code on every profile, 20 RLS policies). Before using
 `supabase db push`, also mark these two as applied with `supabase migration repair`.
+
+## Push notifications (migration 20261030000001, not live yet)
+
+Game events (chests, zones, relics, achievements, companion growth, referral
+chests, the daily reminder) are **local** notifications: the app posts them
+itself after a background HealthKit refresh, so they need no server.
+
+Friend requests and team invites are **pushed** by the server so they arrive
+with the app closed:
+
+1. The app registers its APNs token with `register_push_token(token,
+   environment, social)` after the player allows notifications and is signed
+   in. `unregister_push_token` runs on sign-out. Tokens are never readable by
+   clients; deleting an account deletes its tokens.
+2. Two Database Webhooks (INSERT on `friendships` and on `team_invites`) call
+   the `send-push` Edge Function (`supabase/functions/send-push/index.ts`).
+3. The function looks up the recipient's tokens (only those with `social`
+   on) and sends an alert through APNs, deleting tokens Apple reports as gone.
+
+If the app also sees the request during a background refresh, it does not
+post a second, local copy while a push token is registered.
+
+To switch it on:
+
+1. Apple Developer → Keys → **+** → enable *Apple Push Notifications service
+   (APNs)* → download the `.p8` (only once).
+2. Run `20261030000001_push_notifications.sql` in the SQL Editor.
+3. Edge Functions → *Deploy a new function* → name `send-push`, paste
+   `index.ts`, turn **off** "Verify JWT" (webhooks authenticate with the secret).
+4. Edge Functions → Secrets: `WEBHOOK_SECRET` (random), `APNS_KEY_ID`,
+   `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (the .p8 contents), `APNS_TOPIC`
+   (`com.alexandrub.walkscape`).
+5. Database → Webhooks → two webhooks (INSERT on `public.friendships` and on
+   `public.team_invites`) → *Supabase Edge Functions* → `send-push`, with the
+   HTTP header `x-webhook-secret: <WEBHOOK_SECRET>`.
+6. The app's entitlements already ask for push (`aps-environment`); automatic
+   signing adds the capability to the App ID on the next TestFlight build.

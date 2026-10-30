@@ -4,6 +4,7 @@ import WalkscapeDomain
 /// Compact shared track plus the top of today's leaderboard, on the Journey screen.
 struct FriendsPreviewCard: View {
     @Environment(AppModel.self) private var model
+    @State private var selected: TrackParticipant?
 
     var body: some View {
         let entries = Leaderboard.rank(model.trackParticipants)
@@ -21,11 +22,22 @@ struct FriendsPreviewCard: View {
                 FriendTrackView(style: .compact)
                 VStack(spacing: Theme.Spacing.xs) {
                     ForEach(entries.prefix(3)) { entry in
-                        LeaderboardRow(entry: entry, compact: true)
+                        Button { selected = entry.participant } label: {
+                            HStack(spacing: Theme.Spacing.s) {
+                                LeaderboardRow(entry: entry, compact: true)
+                                Image(systemName: "chevron.right")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(Theme.Palette.creamDim)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Shows their day so far")
                     }
                 }
             }
         }
         .pixelPanel()
+        .sheet(item: $selected) { FriendDayCard(participant: $0) }
     }
 }

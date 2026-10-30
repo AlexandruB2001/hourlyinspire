@@ -224,10 +224,7 @@ private struct SettingsSection: View {
         @Bindable var model = model
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             SectionHeader(title: "Notifications & privacy")
-            Toggle("Daily walk reminder", isOn: $model.settings.dailyReminderEnabled)
-            Text("Reminders are saved now and will be delivered once notifications are added.")
-                .font(Theme.Typography.caption)
-                .foregroundStyle(Theme.Palette.creamDim)
+            NotificationSettings()
             Toggle("Share daily totals with friends",
                    isOn: Binding(get: { model.settings.shareProgressWithFriends }, set: { model.setShareProgress($0) }))
             Text("Only today's step count and distance are shared, never raw Health data or location.")
@@ -245,6 +242,59 @@ private struct SettingsSection: View {
         .font(Theme.Typography.body)
         .foregroundStyle(Theme.Palette.cream)
         .pixelPanel()
+    }
+}
+
+/// Turn notifications on, then choose which kinds to get.
+private struct NotificationSettings: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        @Bindable var model = model
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            switch model.notifications.authorization {
+            case .notDetermined:
+                Text("Get a nudge when you find a chest, reach a new zone, your companion grows, or a friend invites you to a team.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                Button("Turn on notifications") { Task { _ = await model.enableNotifications() } }
+                    .buttonStyle(.pixelSecondary)
+            case .denied:
+                Text("Notifications are turned off for Walkscape in iOS Settings.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                Button("Open Settings") {
+                    if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
+                }
+                .buttonStyle(.pixelQuiet)
+            default:
+                Toggle("Chests & rewards", isOn: $model.notificationPreferences.rewards)
+                Text("Chests, new zones, relics, achievements, companion growth and referral chests.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                Toggle("Friends & teams", isOn: $model.notificationPreferences.social)
+                Text("Friend requests and team invites, even when the app is closed.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                Toggle("Daily walk reminder", isOn: $model.notificationPreferences.dailyReminder)
+                if model.notificationPreferences.dailyReminder {
+                    Picker("Remind me at", selection: $model.notificationPreferences.reminderHour) {
+                        ForEach(7...21, id: \.self) { hour in
+                            Text(Self.hourLabel(hour)).tag(hour)
+                        }
+                    }
+                    .tint(Theme.Palette.gold)
+                }
+            }
+        }
+    }
+
+    private static func hourLabel(_ hour: Int) -> String {
+        var components = DateComponents()
+        components.hour = hour
+        let date = Calendar.current.date(from: components) ?? Date()
+        return date.formatted(date: .omitted, time: .shortened)
     }
 }
 

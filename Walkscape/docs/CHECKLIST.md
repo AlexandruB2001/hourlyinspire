@@ -51,6 +51,9 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Shareable milestone cards (current progress or any journal entry) via the share sheet / Save Image
 - ✅ Ads (AdMob): app-open ad at most every 4 hours, none in the first 5 days or after a quick glance (<1 min away); rewarded ads for 15 coins, 3 per day; UMP consent + ATT
 - ⬜ Ads: real AdMob ids in `Config/Base.xcconfig`, App Store privacy label, `app-ads.txt` on a developer website, GDPR message in AdMob → Privacy & messaging
+- ✅ Friend day card: tap a walker on the Journey leaderboard for their distance, steps, zone, last update and how far ahead or behind you they are
+- ✅ Local notifications: chests, zones, relics, achievements, companion growth, referral chests, daily reminder (Profile → Notifications)
+- ⬜ Push notifications for friend requests and team invites: code, migration and Edge Function are in the repo; needs an APNs key and the setup in BACKEND.md
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
 - ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)

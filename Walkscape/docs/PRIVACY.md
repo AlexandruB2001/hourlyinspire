@@ -29,6 +29,8 @@
   walking, referral chests and rewarded ads; there are no real-money purchases.
 - Ad limits: first launch date, when the last app-open ad was shown and how
   many rewarded ads were watched today.
+- Notification choices, and which events were already announced (so none
+  repeats).
 
 ## Ads
 
@@ -49,6 +51,17 @@ With AdMob, the label needs: Identifiers → Device ID, Usage Data → Advertisi
 Data and Product Interaction, Location → Coarse Location, and Diagnostics,
 marked as used for Third-Party Advertising and, for Device ID, Tracking.
 See Google's "Prepare for Apple's App Store data disclosure requirements".
+
+## Notifications
+
+- Off until you turn them on in Profile, and only after iOS asks you.
+- Chests, zones, relics, achievements, companion growth, referral chests and
+  the daily reminder are created on your phone; nothing is sent anywhere.
+- Friend requests and team invites are pushed by the Walkscape server. For
+  that, your phone's push token is stored with your account. It is never
+  visible to other players, is removed when you sign out, and is deleted with
+  your account. A push contains only a username and team name.
+- Each kind can be switched off separately in Profile.
 
 ## Server (when signed in)
 
