@@ -14,6 +14,12 @@ struct DiscoveryNews: Equatable {
         spriteID = best.spriteID
     }
 
+    init(event: WorldEvent, zoneName: String) {
+        title = "World event!"
+        subtitle = "\(event.name) in \(zoneName)"
+        spriteID = event.spriteID
+    }
+
     init(treasure: Treasure) {
         title = "Treasure found!"
         subtitle = "\(treasure.name) · \(treasure.rarity.displayName)"

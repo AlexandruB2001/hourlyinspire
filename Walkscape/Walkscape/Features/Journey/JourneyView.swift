@@ -13,6 +13,7 @@ struct JourneyView: View {
                     VStack(spacing: Theme.Spacing.l) {
                         DistanceCard()
                         QuestsCard()
+                        WorldEventsCard()
                         HealthStatusCard()
                         CompanionCard()
                         TrailStrip()
@@ -45,7 +46,8 @@ private struct JourneyHero: View {
                        companionImage: model.companion.flatMap {
                            PixelArtCache.shared.companion($0.speciesID, kilometres: model.companionGrowth?.kilometres ?? 0)
                        },
-                       walking: model.distanceMeters > 0)
+                       walking: model.distanceMeters > 0, season: model.season,
+                       eventSpriteID: model.todaysEvents.first { $0.zoneID == zone.id && !model.hasFound($0) }?.event.spriteID)
             .id(zone.biome)
             .transition(.opacity)
             .frame(height: 330 + topInset)

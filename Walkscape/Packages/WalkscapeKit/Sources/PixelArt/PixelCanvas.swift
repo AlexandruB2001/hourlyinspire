@@ -85,6 +85,16 @@ public struct PixelCanvas: Hashable, Sendable {
                                    a: UInt8((outA * 255).rounded()))
     }
 
+    /// Replaces every pixel with `transform(pixel, x, y)` (no blending).
+    public mutating func recolor(_ transform: (PixelColor, Int, Int) -> PixelColor) {
+        for y in 0..<height {
+            for x in 0..<width {
+                let index = y * width + x
+                pixels[index] = transform(pixels[index], x, y)
+            }
+        }
+    }
+
     public mutating func fillRect(x: Int, y: Int, width: Int, height: Int, _ color: PixelColor) {
         guard width > 0, height > 0 else { return }
         for yy in y..<(y + height) {

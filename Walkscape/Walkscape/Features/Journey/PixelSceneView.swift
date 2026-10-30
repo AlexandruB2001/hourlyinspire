@@ -21,6 +21,10 @@ struct PixelSceneView: View {
     var characterPosition: Double = 0.3
     /// When false the scene is drawn once, e.g. for lists of many scenes.
     var animated = true
+    /// Seasonal colours and weather; nil draws the plain scene.
+    var season: Season?
+    /// A world event happening here today, drawn in the scene.
+    var eventSpriteID: String?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -28,7 +32,7 @@ struct PixelSceneView: View {
         GeometryReader { geometry in
             let width = max(32, Int((geometry.size.width / pixel).rounded(.up)))
             let height = max(40, Int((geometry.size.height / pixel).rounded(.up)))
-            if let images = PixelArtCache.shared.scene(biome, width: width, height: height) {
+            if let images = PixelArtCache.shared.scene(biome, width: width, height: height, season: season) {
                 let frames = characterFrames()
                 if animated && !reduceMotion {
                     TimelineView(.animation(minimumInterval: 1 / 30)) { context in
@@ -56,8 +60,15 @@ struct PixelSceneView: View {
             tiled(images.far, offset: time * speeds.far * move, width: width, height: height)
             tiled(images.mid, offset: time * speeds.mid * move, width: width, height: height)
             tiled(images.ground, offset: time * speeds.ground * move, width: width, height: height)
-            if animated && !reduceMotion && [Biome.snowyRidge, .summit, .starlightPass].contains(biome) {
-                SnowfallLayer(time: time, density: biome == .snowyRidge ? 40 : 12, pixel: pixel)
+            if animated && !reduceMotion, let particles = SeasonalParticles.Kind.for(biome: biome, season: season) {
+                SeasonalParticles(kind: particles.kind, time: time, density: particles.density, pixel: pixel)
+            }
+            if let eventSpriteID, let icon = PixelArtCache.shared.item(eventSpriteID) {
+                // Bobs gently a little way ahead of the walker.
+                let bob = animated && !reduceMotion ? (sin(time * 2) * 1.5).rounded() : 0
+                layer(icon, width: 10, height: 10)
+                    .offset(x: (CGFloat(width) * 0.68).rounded() * pixel,
+                            y: CGFloat(images.layers.footY - 16 + Int(bob)) * pixel)
             }
             if let companionImage, avatarID != nil {
                 // Walks just behind the character and hops along while walking.
@@ -110,8 +121,29 @@ struct PixelSceneView: View {
     }
 }
 
-/// Gentle pixel snow for cold biomes.
-private struct SnowfallLayer: View {
+/// Pixel weather: snow, falling leaves, petals or fireflies.
+private struct SeasonalParticles: View {
+    enum Kind {
+        case snow, leaves, petals, fireflies
+
+        /// What falls in this biome and season, and how much.
+        static func `for`(biome: Biome, season: Season?) -> (kind: Kind, density: Int)? {
+            if biome == .crystalCaves { return nil }
+            if [Biome.snowyRidge, .summit, .starlightPass].contains(biome) {
+                return (.snow, biome == .snowyRidge || season == .winter ? 40 : 12)
+            }
+            if biome == .fireflyMarsh { return (.fireflies, 18) }
+            switch season {
+            case .winter: return [.redCanyon, .sandyShore, .hotSprings].contains(biome) ? nil : (.snow, 24)
+            case .autumn: return (.leaves, biome == .autumnWoods ? 22 : 12)
+            case .spring: return (.petals, biome == .blossomOrchard ? 22 : 10)
+            case .summer: return [.meadow, .lakeside, .riverside, .lavenderFields].contains(biome) ? (.fireflies, 8) : nil
+            case nil: return biome == .autumnWoods ? (.leaves, 14) : biome == .blossomOrchard ? (.petals, 14) : nil
+            }
+        }
+    }
+
+    let kind: Kind
     let time: Double
     let density: Int
     let pixel: CGFloat
@@ -119,15 +151,24 @@ private struct SnowfallLayer: View {
     var body: some View {
         Canvas { context, size in
             for index in 0..<density {
-                // Deterministic pseudo-random lane per flake.
+                // Deterministic pseudo-random lane per particle.
                 let seed = Double((index * 7_919) % 1_000) / 1_000
-                let speed = 6 + seed * 8
-                let x = (seed * size.width + sin(time * 0.8 + Double(index)) * 6)
+                let (speed, sway, color): (Double, Double, Color) = {
+                    switch kind {
+                    case .snow: return (6 + seed * 8, 6, .white.opacity(0.85))
+                    case .leaves: return (5 + seed * 5, 14, [Color(hex: 0xD9822B), Color(hex: 0xB5452A), Color(hex: 0xE0B040)][index % 3])
+                    case .petals: return (4 + seed * 4, 12, index % 3 == 0 ? .white.opacity(0.9) : Color(hex: 0xF4B6C8))
+                    case .fireflies: return (0, 10, Color(hex: 0xFFE59A).opacity(0.4 + 0.6 * abs(sin(time * 2 + Double(index)))))
+                    }
+                }()
+                let x = (seed * size.width + sin(time * 0.8 + Double(index)) * sway)
                     .truncatingRemainder(dividingBy: size.width)
-                let y = (time * speed * pixel + Double(index * 37)).truncatingRemainder(dividingBy: size.height)
-                let snapped = CGRect(x: (x / pixel).rounded() * pixel, y: (y / pixel).rounded() * pixel,
-                                     width: pixel, height: pixel)
-                context.fill(Path(snapped), with: .color(.white.opacity(0.85)))
+                let y: Double = kind == .fireflies
+                    ? size.height * (0.45 + 0.35 * seed) + sin(time * 1.3 + Double(index) * 2) * 8
+                    : (time * speed * pixel + Double(index * 37)).truncatingRemainder(dividingBy: size.height)
+                let side = kind == .leaves && index % 2 == 0 ? 2 * pixel : pixel
+                let snapped = CGRect(x: (x / pixel).rounded() * pixel, y: (y / pixel).rounded() * pixel, width: side, height: pixel)
+                context.fill(Path(snapped), with: .color(color))
             }
         }
         .allowsHitTesting(false)

@@ -309,6 +309,7 @@ final class AppModel {
             store.save(questTracker, for: source)
             updateJournal(source: source)
             processCollections(on: progress.localDate, source: source)
+            processWorldEvents(on: progress.localDate, source: source)
             processLevelUps(source: source)
             announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
                      + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
@@ -713,6 +714,54 @@ final class AppModel {
         store.save(wallet, for: dataSource)
         processLevelUps(source: dataSource)
         return true
+    }
+
+    // MARK: Seasons and world events
+
+    var season: Season { Season.of(today, southernHemisphere: Season.isSouthernHemisphere(timeZone)) }
+
+    /// Today's events across the world (the same for every player).
+    var todaysEvents: [ScheduledEvent] {
+        WorldEventCatalog.schedule(for: today, season: season, exploredZoneIDs: progression.discoveredZoneIDs)
+    }
+
+    func hasFound(_ scheduled: ScheduledEvent) -> Bool { ledger.hasClaimed(scheduled.id) }
+
+    /// Finds today's events in the zones walked through today. Each pays once
+    /// (by event and day), so reopening the app never repeats one.
+    private func processWorldEvents(on day: LocalDay, source: WalkingDataSourceKind) {
+        guard day == today else { return }
+        let reachedCount = min(progression.todayHighestZoneIndex + 1, engine.catalog.zones.count)
+        let reached = Set(engine.catalog.zones.prefix(reachedCount).map(\.id))
+        let hour = Calendar.current.component(.hour, from: now)
+        for scheduled in todaysEvents where reached.contains(scheduled.zoneID) && scheduled.event.isOpen(season: season, hour: hour) {
+            guard ledger.claim(scheduled.reward, into: &wallet) else { continue }
+            let zoneName = engine.catalog.zones.first { $0.id == scheduled.zoneID }?.name ?? "the world"
+            recordInJournal([JournalEvents.worldEvent(scheduled, zoneName: zoneName)])
+            switch scheduled.event.bonus {
+            case .none:
+                discovery = DiscoveryNews(event: scheduled.event, zoneName: zoneName)
+            case .creature(let id):
+                if let creature = WildlifeCatalog.creature(withID: id),
+                   !collections.recordSightings([creature], on: day).isEmpty {
+                    store.save(collections, for: source)
+                    _ = ledger.claim(creature.reward, into: &wallet)
+                    recordInJournal([JournalEvents.wildlife(creature, on: day)])
+                }
+                discovery = DiscoveryNews(event: scheduled.event, zoneName: zoneName)
+            case .treasure:
+                awardTreasure(seed: scheduled.id)
+            case .merchantGift(let maxRarity):
+                let unowned = ShopCatalog.items.filter { !wallet.owns($0) && $0.rarity <= maxRarity }
+                if !unowned.isEmpty {
+                    let item = unowned[Int(WildlifeCatalog.roll(scheduled.id) * Double(unowned.count)) % unowned.count]
+                    _ = ledger.claim(Reward(id: "\(scheduled.id)-gift", itemIDs: [item.id]), into: &wallet)
+                }
+                discovery = DiscoveryNews(event: scheduled.event, zoneName: zoneName)
+            }
+        }
+        store.save(ledger, for: source)
+        store.save(wallet, for: source)
     }
 
     // MARK: Collections

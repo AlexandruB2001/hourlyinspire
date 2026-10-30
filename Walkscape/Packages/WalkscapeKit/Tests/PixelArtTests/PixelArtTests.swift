@@ -138,4 +138,28 @@ final class PixelArtTests: XCTestCase {
         XCTAssertEqual(canvas[0, 0].r, 128)
         XCTAssertEqual(canvas[0, 0].a, 255)
     }
+
+    // MARK: Seasons
+
+    func testSeasonsRecolourTheSceneButKeepItsShape() {
+        let plain = SceneRenderer.render(.meadow, width: 96, height: 60)
+        let seasons = Season.allCases.map { SceneRenderer.render(.meadow, width: 96, height: 60, season: $0) }
+        XCTAssertEqual(Set(seasons.map(\.mid)).count, 4, "each season looks different")
+        for layers in seasons {
+            XCTAssertNotEqual(layers.mid, plain.mid)
+            XCTAssertEqual(layers.footY, plain.footY)
+            // Transparent pixels stay transparent, so parallax layering is unchanged.
+            XCTAssertEqual(layers.mid.pixels.map { $0.a == 0 }, plain.mid.pixels.map { $0.a == 0 })
+        }
+        XCTAssertEqual(SceneRenderer.render(.meadow, width: 96, height: 60, season: .winter),
+                       SceneRenderer.render(.meadow, width: 96, height: 60, season: .winter), "deterministic")
+        XCTAssertEqual(SceneRenderer.render(.crystalCaves, width: 96, height: 60, season: .winter),
+                       SceneRenderer.render(.crystalCaves, width: 96, height: 60), "caves ignore the seasons")
+    }
+
+    func testEveryWildlifeAndTreasureHasASprite() {
+        for id in WildlifeCatalog.all.map(\.spriteID) + TreasureCatalog.all.map(\.spriteID) + WorldEventCatalog.all.map(\.spriteID) {
+            XCTAssertNotNil(ItemSprites.sprite(id), "missing sprite \(id)")
+        }
+    }
 }
