@@ -80,6 +80,37 @@ public struct SupabaseAPI: Sendable {
         throw BackendError.notSignedIn
     }
 
+    /// Calls an Edge Function (`/functions/v1/<name>`) as the signed-in user.
+    public func invokeFunction(_ name: String, _ body: some Encodable) async throws -> Data {
+        let payload = try Self.encoder.encode(body)
+        var token = try await auth.validAccessToken()
+        for attempt in 0..<2 {
+            var request = URLRequest(url: config.url.appendingPathComponent("functions/v1/\(name)"))
+            request.httpMethod = "POST"
+            request.setValue(config.anonKey, forHTTPHeaderField: "apikey")
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = payload
+            let (data, response): (Data, HTTPURLResponse)
+            do {
+                (data, response) = try await transport.send(request)
+            } catch let error as BackendError {
+                throw error
+            } catch {
+                throw BackendError.network(error.localizedDescription)
+            }
+            if response.statusCode == 401 && attempt == 0 {
+                token = try await auth.refresh().accessToken
+                continue
+            }
+            guard (200..<300).contains(response.statusCode) else {
+                throw Self.serverError(status: response.statusCode, data: data)
+            }
+            return data
+        }
+        throw BackendError.notSignedIn
+    }
+
     /// Parses a PostgREST/GoTrue error body.
     static func serverError(status: Int, data: Data) -> BackendError {
         struct Body: Decodable {

@@ -13,6 +13,7 @@ struct ShopView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     WardrobeHeader()
+                    StoreEntryCard()
                     MysteryBoxCard { revealed = $0 }
                     RewardedAdCard()
                     CompanionAccessoriesCard()
@@ -219,6 +220,10 @@ private struct CompanionAccessoriesCard: View {
                     .buttonStyle(.pixel)
                     .disabled(model.wallet.coins < price)
                     .opacity(model.wallet.coins < price ? 0.5 : 1)
+            } else if PlusMonthlyGift.rotation.contains(accessory.id) {
+                Text("Plus gift")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.gold)
             } else if let level = accessory.unlockLevel {
                 Text("Level \(level)")
                     .font(Theme.Typography.micro)

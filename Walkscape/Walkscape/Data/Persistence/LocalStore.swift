@@ -35,6 +35,7 @@ struct LocalStore {
         static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
         static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
         static let showcase = "walkscape.showcase.v1"
+        static let premiumLook = "walkscape.premiumLook.v1"
         static func collections(_ source: WalkingDataSourceKind) -> String { "walkscape.collections.v1.\(source.rawValue)" }
         static func quests(_ source: WalkingDataSourceKind) -> String { "walkscape.quests.v1.\(source.rawValue)" }
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
@@ -117,6 +118,9 @@ struct LocalStore {
         save(collections, Key.collections(source))
     }
 
+    func loadPremiumLook() -> PremiumLook { load(PremiumLook.self, Key.premiumLook) ?? PremiumLook() }
+    func save(_ look: PremiumLook) { save(look, Key.premiumLook) }
+
     func loadShowcase() -> ProfileShowcase { load(ProfileShowcase.self, Key.showcase) ?? ProfileShowcase() }
     func save(_ showcase: ProfileShowcase) { save(showcase, Key.showcase) }
 
@@ -159,7 +163,7 @@ struct LocalStore {
     }
 
     func reset() {
-        var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode, Key.cloudSaveOwner, Key.showcase]
+        var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode, Key.cloudSaveOwner, Key.showcase, Key.premiumLook]
         for source in WalkingDataSourceKind.allCases {
             keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source),
                      Key.ledger(source), Key.quests(source), Key.collections(source)]

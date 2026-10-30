@@ -52,9 +52,9 @@ final class PixelArtTests: XCTestCase {
     }
 
     func testEveryShopItemHasArtThatChangesTheWalker() {
-        XCTAssertEqual(Set(EquipmentArt.allIDs), Set(ShopCatalog.items.map(\.id)))
+        XCTAssertEqual(Set(EquipmentArt.allIDs), Set((ShopCatalog.items + PremiumOutfits.items).map(\.id)))
         let plain = CharacterSprites.idleFrame(avatarID: "fern", outfit: [])
-        for item in ShopCatalog.items {
+        for item in ShopCatalog.items + PremiumOutfits.items {
             let dressed = CharacterSprites.idleFrame(avatarID: "fern", outfit: [item.id])
             XCTAssertEqual(dressed.height, CharacterSprites.outfittedHeight)
             XCTAssertNotEqual(dressed, plain, "\(item.id) is invisible")
@@ -196,5 +196,15 @@ final class PixelArtTests: XCTestCase {
         let tinted = WorldTint.allCases.map { SceneRenderer.render(.pineForest, width: 80, height: 50, tint: $0) }
         XCTAssertEqual(Set(tinted.map(\.mid)).count, WorldTint.allCases.count)
         for layers in tinted { XCTAssertNotEqual(layers.mid, plain.mid) }
+    }
+
+    func testCompanionSkinsRecolourEverySpecies() {
+        for species in CompanionSprites.speciesIDs {
+            let growth = CompanionGrowth(kilometres: 25)
+            let plain = CompanionSprites.render(speciesID: species, growth: growth)
+            let skins = CompanionSkinCatalog.all.map { CompanionSprites.render(speciesID: species, growth: growth, skin: $0) }
+            for skin in skins { XCTAssertNotEqual(skin, plain, species) }
+            XCTAssertEqual(Set(skins).count, skins.count, species)
+        }
     }
 }

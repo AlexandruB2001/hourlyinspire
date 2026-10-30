@@ -269,3 +269,17 @@ walking totals it can't be verified by the server.
 `community_distance(start, end)` returns everyone's combined distance between
 two days (capped at 25 km a day, ranges limited to ~2 months). Only the total
 is exposed. Seasonal festivals compare it with their community goal.
+
+## Purchases (migration 20261105000001, not live yet)
+
+- `purchases`: one row per App Store purchase (original transaction), written
+  only by the Edge Functions after checking Apple's signature with Apple's
+  `app-store-server-library` (no secret keys needed: Apple's root
+  certificates are public). `my_entitlements()` returns the caller's active
+  bundles and subscriptions; `has_plus(user)` answers for friends.
+- `verify-purchase` (Verify JWT on): the app sends every verified StoreKit 2
+  transaction; purchases carry the account id as `appAccountToken`, so they
+  can't be claimed by another account.
+- `app-store-notifications` (Verify JWT off): App Store Server Notifications V2
+  for renewals, expiries and refunds. Its URL goes in App Store Connect → App
+  Information → App Store Server Notifications (Production and Sandbox).

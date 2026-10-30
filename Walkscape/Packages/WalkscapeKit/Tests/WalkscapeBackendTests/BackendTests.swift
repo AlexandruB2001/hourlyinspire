@@ -200,6 +200,29 @@ final class BackendTests: XCTestCase {
         } catch CloudSaveService.SaveError.newerSchema {}
     }
 
+    // MARK: Purchases
+
+    func testPurchasesAreVerifiedByTheServerAndMappedToEntitlements() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, #"{"ok":true}"#)
+        let expires = PostgresDate.format(now.addingTimeInterval(86_400))
+        transport.enqueue(200, """
+        [{"product_id":"com.alexandrub.walkscape.bundle.trail-sparkles","expires_at":null},
+         {"product_id":"com.alexandrub.walkscape.plus.monthly","expires_at":"\(expires)"},
+         {"product_id":"com.alexandrub.walkscape.unknown","expires_at":null}]
+        """)
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let service = PurchaseService(api: api)
+        try await service.verify(signedTransaction: "header.payload.signature")
+        XCTAssertEqual(transport.path(0), "/functions/v1/verify-purchase")
+        XCTAssertEqual(transport.body(0)["signedTransaction"] as? String, "header.payload.signature")
+
+        let entitlements = try await service.entitlements()
+        XCTAssertEqual(entitlements.bundles, ["com.alexandrub.walkscape.bundle.trail-sparkles"])
+        XCTAssertTrue(entitlements.hasPlus(at: now))
+        XCTAssertTrue(entitlements.owns("trail-petals"))
+    }
+
     // MARK: Push
 
     func testPushTokenIsRegisteredAsHex() async throws {

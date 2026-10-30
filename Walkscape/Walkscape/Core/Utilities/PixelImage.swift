@@ -75,13 +75,14 @@ final class PixelArtCache {
     }
 
     /// A companion as it looks after `kilometres` walked together.
-    func companion(_ speciesID: String, kilometres: Int, accessories: [String] = []) -> CGImage? {
+    func companion(_ speciesID: String, kilometres: Int, accessories: [String] = [], skin: CompanionSkin? = nil) -> CGImage? {
         let growth = CompanionGrowth(kilometres: kilometres)
         // Keyed by what's actually drawn, so 200 km and 300 km share an image.
         let detail = growth.stage == .elder ? 0 : min(growth.kilometresIntoStage, 60)
         let worn = accessories.isEmpty ? "" : "_" + accessories.joined(separator: "+")
-        return image("companion_\(speciesID)_\(growth.stage.rawValue)_\(detail)\(worn)") {
-            CompanionSprites.render(speciesID: speciesID, growth: growth, accessories: accessories)
+        let look = skin.map { "_\($0.id)" } ?? ""
+        return image("companion_\(speciesID)_\(growth.stage.rawValue)_\(detail)\(worn)\(look)") {
+            CompanionSprites.render(speciesID: speciesID, growth: growth, accessories: accessories, skin: skin)
         }
     }
 

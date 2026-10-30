@@ -167,6 +167,13 @@ public enum CompanionAccessoryCatalog {
         CompanionAccessory(id: "pet-petal-crown", name: "Petal Crown", slot: .head, price: 300, eventID: "spring-awakening"),
         CompanionAccessory(id: "pet-sailor-hat", name: "Sailor Hat", slot: .head, price: 300, eventID: "ocean-expedition"),
         CompanionAccessory(id: "pet-star-cape", name: "Starfall Cape", slot: .back, price: 300, eventID: "starfall-festival"),
+        // Walkscape Plus monthly gifts (see PlusMonthlyGift); never sold for coins.
+        CompanionAccessory(id: "pet-plus-moon-hat", name: "Moon Hat", slot: .head, price: nil),
+        CompanionAccessory(id: "pet-plus-sun-visor", name: "Sun Visor", slot: .head, price: nil),
+        CompanionAccessory(id: "pet-plus-leaf-cloak", name: "Leaf Cloak", slot: .back, price: nil),
+        CompanionAccessory(id: "pet-plus-star-bow", name: "Star Bow", slot: .head, price: nil),
+        CompanionAccessory(id: "pet-plus-crystal-tiara", name: "Crystal Tiara", slot: .head, price: nil),
+        CompanionAccessory(id: "pet-plus-cozy-scarf", name: "Cozy Scarf", slot: .neck, price: nil),
     ]
 
     public static func accessory(withID id: String) -> CompanionAccessory? { all.first { $0.id == id } }

@@ -109,7 +109,7 @@ private struct DecorateSheet: View {
                         .foregroundStyle(Theme.Palette.creamDim)
                     VStack(spacing: Theme.Spacing.s) {
                         ForEach(CampfireCatalog.decorations) { decoration in
-                            let unlocked = decoration.unlockLevel <= campsite.level.level
+                            let unlocked = decoration.unlockLevel <= campsite.level.level && owns(decoration)
                             let selected = placed.contains(decoration.id)
                             Button {
                                 if selected { placed.removeAll { $0 == decoration.id } }
@@ -123,7 +123,7 @@ private struct DecorateSheet: View {
                                         .foregroundStyle(unlocked ? Theme.Palette.cream : Theme.Palette.creamDim)
                                     Spacer()
                                     if !unlocked {
-                                        Text("Campfire level \(decoration.unlockLevel)")
+                                        Text(lockText(decoration))
                                             .font(Theme.Typography.micro)
                                             .foregroundStyle(Theme.Palette.creamDim)
                                     }
@@ -162,5 +162,21 @@ private struct DecorateSheet: View {
             }
         }
         .onAppear { placed = campsite.decorations }
+    }
+
+    private func owns(_ decoration: CampsiteDecoration) -> Bool {
+        switch decoration.source {
+        case .campfire: return true
+        case .bundle: return model.entitlements.owns(decoration.id)
+        case .plus: return model.hasPlus
+        }
+    }
+
+    private func lockText(_ decoration: CampsiteDecoration) -> String {
+        switch decoration.source {
+        case .campfire: return "Campfire level \(decoration.unlockLevel)"
+        case .bundle: return "Cozy Campsite Decor"
+        case .plus: return "Walkscape Plus"
+        }
     }
 }

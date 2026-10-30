@@ -29,6 +29,8 @@ struct PixelSceneView: View {
     var eventSpriteID: String?
     /// Team worlds recolour the biome in the world's palette.
     var tint: WorldTint?
+    /// A premium trail drawn behind the walker while walking.
+    var trail: TrailEffect?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -80,6 +82,11 @@ struct PixelSceneView: View {
                 layer(companionImage, width: CompanionSprites.canvasSize, height: CompanionSprites.canvasSize)
                     .offset(x: ((CGFloat(width) * characterPosition).rounded() - CGFloat(CompanionSprites.canvasSize) + 2) * pixel,
                             y: CGFloat(images.layers.footY - CompanionSprites.canvasSize + 1 + hop) * pixel)
+            }
+            if let trail, stepping, avatarID != nil {
+                TrailLayer(effect: trail, time: time, pixel: pixel,
+                           origin: CGPoint(x: (CGFloat(width) * characterPosition).rounded() * pixel,
+                                           y: CGFloat(images.layers.footY - 4) * pixel))
             }
             if let frames, let idle = frames.last {
                 let walkCount = frames.count - 1
@@ -137,6 +144,29 @@ struct PixelSceneView: View {
             layer(image, width: width, height: height)
         }
         .offset(x: -CGFloat(shift) * pixel)
+    }
+}
+
+/// Sparkles, petals or stardust drifting behind the walker.
+private struct TrailLayer: View {
+    let effect: TrailEffect
+    let time: Double
+    let pixel: CGFloat
+    let origin: CGPoint
+
+    var body: some View {
+        Canvas { context, _ in
+            for index in 0..<10 {
+                // Each particle drifts back and fades over a second, then restarts.
+                let age = (time * 1.2 + Double(index) / 10).truncatingRemainder(dividingBy: 1)
+                let x = origin.x - age * 40 * pixel / 3 + sin(Double(index) * 1.7) * 2 * pixel
+                let y = origin.y - age * 10 * pixel / 3 + cos(time * 3 + Double(index)) * pixel
+                let color = Color(hex: effect.colors[index % effect.colors.count]).opacity(1 - age)
+                let rect = CGRect(x: (x / pixel).rounded() * pixel, y: (y / pixel).rounded() * pixel, width: pixel, height: pixel)
+                context.fill(Path(rect), with: .color(color))
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 

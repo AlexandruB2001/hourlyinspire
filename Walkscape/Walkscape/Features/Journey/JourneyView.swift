@@ -46,11 +46,12 @@ private struct JourneyHero: View {
         PixelSceneView(biome: zone.biome, avatarID: model.settings.avatarID, outfit: model.outfit,
                        companionImage: model.companion.flatMap {
                            PixelArtCache.shared.companion($0.speciesID, kilometres: model.companionGrowth?.kilometres ?? 0,
-                                                          accessories: $0.wornAccessories)
+                                                          accessories: $0.wornAccessories, skin: model.companionSkin)
                        },
                        companionSpeciesID: model.companion?.speciesID,
                        walking: model.distanceMeters > 0, season: model.season,
-                       eventSpriteID: model.todaysEvents.first { $0.zoneID == zone.id && !model.hasFound($0) }?.event.spriteID)
+                       eventSpriteID: model.todaysEvents.first { $0.zoneID == zone.id && !model.hasFound($0) }?.event.spriteID,
+                       trail: TrailEffectCatalog.effect(withID: model.currentLook.trailEffectID))
             .id(zone.biome)
             .transition(.opacity)
             .frame(height: 330 + topInset)

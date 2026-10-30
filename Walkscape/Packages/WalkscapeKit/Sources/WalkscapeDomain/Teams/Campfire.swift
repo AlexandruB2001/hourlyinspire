@@ -18,9 +18,26 @@ public struct CampfireLevel: Identifiable, Hashable, Sendable {
 }
 
 public struct CampsiteDecoration: Identifiable, Hashable, Sendable {
+    public enum Source: String, Sendable {
+        /// Unlocked by the Campfire level.
+        case campfire
+        /// From the Cozy Campsite Decor bundle.
+        case bundle
+        /// For Walkscape Plus members.
+        case plus
+    }
+
     public let id: String
     public let name: String
     public let unlockLevel: Int
+    public let source: Source
+
+    public init(id: String, name: String, unlockLevel: Int, source: Source = .campfire) {
+        self.id = id
+        self.name = name
+        self.unlockLevel = unlockLevel
+        self.source = source
+    }
 }
 
 public enum CampfireCatalog {
@@ -47,6 +64,19 @@ public enum CampfireCatalog {
         CampsiteDecoration(id: "totem", name: "Trail Totem", unlockLevel: 4),
         CampsiteDecoration(id: "banner", name: "Expedition Banner", unlockLevel: 5),
         CampsiteDecoration(id: "telescope", name: "Star Telescope", unlockLevel: 5),
+    ] + premiumDecorations + plusDecorations
+
+    /// Cozy Campsite Decor bundle. Anyone in the team sees them once a member places them.
+    public static let premiumDecorations: [CampsiteDecoration] = [
+        CampsiteDecoration(id: "hammock", name: "Hammock", unlockLevel: 1, source: .bundle),
+        CampsiteDecoration(id: "string-lights", name: "String Lights", unlockLevel: 1, source: .bundle),
+        CampsiteDecoration(id: "cocoa-stand", name: "Hot Cocoa Stand", unlockLevel: 1, source: .bundle),
+    ]
+
+    /// Walkscape Plus decorations.
+    public static let plusDecorations: [CampsiteDecoration] = [
+        CampsiteDecoration(id: "fountain", name: "Wishing Fountain", unlockLevel: 1, source: .plus),
+        CampsiteDecoration(id: "lantern-arch", name: "Lantern Arch", unlockLevel: 1, source: .plus),
     ]
 
     public static let maxPlaced = 6

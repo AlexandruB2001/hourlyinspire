@@ -106,5 +106,8 @@ public enum ShopCatalog {
         ShopItem(id: "phoenix-wings", name: "Phoenix Wings", detail: "Fiery wings for the most dedicated walkers.", slot: .back, rarity: .legendary),
     ]
 
-    public static func item(withID id: String) -> ShopItem? { items.first { $0.id == id } }
+    /// Coin-shop items and premium outfit pieces (which are never sold for coins).
+    public static func item(withID id: String) -> ShopItem? {
+        items.first { $0.id == id } ?? PremiumOutfits.items.first { $0.id == id }
+    }
 }

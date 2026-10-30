@@ -185,6 +185,30 @@ public struct EquipmentArt: Sendable {
             ".oqqo.",
             ".oo...",
         ]),
+        // Seasonal Outfit Bundle (premium, never in the coin shop).
+        "harvest-crown": EquipmentArt(at: (1, -4), overlay: [
+            "..............",
+            "..............",
+            "..............",
+            "...a..Y..a....",
+            "..aAa.y.aAa...",
+            "..oYyYyYyYo...",
+            "..oaaaaaaao...",
+            "..............",
+        ]),
+        "snowfall-scarf": EquipmentArt(recolor: ["f": 0xE8F4FA, "F": 0x8FC3C9], at: (7, 11), overlay: [
+            "w.w.",
+        ]),
+        "blossom-wings": EquipmentArt(at: (0, 8), overlay: [
+            ".oo...",
+            "oppo..",
+            "opPpo.",
+            ".opwpo",
+            "..oppo",
+            ".oppo.",
+            ".oo...",
+        ]),
+        "sunny-sandals": EquipmentArt(recolor: ["b": 0xE8893A, "B": 0xB5602A]),
         "phoenix-wings": EquipmentArt(at: (0, 7), overlay: [
             "o.....",
             "oro...",

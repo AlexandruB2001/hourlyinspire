@@ -21,7 +21,8 @@ public enum CompanionSprites {
     ]
 
     /// The companion at `growth`, centred at the bottom of a `canvasSize` square.
-    public static func render(speciesID: String, growth: CompanionGrowth, accessories: [String] = []) -> PixelCanvas {
+    public static func render(speciesID: String, growth: CompanionGrowth, accessories: [String] = [],
+                              skin: CompanionSkin? = nil) -> PixelCanvas {
         var canvas = PixelCanvas(width: canvasSize, height: canvasSize)
         guard let stages = art[speciesID] else { return canvas }
         let isElder = growth.stage == .elder
@@ -32,8 +33,17 @@ public enum CompanionSprites {
         for detail in stage.details.prefix(shown) where rows.indices.contains(detail.y) && rows[detail.y].indices.contains(detail.x) {
             rows[detail.y][detail.x] = detail.key
         }
-        let sprite = Sprite(name: speciesID, palette: ItemSprites.palette.overriding(["e": PixelColor(0xFF8A3D)]),
-                            rows: rows.map { String($0) })
+        var palette = ItemSprites.palette.overriding(["e": PixelColor(0xFF8A3D)])
+        if let skin, skin.colors.count >= 3 {
+            // Skins recolour each species' body, shading and highlight keys.
+            let body = PixelColor(skin.colors[0]), shade = PixelColor(skin.colors[1]), accent = PixelColor(skin.colors[2])
+            var overrides: [Character: PixelColor] = [:]
+            for key in "gavsnb" { overrides[key] = body }
+            for key in "GAVSNB" { overrides[key] = shade }
+            for key in "Lhlk" { overrides[key] = accent }
+            palette = palette.overriding(overrides)
+        }
+        let sprite = Sprite(name: speciesID, palette: palette, rows: rows.map { String($0) })
         let x = (canvasSize - sprite.width) / 2
         let y = canvasSize - sprite.height
         if isElder, let glow = glow[speciesID] {

@@ -49,7 +49,8 @@ struct ProfilePortrait: View {
                 if showcase.showsCompanion, let companion = model.companion {
                     PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID,
                                                                         kilometres: companion.growth(lifetimeMeters: model.progression.lifetimeMeters).kilometres,
-                                                                        accessories: companion.wornAccessories),
+                                                                        accessories: companion.wornAccessories,
+                                                                        skin: model.companionSkin),
                                    pixel: 1.6)
                 }
             }

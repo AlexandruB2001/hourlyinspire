@@ -1,0 +1,131 @@
+{
+  "identifier": "9C1D2E3F",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "2.99",
+      "familyShareable": false,
+      "internalID": "ce8926fa-d8f5-5036-ab23-ca2a20e64349",
+      "localizations": [
+        {
+          "description": "Four outfit pieces, one for every season.",
+          "displayName": "Seasonal Outfit Bundle",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.alexandrub.walkscape.bundle.seasonal-outfits",
+      "referenceName": "Seasonal Outfit Bundle",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "c6e9488d-46ff-50c5-b799-400b6e930395",
+      "localizations": [
+        {
+          "description": "Golden, Frost and Shadow looks for any companion.",
+          "displayName": "Companion Skins",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.alexandrub.walkscape.bundle.companion-skins",
+      "referenceName": "Companion Skins",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "0.99",
+      "familyShareable": false,
+      "internalID": "cc97eab9-a3c1-5357-8256-a6d1db420d3e",
+      "localizations": [
+        {
+          "description": "Sparkles, petals or stars behind you as you walk.",
+          "displayName": "Trail Sparkles",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.alexandrub.walkscape.bundle.trail-sparkles",
+      "referenceName": "Trail Sparkles",
+      "type": "NonConsumable"
+    },
+    {
+      "displayPrice": "1.99",
+      "familyShareable": false,
+      "internalID": "16860cd4-f829-5558-8bc1-fbea77dff096",
+      "localizations": [
+        {
+          "description": "A hammock, string lights and a cocoa stand.",
+          "displayName": "Cozy Campsite Decor",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.alexandrub.walkscape.bundle.campsite-decor",
+      "referenceName": "Cozy Campsite Decor",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "6827387213",
+    "_developerTeamID": "52MSDV72ZT",
+    "_failTransactionsEnabled": false,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [
+    {
+      "id": "5af06860-1c9b-5fd8-9813-a4b71e380557",
+      "localizations": [],
+      "name": "Walkscape Plus",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "2.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "f91ece5d-ed03-5a7d-8fd6-607a56dd2adf",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Exclusive cosmetics every month. Cosmetic only.",
+              "displayName": "Walkscape Plus (monthly)",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.alexandrub.walkscape.plus.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Walkscape Plus (monthly)",
+          "subscriptionGroupID": "5af06860-1c9b-5fd8-9813-a4b71e380557",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "19.99",
+          "familyShareable": false,
+          "groupNumber": 2,
+          "internalID": "8f6cf0ac-c5ed-5f4a-8eb0-bc03793df829",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Exclusive cosmetics every month. Cosmetic only.",
+              "displayName": "Walkscape Plus (yearly)",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.alexandrub.walkscape.plus.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Walkscape Plus (yearly)",
+          "subscriptionGroupID": "5af06860-1c9b-5fd8-9813-a4b71e380557",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}

@@ -60,5 +60,7 @@ schemes:
         Walkscape: all
     run:
       config: Debug
+      # Offline test store (Xcode only): products and prices match StoreCatalog.
+      storeKitConfiguration: Walkscape.storekit
     archive:
       config: Release

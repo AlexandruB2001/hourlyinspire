@@ -15,6 +15,7 @@ public final class WalkscapeBackend: Sendable {
     public let cloudSave: CloudSaveService
     public let showcases: ShowcaseService
     public let social: SocialService
+    public let purchases: PurchaseService
 
     public init(config: SupabaseConfig, transport: HTTPTransport = URLSessionTransport(), sessionStore: SessionStore,
                 catalog: ZoneCatalog = .standard) {
@@ -31,6 +32,7 @@ public final class WalkscapeBackend: Sendable {
         cloudSave = CloudSaveService(api: api)
         showcases = ShowcaseService(api: api)
         social = SocialService(api: api)
+        purchases = PurchaseService(api: api)
     }
 
     /// Permanently deletes the account and everything stored for it, then signs out locally.

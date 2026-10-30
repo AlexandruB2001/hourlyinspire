@@ -81,6 +81,39 @@ enum CompanionAccessoryArt {
             ovv
             ooo
             """,
+        "pet-plus-moon-hat": """
+            ..ooo
+            .ouuo
+            ouhuo
+            ouuuo
+            """,
+        "pet-plus-sun-visor": """
+            .ooo.
+            oyyyo
+            oYYYYo
+            """,
+        "pet-plus-leaf-cloak": """
+            oo.
+            ogg
+            oLg
+            ogg
+            ooo
+            """,
+        "pet-plus-star-bow": """
+            h.o.h
+            hyoyh
+            h.o.h
+            """,
+        "pet-plus-crystal-tiara": """
+            c.C.c
+            ocwco
+            ooooo
+            """,
+        "pet-plus-cozy-scarf": """
+            ovvvvvo
+            .oVvvo.
+            ...oo..
+            """,
         "pet-cape": """
             oo.
             orr

@@ -10,15 +10,18 @@ public struct ProfileFacts: Hashable, Sendable {
     /// Highest companion stage ever reached (raw value), if any.
     public var companionStage: Int?
     public var collections: CollectionState
+    /// Walkscape Plus is active.
+    public var hasPlus: Bool
 
     public init(progression: ProgressionState, explorerLevel: Int, ledger: RewardLedger, journal: JourneyJournal,
-                companionStage: Int?, collections: CollectionState = CollectionState()) {
+                companionStage: Int?, collections: CollectionState = CollectionState(), hasPlus: Bool = false) {
         self.progression = progression
         self.explorerLevel = explorerLevel
         self.ledger = ledger
         self.journal = journal
         self.companionStage = companionStage
         self.collections = collections
+        self.hasPlus = hasPlus
     }
 
     var questsClaimed: Int {
@@ -44,6 +47,8 @@ public enum UnlockRequirement: Hashable, Sendable {
     case treasures(Int)
     /// Every tier of a seasonal event, in any year.
     case eventCompleted(String)
+    /// Walkscape Plus members.
+    case plus
 
     public func isMet(by facts: ProfileFacts) -> Bool {
         switch self {
@@ -60,6 +65,7 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .expeditions(let count): return facts.expeditions >= count
         case .creatures(let count): return facts.collections.wildlife.count >= count
         case .treasures(let count): return facts.collections.treasures.count >= count
+        case .plus: return facts.hasPlus
         case .eventCompleted(let id):
             guard let event = SeasonalEventCatalog.event(withID: id) else { return false }
             let suffix = "-tier-\(event.tiers.count)"
@@ -85,6 +91,7 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .expeditions(let count): return count == 1 ? "Complete a team expedition." : "Complete \(count) team expeditions."
         case .creatures(let count): return "Spot \(count) different creatures."
         case .treasures(let count): return "Find \(count) treasures."
+        case .plus: return "Included with Walkscape Plus."
         case .eventCompleted(let id):
             return "Finish every tier of \(SeasonalEventCatalog.event(withID: id)?.name ?? "a seasonal event")."
         }
@@ -174,6 +181,9 @@ public enum FrameCatalog {
         ProfileFrame(id: "gold", name: "Gold", outer: 0x9A6B12, inner: 0xF2C94C, requirement: .explorerLevel(20)),
         ProfileFrame(id: "crystal", name: "Crystal", outer: 0x4B3C8C, inner: 0xB9A6F2, requirement: .explorerLevel(30)),
         ProfileFrame(id: "aurora", name: "Aurora", outer: 0x1E6B5C, inner: 0x8CF2C9, requirement: .explorerLevel(40)),
+        ProfileFrame(id: "prism", name: "Prism", outer: 0x9A78D0, inner: 0x7FE0E8, requirement: .plus),
+        ProfileFrame(id: "starlight", name: "Starlight", outer: 0x232A4A, inner: 0xFFE59A, requirement: .plus),
+        ProfileFrame(id: "ember", name: "Ember", outer: 0x93402D, inner: 0xFF8A3D, requirement: .plus),
     ]
 
     public static func frame(withID id: String?) -> ProfileFrame {

@@ -30,6 +30,8 @@ final class AppModel {
     private let store: LocalStore
     let ads = AdService()
     let notifications = NotificationService.shared
+    /// Real-money cosmetic purchases (StoreKit).
+    let shop = StoreService()
     @ObservationIgnored private var notificationLedger: NotificationLedger
     @ObservationIgnored private var adsStarted = false
     @ObservationIgnored private var backgroundedAt: Date?
@@ -74,6 +76,12 @@ final class AppModel {
     private(set) var teamContributions: [TeamContribution] = []
     /// Everyone's combined distance per running seasonal event (run id → metres).
     private(set) var communityMeters: [String: Int] = [:]
+    /// Purchases the server has verified for this account (any device).
+    private(set) var serverEntitlements = Entitlements()
+    /// Chosen companion skin, trail effect and Journal theme.
+    var premiumLook: PremiumLook {
+        didSet { if premiumLook != oldValue { store.save(premiumLook) } }
+    }
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -141,6 +149,7 @@ final class AppModel {
         ledger = store.loadLedger(source)
         questTracker = store.loadQuestTracker(source)
         showcase = store.loadShowcase()
+        premiumLook = store.loadPremiumLook()
         collections = store.loadCollections(source)
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
@@ -235,6 +244,8 @@ final class AppModel {
             startHealthObservationIfPossible()
         }
         startAdsIfReady()
+        shop.onVerifiedTransaction = { [weak self] jws in await self?.recordPurchase(jws) }
+        shop.start()
         notifications.onOpen = { [weak self] destination in self?.open(destination) }
         notifications.onDeviceToken = { [weak self] _ in Task { await self?.registerPushToken() } }
         if let destination = notifications.takePendingDestination() { open(destination) }
@@ -280,6 +291,7 @@ final class AppModel {
         async let referrals: Void = refreshReferrals()
         _ = await (walking, social, team, referrals)
         await syncCloudSave()
+        await refreshPurchases()
     }
 
     // MARK: Walking data
@@ -894,6 +906,75 @@ final class AppModel {
         store.save(current, for: dataSource)
     }
 
+    // MARK: Store
+
+    /// Everything owned: this Apple ID's purchases plus what the server has
+    /// verified for the account (e.g. bought on another phone).
+    var entitlements: Entitlements {
+        var combined = shop.entitlements
+        combined.bundles.formUnion(serverEntitlements.bundles)
+        if let server = serverEntitlements.plusExpires {
+            combined.plusExpires = max(combined.plusExpires ?? server, server)
+        }
+        return combined
+    }
+
+    var hasPlus: Bool { entitlements.hasPlus(at: now) }
+
+    /// The premium look with anything no longer owned removed.
+    var currentLook: PremiumLook { premiumLook.validated(entitlements: entitlements, now: now) }
+
+    var companionSkin: CompanionSkin? { CompanionSkinCatalog.skin(withID: currentLook.companionSkinID) }
+
+    func buy(_ product: StoreProduct) async -> StoreService.PurchaseOutcome {
+        let accountID = await backend?.auth.currentSession.flatMap { UUID(uuidString: $0.userID.rawValue) }
+        let outcome = await shop.purchase(product, accountID: accountID)
+        if outcome == .purchased { applyEntitlements() }
+        return outcome
+    }
+
+    func restorePurchases() async -> String? {
+        let error = await shop.restore()
+        await refreshPurchases()
+        return error
+    }
+
+    private func recordPurchase(_ jws: String) async {
+        guard let backend, isSignedIn else { return }
+        try? await backend.purchases.verify(signedTransaction: jws)
+    }
+
+    private func refreshPurchases() async {
+        if let backend, isSignedIn, let verified = try? await backend.purchases.entitlements() {
+            serverEntitlements = verified
+        }
+        applyEntitlements()
+    }
+
+    /// Bundle outfit pieces live in the wallet so they wear like any item;
+    /// a refunded bundle takes them back. Plus members get the monthly gift.
+    private func applyEntitlements() {
+        guard dataSource == .appleHealth else { return }
+        let owned = entitlements
+        var changed = false
+        for bundle in StoreCatalog.bundles {
+            let outfits = bundle.contents.filter { id in PremiumOutfits.items.contains { $0.id == id } }
+            guard !outfits.isEmpty else { continue }
+            if owned.bundles.contains(bundle.id) {
+                wallet.receiveReward(coins: 0, itemIDs: outfits)
+                changed = true
+            } else if outfits.contains(where: wallet.owns(itemID:)) {
+                wallet.removeItems(outfits)
+                changed = true
+            }
+        }
+        if owned.hasPlus(at: now), ledger.claim(PlusMonthlyGift.reward(for: today), into: &wallet) {
+            store.save(ledger, for: .appleHealth)
+            changed = true
+        }
+        if changed { store.save(wallet, for: .appleHealth) }
+    }
+
     // MARK: Seasonal events
 
     var activeEventRuns: [EventRun] { SeasonalEventCatalog.active(on: today) }
@@ -913,6 +994,11 @@ final class AppModel {
                     recordInJournal([JournalEvents.eventTier(run, tier: index + 1, on: today)])
                     discovery = DiscoveryNews(eventTier: run, tier: index + 1)
                 }
+            }
+            // Plus members get the festival's accessories from the first tier.
+            if hasPlus, progress.tiersReached >= 1 {
+                let items = run.event.tiers.flatMap(\.itemIDs)
+                if !items.isEmpty { _ = ledger.claim(Reward(id: "event-\(run.id)-plus", itemIDs: items), into: &wallet) }
             }
             for quest in run.event.quests where progress.progress(of: quest) >= quest.target {
                 _ = ledger.claim(run.questReward(quest), into: &wallet)
@@ -1034,7 +1120,8 @@ final class AppModel {
         let level = ExplorerLevel(totalXP: ExplorerXP(progression: health.progression, ledger: health.ledger).total).level
         let stage = health.companion.map { max($0.celebratedStage, $0.growth(lifetimeMeters: health.progression.lifetimeMeters).stage.rawValue) }
         return ProfileFacts(progression: health.progression, explorerLevel: level, ledger: health.ledger,
-                            journal: health.journal, companionStage: stage, collections: health.collections ?? CollectionState())
+                            journal: health.journal, companionStage: stage, collections: health.collections ?? CollectionState(),
+                            hasPlus: hasPlus)
     }
 
     /// The showcase with anything not (or no longer) unlocked replaced by defaults.

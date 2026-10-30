@@ -167,6 +167,30 @@ public enum CampfireRenderer {
             canvas.vline(x: x, y: y - 12, length: 14, c.woodDark)
             canvas.fillRect(x: x + 1, y: y - 12, width: 5, height: 6, c.yellow)
             canvas.plot(x + 3, y - 10, c.red)
+        case "hammock":
+            canvas.vline(x: x, y: y - 6, length: 8, c.woodDark)
+            canvas.vline(x: x + 8, y: y - 6, length: 8, c.woodDark)
+            for dx in 1..<8 { canvas.plot(x + dx, y - 4 + (dx > 2 && dx < 6 ? 1 : 0), c.red) }
+        case "string-lights":
+            for i in 0..<5 {
+                canvas.plot(x + i * 2, y - 10 + (i % 2), c.ink)
+                canvas.plot(x + i * 2, y - 9 + (i % 2), [c.window, c.pink, c.blue][(i + frame) % 3])
+            }
+        case "cocoa-stand":
+            canvas.fillRect(x: x, y: y - 3, width: 7, height: 4, c.wood)
+            canvas.fillRect(x: x + 1, y: y - 6, width: 5, height: 2, c.red)
+            canvas.plot(x + 3, y - 4 - frame % 2, c.white)
+        case "fountain":
+            canvas.fillRect(x: x, y: y - 1, width: 8, height: 3, c.stone)
+            canvas.vline(x: x + 4, y: y - 5, length: 4, c.stone)
+            canvas.plot(x + 3, y - 6 + frame % 2, PixelColor(0x7FE0E8))
+            canvas.plot(x + 5, y - 5 - frame % 2, PixelColor(0x7FE0E8))
+        case "lantern-arch":
+            canvas.vline(x: x, y: y - 9, length: 11, c.woodDark)
+            canvas.vline(x: x + 8, y: y - 9, length: 11, c.woodDark)
+            canvas.hline(x: x, y: y - 10, length: 9, c.woodDark)
+            canvas.plot(x + 2, y - 9, c.window)
+            canvas.plot(x + 6, y - 9, c.window)
         case "telescope":
             canvas.vline(x: x + 2, y: y - 2, length: 4, c.woodDark)
             canvas.fillRect(x: x, y: y - 5, width: 6, height: 2, c.stone)

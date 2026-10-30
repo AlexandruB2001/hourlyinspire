@@ -169,6 +169,12 @@ public struct WalletState: Codable, Hashable, Sendable {
         ownedItemIDs.formUnion(itemIDs)
     }
 
+    /// Takes away items (a refunded purchase), taking them off if worn.
+    public mutating func removeItems(_ itemIDs: [String]) {
+        ownedItemIDs.subtract(itemIDs)
+        equipped = equipped.filter { !itemIDs.contains($0.value) }
+    }
+
     /// Coins spent so far. Derived, so old saves don't need a new field.
     public var spentCoins: Int { max(0, lifetimeCoins - coins) }
 

@@ -11,7 +11,8 @@ struct CompanionCard: View {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
                     PixelImageView(image: PixelArtCache.shared.companion(species.id, kilometres: growth.kilometres,
-                                                                        accessories: companion.wornAccessories), pixel: 3.4)
+                                                                        accessories: companion.wornAccessories,
+                                                                        skin: model.companionSkin), pixel: 3.4)
                 }
                 .frame(width: 76, height: 76)
                 .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(Theme.Palette.ink, lineWidth: 2))
@@ -90,7 +91,17 @@ struct JourneyJournalSection: View {
                 }
             }
         }
-        .pixelPanel()
+        .pixelPanel(fill: Color(hex: JournalThemeCatalog.theme(withID: model.currentLook.journalThemeID).fill))
+        .overlay(alignment: .topLeading) {
+            // Plus Journal themes add an accent line along the top.
+            if JournalThemeCatalog.isPlus(model.currentLook.journalThemeID) {
+                Rectangle()
+                    .fill(Color(hex: JournalThemeCatalog.theme(withID: model.currentLook.journalThemeID).accent))
+                    .frame(height: 3)
+                    .padding(.horizontal, Theme.Spacing.m)
+                    .padding(.top, 2)
+            }
+        }
         .sheet(item: $sharing) { ShareCardSheet(content: $0) }
     }
 }

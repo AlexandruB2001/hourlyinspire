@@ -63,6 +63,14 @@ See Google's "Prepare for Apple's App Store data disclosure requirements".
   your account. A push contains only a username and team name.
 - Each kind can be switched off separately in Profile.
 
+## Purchases
+
+- Optional cosmetic purchases (Walkscape Plus and bundles) go through Apple;
+  Walkscape never sees payment details.
+- When signed in, each purchase's App Store transaction (product, dates,
+  refund status) is stored with your account so it follows you to a new
+  phone. It is deleted with your account.
+
 ## Server (when signed in)
 
 - Sign in with Apple, requesting **no** name or e-mail scope.
