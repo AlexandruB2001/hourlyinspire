@@ -49,6 +49,8 @@ public enum UnlockRequirement: Hashable, Sendable {
     case eventCompleted(String)
     /// Walkscape Plus members.
     case plus
+    /// Reached every zone of a team world.
+    case teamWorld(String)
 
     public func isMet(by facts: ProfileFacts) -> Bool {
         switch self {
@@ -63,9 +65,12 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .weeklyChests(let count): return facts.weeklyChests >= count
         case .companionStage(let stage): return (facts.companionStage ?? -1) >= stage.rawValue
         case .expeditions(let count): return facts.expeditions >= count
-        case .creatures(let count): return facts.collections.wildlife.count >= count
-        case .treasures(let count): return facts.collections.treasures.count >= count
+        case .creatures(let count): return facts.collections.trailWildlifeCount >= count
+        case .treasures(let count): return facts.collections.trailTreasureCount >= count
         case .plus: return facts.hasPlus
+        case .teamWorld(let id):
+            guard let reward = TeamWorldCatalog.world(withID: id)?.finalZoneReward else { return false }
+            return facts.ledger.hasClaimed(reward.id)
         case .eventCompleted(let id):
             guard let event = SeasonalEventCatalog.event(withID: id) else { return false }
             let suffix = "-tier-\(event.tiers.count)"
@@ -92,6 +97,8 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .creatures(let count): return "Spot \(count) different creatures."
         case .treasures(let count): return "Find \(count) treasures."
         case .plus: return "Included with Walkscape Plus."
+        case .teamWorld(let id):
+            return "Reach every zone of \(TeamWorldCatalog.world(withID: id)?.name ?? "a team world") with your team."
         case .eventCompleted(let id):
             return "Finish every tier of \(SeasonalEventCatalog.event(withID: id)?.name ?? "a seasonal event")."
         }
@@ -143,7 +150,9 @@ public enum TitleCatalog {
         PlayerTitle(id: "seasoned-explorer", name: "Seasoned Explorer", requirement: .explorerLevel(10)),
         PlayerTitle(id: "master-explorer", name: "Master Explorer", requirement: .explorerLevel(20)),
         PlayerTitle(id: "legendary-explorer", name: "Legendary Explorer", requirement: .explorerLevel(40)),
-    ]
+    ] + TeamWorldCatalog.worlds.compactMap { world in
+        TeamWorldContent.titles[world.id].map { PlayerTitle(id: "world-\(world.id)", name: $0, requirement: .teamWorld(world.id)) }
+    }
 
     public static func title(withID id: String?) -> PlayerTitle? {
         guard let id else { return nil }

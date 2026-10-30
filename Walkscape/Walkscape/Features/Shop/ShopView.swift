@@ -13,7 +13,7 @@ struct ShopView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     WardrobeHeader()
-                    StoreEntryCard()
+                    if StoreFeature.isEnabled { StoreEntryCard() }
                     MysteryBoxCard { revealed = $0 }
                     RewardedAdCard()
                     CompanionAccessoriesCard()
@@ -175,7 +175,7 @@ private struct CompanionAccessoriesCard: View {
                 SectionHeader(title: "For \(species.name)")
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Theme.Spacing.m) {
-                        ForEach(CompanionAccessoryCatalog.all) { accessory in
+                        ForEach(CompanionAccessoryCatalog.all.filter { StoreFeature.shows(accessoryID: $0.id) }) { accessory in
                             tile(accessory, companion: companion)
                         }
                     }

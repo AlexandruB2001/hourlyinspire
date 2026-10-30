@@ -166,7 +166,7 @@ private struct WorldTrail: View {
     }
 }
 
-/// Every team world, its zones and relics.
+/// Every team world: zones, relics, wildlife and quests.
 private struct TeamWorldMap: View {
     let progress: TeamWorldProgress
     let teamName: String
@@ -199,6 +199,7 @@ private struct TeamWorldMap: View {
                                     .frame(maxWidth: .infinity)
                                     .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.s))
                                 WorldTrail(world: world, reachedCount: reached.count)
+                                WorldDetails(world: world, progress: progress)
                             } else {
                                 Text("Opens after \(DistanceFormatting.kilometres(TeamWorldCatalog.startMeters(of: world))) of team walking.")
                                     .font(Theme.Typography.micro)

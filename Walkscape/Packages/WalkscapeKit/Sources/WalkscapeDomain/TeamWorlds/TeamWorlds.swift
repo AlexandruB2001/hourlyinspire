@@ -56,6 +56,8 @@ public enum TeamWorldCatalog {
     public static let unlockExpeditionID = "summit-relay"
     /// A player must have walked at least this far for the team to collect world rewards.
     public static let minimumContribution = 2_000
+    /// Walked today before you can spot a team world's wildlife.
+    public static let sightingMinimumMeters = 1_000
 
     static func relic(_ id: String, _ name: String, _ detail: String, _ sprite: String) -> Collectible {
         Collectible(id: id, name: name, detail: detail, spriteID: sprite)

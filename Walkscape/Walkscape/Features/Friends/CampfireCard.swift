@@ -108,7 +108,7 @@ private struct DecorateSheet: View {
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Palette.creamDim)
                     VStack(spacing: Theme.Spacing.s) {
-                        ForEach(CampfireCatalog.decorations) { decoration in
+                        ForEach(CampfireCatalog.decorations.filter { StoreFeature.shows($0) }) { decoration in
                             let unlocked = decoration.unlockLevel <= campsite.level.level && owns(decoration)
                             let selected = placed.contains(decoration.id)
                             Button {

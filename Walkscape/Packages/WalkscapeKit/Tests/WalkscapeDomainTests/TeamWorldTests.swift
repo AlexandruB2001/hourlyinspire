@@ -67,6 +67,77 @@ final class TeamWorldTests: XCTestCase {
         XCTAssertEqual(Biome.trailBiomes.count, 20)
     }
 
+    func testEveryWorldHasWildlifeATreasureAndATitle() {
+        let creatureIDs = TeamWorldContent.allCreatures.map(\.id)
+        XCTAssertEqual(Set(creatureIDs).count, creatureIDs.count)
+        XCTAssertTrue(Set(creatureIDs).isDisjoint(with: WildlifeCatalog.all.map(\.id)), "world wildlife stays out of the trail book")
+        for world in worlds {
+            XCTAssertEqual(world.creatures.count, 3, world.id)
+            let zoneIDs = Set(world.zones.map(\.id))
+            for creature in world.creatures {
+                XCTAssertTrue(Set(creature.zoneIDs).isSubset(of: zoneIDs), creature.id)
+            }
+            let treasure = try! XCTUnwrap(world.treasure)
+            XCTAssertNil(TreasureCatalog.treasure(withID: treasure.id), "world treasures stay out of the trail book")
+            XCTAssertNotNil(TitleCatalog.title(withID: "world-\(world.id)"), world.id)
+        }
+    }
+
+    func testSightingsNeedAReachedZoneAndAreTheSameForTheWholeTeam() {
+        let world = worlds[0]
+        let start = TeamWorldCatalog.startMeters(of: world)
+        let atGate = TeamWorldProgress(teamMeters: start)
+        let days = (1...28).map { LocalDay(year: 2027, month: 2, day: $0) }
+        let seen = Set(days.flatMap { TeamWorldContent.sightings(on: $0, progress: atGate).map(\.id) })
+        XCTAssertTrue(seen.isSubset(of: ["glow-moth"]), "only creatures living at the Moonlit Gate")
+        XCTAssertTrue(seen.contains("glow-moth"), "a common creature turns up within a month")
+        XCTAssertTrue(TeamWorldContent.sightings(on: days[0], progress: TeamWorldProgress(teamMeters: start - 1)).isEmpty)
+        XCTAssertEqual(TeamWorldContent.sightings(on: days[3], progress: atGate),
+                       TeamWorldContent.sightings(on: days[3], progress: atGate))
+    }
+
+    func testWorldQuests() {
+        let world = worlds[0]
+        let start = TeamWorldCatalog.startMeters(of: world)
+        let fresh = world.quests(progress: TeamWorldProgress(teamMeters: start), seenCreatures: [], challengeDone: false)
+        XCTAssertEqual(fresh.map(\.kind), [.pathfinder, .naturalist, .together])
+        XCTAssertFalse(fresh.contains(where: \.isComplete))
+        XCTAssertEqual(fresh[0].done, 1)
+        XCTAssertEqual(fresh[1].treasure?.id, "moonlit-harp")
+        XCTAssertEqual(fresh[2].reward.id, world.challengeReward.id)
+        let done = world.quests(progress: TeamWorldProgress(teamMeters: start + world.lengthMeters),
+                                seenCreatures: Set(world.creatures.map(\.id)), challengeDone: true)
+        XCTAssertTrue(done.allSatisfy(\.isComplete))
+        let ids = worlds.flatMap { $0.quests(progress: TeamWorldProgress(teamMeters: 0), seenCreatures: [], challengeDone: false) }
+            .map(\.reward.id)
+        XCTAssertEqual(Set(ids).count, ids.count)
+    }
+
+    func testWorldTitleNeedsTheLastZone() {
+        let world = worlds[0]
+        var ledger = RewardLedger()
+        var wallet = WalletState()
+        let facts = { ProfileFacts(progression: ProgressionState(), explorerLevel: 1, ledger: ledger, journal: JourneyJournal(),
+                                   companionStage: nil) }
+        let title = TitleCatalog.title(withID: "world-enchanted-forest")!
+        XCTAssertFalse(title.requirement.isMet(by: facts()))
+        _ = ledger.claim(world.zones[0].reward, into: &wallet)
+        XCTAssertFalse(title.requirement.isMet(by: facts()))
+        _ = ledger.claim(world.zones.last!.reward, into: &wallet)
+        XCTAssertTrue(title.requirement.isMet(by: facts()))
+    }
+
+    func testWorldFindsDoNotCountInTheTrailBooks() {
+        var collections = CollectionState()
+        let day = LocalDay(year: 2027, month: 2, day: 1)
+        collections.recordSightings(worlds[0].creatures, on: day)
+        collections.recordTreasure(worlds[0].treasure!, on: day)
+        XCTAssertEqual(collections.trailWildlifeCount, 0)
+        XCTAssertEqual(collections.trailTreasureCount, 0)
+        collections.recordSightings([WildlifeCatalog.all[0]], on: day)
+        XCTAssertEqual(collections.trailWildlifeCount, 1)
+    }
+
     func testEverythingAfterTheLastWorldStaysInIt() {
         let huge = TeamWorldProgress(teamMeters: 100_000_000)
         XCTAssertEqual(huge.currentWorld?.id, worlds.last?.id)

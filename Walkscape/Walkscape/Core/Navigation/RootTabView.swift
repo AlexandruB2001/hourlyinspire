@@ -57,6 +57,7 @@ struct RootTabView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.levelUp)
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.discovery)
+        .fullScreenCover(item: $model.teamWorldArrival) { TeamWorldArrivalView(arrival: $0) }
         .fullScreenCover(isPresented: Binding(get: { model.needsCompanionChoice }, set: { _ in })) {
             CompanionOnboardingView()
         }

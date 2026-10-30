@@ -427,5 +427,246 @@ enum CreatureSprites {
             ..........
             ..........
             """,
+        // MARK: Team worlds
+        "glow-moth": """
+            ..........
+            o..o..o..o
+            ohhoooohho
+            ohhhoohhho
+            .ohhyyhho.
+            ..ohyyho..
+            .ohhyyhho.
+            ohhoyyohho
+            .oo.oo.oo.
+            ..........
+            """,
+        "fairy-fox": """
+            .o....o...
+            oao..oao..
+            oaaooaao..
+            oawaaawao.
+            .oaoaoao.l
+            .oaawaao.l
+            ..oaaaaoll
+            ..oawwaol.
+            ..oo..oo..
+            ..........
+            """,
+        "elder-stag": """
+            o.o..o.o..
+            oGo..oGo..
+            .oo.o.oo..
+            ..onnnno..
+            ..onwnwo..
+            ...onnnno.
+            ...onnno..
+            ..onnnnno.
+            ..ob.o.bo.
+            ..oo.o.oo.
+            """,
+        "prism-beetle": """
+            ....oo....
+            ...o..o...
+            .oocccoo..
+            ocmcwcuco.
+            ocmcwcuco.
+            ocmcwcuco.
+            .occwcco..
+            o.oooooo.o
+            .o.o..o.o.
+            ..........
+            """,
+        "frost-penguin": """
+            ...oooo...
+            ..oUUUUo..
+            ..oUwUwo..
+            ..oUUyUo..
+            .oUwwwwUo.
+            .oUwwwwUo.
+            .oUwwwwUo.
+            ..oUwwUo..
+            ..oyo.oyo.
+            ..........
+            """,
+        "crystal-drake": """
+            .....o.o..
+            ....ococo.
+            ...occcwco
+            ..occcccco
+            .ocCcccco.
+            occCcccoo.
+            .occccco..
+            ..oCooCo..
+            .oo...oo..
+            ..........
+            """,
+        "fennec": """
+            o......o..
+            oyo...oyo.
+            oyyo.oyyo.
+            .oyyyyyyo.
+            .oywyywyo.
+            ..oyyoyyo.
+            ..oyyyyo.o
+            ..oywwyooy
+            ...oo.ooyo
+            .......oo.
+            """,
+        "golden-scarab": """
+            ..o....o..
+            ...o..o...
+            ..oyyyyo..
+            .oyhyyhyo.
+            oyhyyyyhyo
+            oyyyoyyyyo
+            oyhyoyyhyo
+            .oyyoyyyo.
+            ..oooooo..
+            ..........
+            """,
+        "sphinx-cat": """
+            .o....o...
+            oyo..oyo..
+            oyyooyyo..
+            oyuyyuyo..
+            .oyyyyo...
+            .oyyyyyoo.
+            oyyyyyyyyo
+            oyyyyyyyyo
+            .oyo.oyyoo
+            ..o...oo..
+            """,
+        "sky-puffin": """
+            ..oooo....
+            .owwwwo...
+            .owowwo...
+            .owwwwaoo.
+            .oowwwaaao
+            .oowwwoo..
+            .oowwwwo..
+            ..owwwwo..
+            ...oaoao..
+            ..........
+            """,
+        "kite-ray": """
+            ....oo....
+            ...ollo...
+            ..ollllo..
+            .olvlvllo.
+            ollllllllo
+            .olvvvvlo.
+            ..ollllo..
+            ...ollo...
+            ....oo....
+            ....o.o...
+            """,
+        "thunderbird": """
+            o........o
+            ouo....ouo
+            ouuo..ouuo
+            .ouuooUuo.
+            ..oUhhUo..
+            ...ohho...
+            ...ouuo...
+            ..ouyyuo..
+            ..o.oo.o..
+            ..........
+            """,
+        "royal-corgi": """
+            .o....o...
+            oao..oao..
+            oaaooaao..
+            oawaawao..
+            oaaaoaao..
+            .owwwao..o
+            .oaaaaaaao
+            .oaaaaaao.
+            ..oo..oo..
+            ..........
+            """,
+        "peacock": """
+            .ouuuuuuo.
+            ouCuCuCuuo
+            ouuCyCuuuo
+            ouCuCuCuuo
+            .ouuuuuuo.
+            ...ouuo...
+            ...ouuo...
+            ...oUUo...
+            ...oyoyo..
+            ..........
+            """,
+        "gargoyle": """
+            o........o
+            oso.oo.oso
+            osssssssso
+            .osrsssrso
+            ..osssssso
+            ..osSSSso.
+            .osssssso.
+            .osSoSoSo.
+            ..oo.o.oo.
+            ..........
+            """,
+        "moonlit-harp": """
+            ..ooooo...
+            .oyyhhyo..
+            .oy.w.yo..
+            .oyw.w.yo.
+            .oy.w.w.o.
+            .oyw.w.yo.
+            .oy.w.w.o.
+            .oyyyyyyo.
+            ..oooooo..
+            ..........
+            """,
+        "prism-tiara": """
+            ..........
+            ....o.....
+            ...oco....
+            .o.ocmo.o.
+            ouoocwoouo
+            oyyyyyyyyo
+            oyhyyyyhyo
+            .oooooooo.
+            ..........
+            ..........
+            """,
+        "sun-amulet": """
+            ....oo....
+            ...o..o...
+            ...o..o...
+            ..oyyyyo..
+            .oyhaahyo.
+            oyhaRRahyo
+            oyhaRRahyo
+            .oyhaahyo.
+            ..oyyyyo..
+            ...oooo...
+            """,
+        "sky-compass": """
+            ...oooo...
+            ..oYyyYo..
+            .oywwwwyo.
+            oywwrwwwyo
+            oywwrwwwyo
+            oywwouwwyo
+            oywwwuwwyo
+            .oywwwwyo.
+            ..oYyyYo..
+            ...oooo...
+            """,
+        "royal-seal": """
+            ...oooo...
+            ..orrrro..
+            ..orrrro..
+            ...orro...
+            ...obbo...
+            ..obnnbo..
+            .orrrrrro.
+            orryhhyrro
+            orrrhyrrro
+            .oooooooo.
+            """,
     ]
 }

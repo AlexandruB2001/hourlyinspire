@@ -42,6 +42,12 @@ var items = PixelCanvas(width: ItemSprites.allIDs.count * 12, height: 12)
 for (i, id) in ItemSprites.allIDs.enumerated() { items.draw(ItemSprites.render(id), x: i * 12 + 1, y: 1) }
 write(items, "items", scale: 6)
 
+// Team world wildlife and treasures.
+let worldSprites = TeamWorldContent.allCreatures.map(\.spriteID) + TeamWorldCatalog.worlds.compactMap(\.treasure?.spriteID)
+var worldItems = PixelCanvas(width: worldSprites.count * 12, height: 12)
+for (i, id) in worldSprites.enumerated() { worldItems.draw(ItemSprites.render(id), x: i * 12 + 1, y: 1) }
+write(worldItems, "team-world-items", scale: 6)
+
 // Every shop item on the walker.
 var outfits = PixelCanvas(width: 10 * 18, height: ((ShopCatalog.items.count + 9) / 10) * 26)
 for (i, item) in ShopCatalog.items.enumerated() {

@@ -158,7 +158,8 @@ final class PixelArtTests: XCTestCase {
     }
 
     func testEveryWildlifeAndTreasureHasASprite() {
-        for id in WildlifeCatalog.all.map(\.spriteID) + TreasureCatalog.all.map(\.spriteID) + WorldEventCatalog.all.map(\.spriteID) {
+        for id in WildlifeCatalog.all.map(\.spriteID) + TreasureCatalog.all.map(\.spriteID) + WorldEventCatalog.all.map(\.spriteID)
+            + TeamWorldContent.allCreatures.map(\.spriteID) + TeamWorldCatalog.worlds.compactMap(\.treasure?.spriteID) {
             XCTAssertNotNil(ItemSprites.sprite(id), "missing sprite \(id)")
         }
     }

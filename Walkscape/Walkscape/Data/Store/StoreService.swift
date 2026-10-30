@@ -3,6 +3,17 @@ import Observation
 import StoreKit
 import WalkscapeDomain
 
+/// Switch for everything that sells or advertises real-money purchases.
+/// Off until the Paid Apps agreement is active and the owner says to turn it on.
+enum StoreFeature {
+    static let isEnabled = false
+
+    /// Plus frames, Plus gifts and bundle decorations stay out of lists while the store is hidden.
+    static func shows(frame: ProfileFrame) -> Bool { isEnabled || frame.requirement != .plus }
+    static func shows(accessoryID: String) -> Bool { isEnabled || !PlusMonthlyGift.rotation.contains(accessoryID) }
+    static func shows(_ decoration: CampsiteDecoration) -> Bool { isEnabled || decoration.source == .campfire }
+}
+
 /// Real-money purchases with StoreKit 2. Only verified transactions count;
 /// each one is also sent to the server (verify-purchase), which checks
 /// Apple's signature again and links it to the account.

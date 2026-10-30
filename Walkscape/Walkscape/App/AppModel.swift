@@ -769,6 +769,9 @@ final class AppModel {
 
     // MARK: Team worlds
 
+    /// The newest team-world zone reached, shown full screen once.
+    var teamWorldArrival: TeamWorldArrival?
+
     var teamWorldProgress: TeamWorldProgress? { team.map { TeamWorldProgress(teamMeters: $0.team.totalMeters) } }
 
     /// What the player has walked for their current team.
@@ -782,14 +785,41 @@ final class AppModel {
     private func processTeamWorlds(_ dashboard: TeamDashboard) {
         let progress = TeamWorldProgress(teamMeters: dashboard.team.totalMeters)
         guard progress.isUnlocked, myTeamContribution >= TeamWorldCatalog.minimumContribution else { return }
+        var newestZone: (TeamWorldZone, TeamWorld)?
         for world in TeamWorldCatalog.worlds {
             for zone in progress.reachedZones(in: world) where claim(zone.reward) {
                 recordInJournal([JournalEvents.teamWorldZone(zone, world: world, teamName: dashboard.team.name, on: today)])
+                newestZone = (zone, world)
             }
             let weekMeters = dashboard.members.compactMap(\.weekMeters).reduce(0, +)
             if progress.challengeOpen(in: world), weekMeters >= world.challenge.weekMeters, claim(world.challengeReward) {
                 recordInJournal([JournalEvents.teamWorldChallenge(world, teamName: dashboard.team.name, on: today)])
             }
+        }
+        // Only walkers who are out today spot the world's wildlife.
+        if distanceMeters >= TeamWorldCatalog.sightingMinimumMeters {
+            let fresh = collections.recordSightings(TeamWorldContent.sightings(on: today, progress: progress), on: today)
+            if !fresh.isEmpty {
+                store.save(collections, for: .appleHealth)
+                for creature in fresh { claim(creature.reward) }
+                recordInJournal(fresh.map { JournalEvents.wildlife($0, on: today) })
+                discovery = DiscoveryNews(creatures: fresh)
+            }
+        }
+        for world in TeamWorldCatalog.worlds {
+            let quests = world.quests(progress: progress, seenCreatures: Set(collections.wildlife.keys),
+                                      challengeDone: ledger.hasClaimed(world.challengeReward.id))
+            for quest in quests where quest.kind != .together && quest.isComplete && claim(quest.reward) {
+                if let treasure = quest.treasure, collections.recordTreasure(treasure, on: today) {
+                    store.save(collections, for: .appleHealth)
+                    claim(treasure.reward)
+                    discovery = DiscoveryNews(treasure: treasure)
+                }
+                recordInJournal([JournalEvents.teamWorldQuest(quest, world: world, on: today)])
+            }
+        }
+        if let newest = newestZone {
+            teamWorldArrival = TeamWorldArrival(zone: newest.0, world: newest.1, teamName: dashboard.team.name)
         }
     }
 
@@ -1095,9 +1125,9 @@ final class AppModel {
     var collectionProgress: [CollectionProgress] {
         [CollectionProgress(category: .relics, found: progression.collectedItemIDs.count,
                             total: engine.catalog.allCollectibles.count),
-         CollectionProgress(category: .wildlife, found: collections.wildlife.count, total: WildlifeCatalog.all.count),
+         CollectionProgress(category: .wildlife, found: collections.trailWildlifeCount, total: WildlifeCatalog.all.count),
          CollectionProgress(category: .postcards, found: Postcards.earned(in: progression).count, total: PostcardCatalog.all.count),
-         CollectionProgress(category: .treasures, found: collections.treasures.count, total: TreasureCatalog.all.count),
+         CollectionProgress(category: .treasures, found: collections.trailTreasureCount, total: TreasureCatalog.all.count),
          CollectionProgress(category: .memories, found: MemoryCatalog.reached(in: progression).count, total: MemoryCatalog.all.count)]
     }
 

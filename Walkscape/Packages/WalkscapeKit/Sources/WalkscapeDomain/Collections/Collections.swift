@@ -361,6 +361,11 @@ public struct CollectionState: Codable, Hashable, Sendable {
         return true
     }
 
+    /// Finds that belong to the solo collection books (team-world finds are kept
+    /// in the same lists but counted in their world instead).
+    public var trailWildlifeCount: Int { wildlife.keys.filter { WildlifeCatalog.creature(withID: $0) != nil }.count }
+    public var trailTreasureCount: Int { treasures.keys.filter { TreasureCatalog.treasure(withID: $0) != nil }.count }
+
     /// Two phones' collections together, keeping the earliest discovery date.
     public func merged(with other: CollectionState) -> CollectionState {
         var result = self

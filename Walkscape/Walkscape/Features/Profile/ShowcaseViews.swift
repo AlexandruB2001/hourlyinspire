@@ -156,7 +156,7 @@ struct ShowcaseEditor: View {
 
                     group("Frame") {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: Theme.Spacing.m)], spacing: Theme.Spacing.m) {
-                            ForEach(FrameCatalog.all) { frame in
+                            ForEach(FrameCatalog.all.filter(StoreFeature.shows(frame:))) { frame in
                                 let unlocked = frame.requirement.isMet(by: facts)
                                 Button { model.showcase.frameID = frame.id } label: {
                                     VStack(spacing: Theme.Spacing.xs) {

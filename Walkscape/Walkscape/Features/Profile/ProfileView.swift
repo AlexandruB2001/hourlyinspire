@@ -323,8 +323,9 @@ private struct AccountSection: View {
                         .disabled(isDeleting)
                 }
             }
-            Label("Walkscape Plus — optional cosmetics, coming later. Walking, zones and friends stay free.",
-                  systemImage: "crown")
+            if StoreFeature.isEnabled {
+                Label("Walkscape Plus — optional cosmetics. Walking, zones and friends stay free.", systemImage: "crown")
+            }
         }
         .font(Theme.Typography.caption)
         .foregroundStyle(Theme.Palette.creamDim)
