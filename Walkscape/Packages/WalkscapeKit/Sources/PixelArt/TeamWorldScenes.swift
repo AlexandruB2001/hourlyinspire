@@ -261,8 +261,8 @@ extension ScenePainter {
             mid.fillRect(x: x - 1, y: wallTop + 3, width: 2, height: 2, PixelColor(0xF2C84A))
         }
         for x in positions(count: max(2, width / 24), jitter: 5) {
-            pine(&mid, x: x, base: wallBottom + 1, height: rng.int(9...13), dark: PixelColor(0x3E6A44),
-                 light: PixelColor(0x568A56), trunk: PixelColor(0x6B4A2F))
+            roundTree(&mid, x: x, base: wallBottom + 1, radius: rng.int(3...4), dark: PixelColor(0x3E6A44),
+                      light: PixelColor(0x568A56), trunk: PixelColor(0x6B4A2F))
         }
         path(&ground, footY: footY, grass: PixelColor(0x7AAE5E), grassDark: PixelColor(0x5E9248),
              path: PixelColor(0xB8B0A0), pathDark: PixelColor(0x8C8478), pathLight: PixelColor(0xD4CCBC))
