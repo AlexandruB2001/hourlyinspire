@@ -364,8 +364,10 @@ public struct QuestBoard: Hashable, Sendable {
     public let companion: [QuestStatus]
 
     public init(tracker: QuestTracker, facts: QuestFacts, ledger: RewardLedger) {
-        day = tracker.day ?? facts.today
-        week = tracker.week ?? TeamWeek.start(of: facts.today)
+        let day = tracker.day ?? facts.today
+        let week = tracker.week ?? TeamWeek.start(of: facts.today)
+        self.day = day
+        self.week = week
         func status(_ id: String, period: String) -> QuestStatus? {
             guard let quest = QuestCatalog.definition(withID: id) else { return nil }
             let rewardID = "quest-\(quest.kind.rawValue)-\(period)-\(quest.id)"
@@ -375,8 +377,9 @@ public struct QuestBoard: Hashable, Sendable {
         daily = tracker.dailyQuestIDs.compactMap { status($0, period: day.isoString) }
         weekly = tracker.weeklyQuestIDs.compactMap { status($0, period: week.isoString) }
         companion = tracker.companionQuestIDs.compactMap { status($0, period: week.isoString) }
-        weeklyChest = QuestCatalog.weeklyChest(week: week)
-        weeklyChestClaimed = ledger.hasClaimed(weeklyChest.id)
+        let chest = QuestCatalog.weeklyChest(week: week)
+        weeklyChest = chest
+        weeklyChestClaimed = ledger.hasClaimed(chest.id)
     }
 
     public let weeklyChest: Reward
