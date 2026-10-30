@@ -16,6 +16,7 @@ struct LeaderboardRow: View {
                 Text(participant.name)
                     .font(Theme.Typography.headline)
                     .foregroundStyle(participant.isCurrentUser ? Theme.Palette.gold : Theme.Palette.cream)
+                if !compact, let title = model.titleName(for: participant.id) { TitleLabel(title: title) }
                 if !compact { subtitle }
             }
             Spacer()

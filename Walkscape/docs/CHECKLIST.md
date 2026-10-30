@@ -58,6 +58,7 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Reward ledger: every quest/event/level reward has an id and pays once
 - ✅ Quests: 3 daily (reset at local midnight), 3 weekly + 1 companion (reset Monday), weekly chest for finishing every weekly quest; rewards paid once via the ledger; Journey card + quest log
 - ⬜ Quest rewards beyond coins/XP (exclusive cosmetics, postcards, collection items) arrive with collections in Phase 3
+- ✅ Titles (20) and profile frames (8), unlocked from Apple Health progress; favourite-zone backdrop, companion and up to 3 showcased achievements; titles shown under names on the leaderboard, team list and friend card (migration 20261101000001)
 - ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges

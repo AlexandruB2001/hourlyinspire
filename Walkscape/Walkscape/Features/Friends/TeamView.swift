@@ -222,6 +222,9 @@ private struct TeamDashboardView: View {
                                 Image(systemName: "crown.fill").font(.caption2).foregroundStyle(Theme.Palette.gold)
                             }
                         }
+                        if let title = model.titleName(for: member.isCurrentUser ? model.currentUserID : member.id) {
+                            TitleLabel(title: title)
+                        }
                         if let meters = member.dayMeters {
                             PixelProgressBar(fraction: Double(meters) / Double(dayTotal), segments: 10,
                                              fill: member.isCurrentUser ? Theme.Palette.gold : Theme.Palette.leaf, height: 8)

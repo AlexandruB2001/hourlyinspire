@@ -52,6 +52,16 @@ final class AppModel {
     private(set) var ledger: RewardLedger
     /// Today's and this week's quests, and the counters they need.
     private(set) var questTracker: QuestTracker
+    /// Title, frame, favourite zone and showcased achievements.
+    var showcase: ProfileShowcase {
+        didSet {
+            guard showcase != oldValue else { return }
+            store.save(showcase)
+            Task { await publishShowcase() }
+        }
+    }
+    /// Friends' and teammates' titles and frames.
+    private(set) var friendShowcases: [UserID: PublicShowcase] = [:]
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -118,6 +128,7 @@ final class AppModel {
         adState = store.loadAdState()
         ledger = store.loadLedger(source)
         questTracker = store.loadQuestTracker(source)
+        showcase = store.loadShowcase()
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
@@ -688,6 +699,36 @@ final class AppModel {
         return true
     }
 
+    // MARK: Titles and profile
+
+    /// Unlocks always come from Apple Health progress, so demo walking can't unlock titles.
+    var profileFacts: ProfileFacts {
+        let health = healthCloudSave()
+        let level = ExplorerLevel(totalXP: ExplorerXP(progression: health.progression, ledger: health.ledger).total).level
+        let stage = health.companion.map { max($0.celebratedStage, $0.growth(lifetimeMeters: health.progression.lifetimeMeters).stage.rawValue) }
+        return ProfileFacts(progression: health.progression, explorerLevel: level, ledger: health.ledger,
+                            journal: health.journal, companionStage: stage)
+    }
+
+    /// The showcase with anything not (or no longer) unlocked replaced by defaults.
+    var currentShowcase: ProfileShowcase { showcase.validated(with: profileFacts) }
+
+    /// The title shown under someone's name, if they picked one.
+    func titleName(for id: UserID) -> String? {
+        if id == currentUserID { return TitleCatalog.title(withID: currentShowcase.titleID)?.name }
+        return friendShowcases[id]?.titleName
+    }
+
+    func frame(for id: UserID) -> ProfileFrame {
+        if id == currentUserID { return FrameCatalog.frame(withID: currentShowcase.frameID) }
+        return FrameCatalog.frame(withID: friendShowcases[id]?.frameID)
+    }
+
+    private func publishShowcase() async {
+        guard let backend, isSignedIn else { return }
+        try? await backend.showcases.publish(currentShowcase)
+    }
+
     // MARK: Quests
 
     /// Starts a new day or week of quests when needed. Safe to call often.
@@ -768,6 +809,7 @@ final class AppModel {
                          journal: isHealth ? journal : store.loadJournal(.appleHealth),
                          ledger: isHealth ? ledger : store.loadLedger(.appleHealth),
                          companion: isHealth ? companion : store.loadCompanion(.appleHealth),
+                         showcase: showcase,
                          savedAt: Date())
     }
 
@@ -791,6 +833,7 @@ final class AppModel {
         journal = save.journal
         ledger = save.ledger
         if let restored = save.companion { companion = restored }
+        if let restored = save.showcase, restored != showcase { showcase = restored }
         processLevelUps(source: .appleHealth)
     }
 
@@ -900,6 +943,7 @@ final class AppModel {
             (friends, friendRequests) = try await (summaries, requests)
             friendsError = nil
             announce(friendRequests.incoming.map(GameNotifications.friendRequest))
+            if let backend, isSignedIn, let showcases = try? await backend.showcases.friends() { friendShowcases = showcases }
             trackFocus.reconcile(with: trackParticipants)
         } catch FriendRepositoryError.notSignedIn {
             handleSessionExpired()
@@ -1014,6 +1058,7 @@ final class AppModel {
         settings.shareProgressWithFriends = profile.shareProgress
         Task { await registerPushToken() }
         Task { await syncCloudSave(force: true) }
+        Task { await publishShowcase() }
     }
 
     /// Changes the username. Returns an error message, or nil on success.

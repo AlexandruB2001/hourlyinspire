@@ -22,14 +22,14 @@ struct FriendDayCard: View {
                                      walking: (current.distanceMeters ?? 0) > 0, pixel: 4)
                 }
                 .frame(width: 84, height: 100)
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m)
-                    .strokeBorder(current.isCurrentUser ? Theme.Palette.gold : Theme.Palette.ink, lineWidth: 2))
+                .profileFrame(model.frame(for: current.id))
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Eyebrow(rankText(entry), color: entry?.rank == 1 ? Theme.Palette.gold : Theme.Palette.creamDim)
                     Text(current.isCurrentUser ? "You" : "@\(current.name)")
                         .font(Theme.Typography.title)
                         .foregroundStyle(current.isCurrentUser ? Theme.Palette.gold : Theme.Palette.cream)
+                    if let title = model.titleName(for: current.id) { TitleLabel(title: title) }
                     if isTeammate(current) {
                         Label("Teammate", systemImage: "flag.fill")
                             .font(Theme.Typography.micro)

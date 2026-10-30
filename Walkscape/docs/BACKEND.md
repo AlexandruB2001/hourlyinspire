@@ -225,3 +225,11 @@ WalkscapeDomain). Demo data is never uploaded.
 
 Limits: the save is written by the app, so (like walking totals) it can't be
 verified by the server. Shared rewards are always granted server-side.
+
+## Profile showcase (migration 20261101000001, not live yet)
+
+`profiles` gains `title_id`, `frame_id` and `favorite_zone_id` (id format
+checked). `set_my_showcase` updates the caller's; `friend_showcases()` lists
+the caller's, their friends' and their teammates'. Which titles are unlocked
+is decided by the app from Apple Health progress (`Titles.swift`), so like
+walking totals it can't be verified by the server.

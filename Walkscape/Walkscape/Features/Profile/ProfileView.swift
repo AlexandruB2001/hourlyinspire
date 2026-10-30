@@ -10,6 +10,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     ProfileHeader()
                     ExplorerLevelCard()
+                    ShowcaseSection()
                     AchievementsSection()
                     CollectionSection()
                     ReferralSection()
@@ -36,12 +37,7 @@ private struct ProfileHeader: View {
         @Bindable var model = model
         VStack(spacing: Theme.Spacing.l) {
             HStack(spacing: Theme.Spacing.l) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                    WalkingCharacter(avatarID: model.settings.avatarID, outfit: model.outfit, walking: true, pixel: 4)
-                }
-                .frame(width: 92, height: 100)
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(Theme.Palette.ink, lineWidth: 2))
+                ProfilePortrait(showcase: model.currentShowcase)
 
                 VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
                     Button {
@@ -58,6 +54,7 @@ private struct ProfileHeader: View {
                         .foregroundStyle(Theme.Palette.cream)
                     }
                     .accessibilityLabel("Username \(model.settings.username). Edit")
+                    if let title = TitleCatalog.title(withID: model.currentShowcase.titleID) { TitleLabel(title: title.name) }
                     StatBlock(value: DistanceFormatting.kilometres(model.progression.lifetimeMeters), label: "walked in total")
                     Text("\(model.progression.activeDays()) active days · best \(DistanceFormatting.kilometres(model.progression.bestDayMeters))")
                         .font(Theme.Typography.caption)
