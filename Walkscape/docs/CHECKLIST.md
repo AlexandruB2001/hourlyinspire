@@ -69,6 +69,14 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Team ledger: every member's day credited to one team once (capped 25 km), kept when they leave; expeditions and totals never go backwards (migration 20261103000001)
 - ✅ Team Campfire: 5 levels (campfire → tent & lantern → gathering place → camp village → expedition HQ) from team distance + expeditions, 10 shared decorations, contributor list, per-player level rewards
 - ✅ Team worlds (Phase 7): 5 worlds of 4-5 zones each opening after the Summit Relay, world tint art, world map, weekly community challenge per world; rewards once per player who walked 2 km for the team
+- ✅ Team worlds, second pass:
+  - hand-painted background per world
+  - 3 creatures per world
+  - world quests (Pathfinder, World Naturalist with a world treasure)
+  - a title per world
+  - full-screen zone arrival
+  - server-recorded unlocks (migration 20261106)
+- ⏸ Store and Walkscape Plus are built but hidden (`StoreFeature.isEnabled = false`) until the owner turns them on
 - ✅ Seasonal festivals (Phase 8): Great Harvest, Winter Wanderer, Spring Awakening, Ocean Expedition, Starfall Festival; yearly dates, 4 tiers (≤ 50 km, 10 km/day cap), festival quests, exclusive companion accessories (sold after the festival), festival titles, community goal (migration 20261104000001)
 - ✅ Store (Phase 9, code): Walkscape Plus ($2.99/mo, $19.99/yr) and 4 cosmetic bundles via StoreKit 2; server-verified purchases (migration 20261105000001, verify-purchase + app-store-notifications functions); premium outfits, companion skins, trails, Journal themes, Plus frames, campsite decor, monthly Plus gift
 - ✅ Store server: purchases migration applied, verify-purchase and app-store-notifications deployed (2026-10-30)

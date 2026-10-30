@@ -138,6 +138,22 @@ final class TeamWorldTests: XCTestCase {
         XCTAssertEqual(collections.trailWildlifeCount, 1)
     }
 
+    func testServerZoneDistancesMatchTheApp() throws {
+        let migration = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("supabase/migrations/20261106000001_team_worlds.sql")
+        let sql = try String(contentsOf: migration, encoding: .utf8)
+        var rows = 0
+        for world in worlds {
+            for zone in world.zones {
+                let meters = TeamWorldCatalog.startMeters(of: world) + zone.metersFromWorldStart
+                XCTAssertTrue(sql.contains("('\(zone.id)', '\(world.id)', \(meters))"), "\(zone.id) should be at \(meters) m")
+                rows += 1
+            }
+        }
+        XCTAssertEqual(sql.components(separatedBy: "', '").count - 1, rows, "no extra zones on the server")
+    }
+
     func testEverythingAfterTheLastWorldStaysInIt() {
         let huge = TeamWorldProgress(teamMeters: 100_000_000)
         XCTAssertEqual(huge.currentWorld?.id, worlds.last?.id)

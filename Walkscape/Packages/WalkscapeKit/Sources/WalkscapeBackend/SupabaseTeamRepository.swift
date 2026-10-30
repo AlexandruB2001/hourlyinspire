@@ -151,6 +151,14 @@ public struct SupabaseTeamRepository: TeamRepository {
         try await run { try await api.call("my_campsite") }
     }
 
+    /// Records the team-world zones the team's ledger distance has reached and
+    /// returns every zone the server has on record for the team.
+    public func recordTeamWorldUnlocks() async throws -> Set<String> {
+        struct Row: Decodable { let zone_id: String }
+        let rows: [Row] = try await run { try await api.call("record_team_world_unlocks") }
+        return Set(rows.map(\.zone_id))
+    }
+
     public func setCampsiteDecorations(_ decorations: [String]) async throws {
         struct Params: Encodable { let p_decorations: [String] }
         try await run { try await api.call("set_campsite_decorations", Params(p_decorations: decorations)) }

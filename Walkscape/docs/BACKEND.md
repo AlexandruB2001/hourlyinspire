@@ -283,3 +283,13 @@ is exposed. Seasonal festivals compare it with their community goal.
 - `app-store-notifications` (Verify JWT off): App Store Server Notifications V2
   for renewals, expiries and refunds. Its URL goes in App Store Connect → App
   Information → App Store Server Notifications (Production and Sandbox).
+
+## Team world unlocks (migration 20261106000001, not applied yet)
+
+- `team_world_zones`: the 21 team-world zones and the team distance that
+  reaches each one, mirroring `TeamWorlds.swift`. `TeamWorldTests` fails if the two drift apart.
+- `team_world_unlocks`: one row per team and zone, the first time the team's
+  ledger total reaches it.
+- `record_team_world_unlocks()`: any member records the reached zones and gets
+  the team's unlocks back. The app pays a zone's reward only once the zone is on
+  record. Servers without this function fall back to the app's own calculation.

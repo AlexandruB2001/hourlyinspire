@@ -754,12 +754,14 @@ final class AppModel {
         }
         let placed = (try? await backend.teams.campsiteDecorations()) ?? campsite?.decorations ?? []
         if let contributions = try? await backend.teams.contributions() { teamContributions = contributions }
+        // Older servers without the unlock table fall back to the app's own calculation.
+        let serverUnlocks = try? await backend.teams.recordTeamWorldUnlocks()
         let site = Campsite(teamMeters: dashboard.team.totalMeters, expeditions: dashboard.expeditions.completed.count,
                             placed: placed)
         campsite = site
         // Level rewards are per player, so moving teams can't collect them twice.
         guard dataSource == .appleHealth else { return }
-        processTeamWorlds(dashboard)
+        processTeamWorlds(dashboard, serverUnlocks: serverUnlocks)
         for level in CampfireCatalog.levels where level.level > 1 && level.level <= site.level.level {
             if claim(level.reward) {
                 recordInJournal([JournalEvents.campfire(level, teamName: dashboard.team.name, on: today)])
@@ -781,13 +783,15 @@ final class AppModel {
     }
 
     /// Zones and challenges the team has reached pay each player once, ever,
-    /// and only players who have walked for the team themselves.
-    private func processTeamWorlds(_ dashboard: TeamDashboard) {
+    /// and only players who have walked for the team themselves. Once the server
+    /// keeps the team's unlocks, a zone pays only after it's on record there.
+    private func processTeamWorlds(_ dashboard: TeamDashboard, serverUnlocks: Set<String>?) {
         let progress = TeamWorldProgress(teamMeters: dashboard.team.totalMeters)
         guard progress.isUnlocked, myTeamContribution >= TeamWorldCatalog.minimumContribution else { return }
         var newestZone: (TeamWorldZone, TeamWorld)?
         for world in TeamWorldCatalog.worlds {
-            for zone in progress.reachedZones(in: world) where claim(zone.reward) {
+            for zone in progress.reachedZones(in: world) where serverUnlocks?.contains(zone.id) ?? true {
+                guard claim(zone.reward) else { continue }
                 recordInJournal([JournalEvents.teamWorldZone(zone, world: world, teamName: dashboard.team.name, on: today)])
                 newestZone = (zone, world)
             }
