@@ -208,6 +208,12 @@ private struct CompanionAccessoriesCard: View {
             if owned {
                 Button(wearing ? "Wearing" : "Wear") { model.toggleAccessory(accessory) }
                     .buttonStyle(PixelButtonStyle(kind: wearing ? .secondary : .quiet))
+            } else if !accessory.isForSale(on: model.today), let event = accessory.eventID.flatMap(SeasonalEventCatalog.event(withID:)) {
+                Text("\(event.name) reward")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.gold)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 84)
             } else if let price = accessory.price {
                 Button { _ = model.buyAccessory(accessory) } label: { PriceLabel(price: price) }
                     .buttonStyle(.pixel)

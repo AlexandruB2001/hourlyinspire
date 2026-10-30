@@ -20,6 +20,12 @@ struct DiscoveryNews: Equatable {
         spriteID = event.spriteID
     }
 
+    init(eventTier run: EventRun, tier: Int) {
+        title = "\(run.event.name)!"
+        subtitle = tier == run.event.tiers.count ? "Every tier complete!" : "Tier \(tier) reached"
+        spriteID = run.event.tiers[tier - 1].itemIDs.isEmpty ? run.event.spriteID : "chest"
+    }
+
     init(shared: SharedDiscovery) {
         title = "Found together!"
         subtitle = "You and @\(shared.friendName): \(SharedDiscoveries.name(of: shared.discoveryID))"

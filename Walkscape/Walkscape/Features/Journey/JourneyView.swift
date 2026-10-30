@@ -12,6 +12,7 @@ struct JourneyView: View {
                     JourneyHero(topInset: proxy.safeAreaInsets.top)
                     VStack(spacing: Theme.Spacing.l) {
                         DistanceCard()
+                        if let run = model.activeEventRuns.first { SeasonalEventCard(run: run) }
                         QuestsCard()
                         WorldEventsCard()
                         HealthStatusCard()

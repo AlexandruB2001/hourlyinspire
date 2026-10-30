@@ -256,3 +256,9 @@ walking totals it can't be verified by the server.
 - `team_campsites`: up to 8 decoration ids per team (`my_campsite`,
   `set_campsite_decorations`). The Campfire level is derived in the app
   from the ledger total and finished expeditions (`Campfire.swift`).
+
+## Community goals (migration 20261104000001, not live yet)
+
+`community_distance(start, end)` returns everyone's combined distance between
+two days (capped at 25 km a day, ranges limited to ~2 months). Only the total
+is exposed. Seasonal festivals compare it with their community goal.

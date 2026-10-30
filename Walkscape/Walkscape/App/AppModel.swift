@@ -72,6 +72,8 @@ final class AppModel {
     private(set) var campsite: Campsite?
     /// Everyone who has walked for the team, most first.
     private(set) var teamContributions: [TeamContribution] = []
+    /// Everyone's combined distance per running seasonal event (run id → metres).
+    private(set) var communityMeters: [String: Int] = [:]
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -317,6 +319,7 @@ final class AppModel {
             processCollections(on: progress.localDate, source: source)
             processWorldEvents(on: progress.localDate, source: source)
             processCompanionFind(on: progress.localDate, meters: progress.distanceMeters, source: source)
+            processSeasonalEvents(source: source)
             processLevelUps(source: source)
             announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
                      + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
@@ -823,6 +826,12 @@ final class AppModel {
             }
         }
         if let feed = try? await backend.social.milestoneFeed(since: today.adding(days: -14)) { milestoneFeed = feed }
+        for run in activeEventRuns {
+            if let meters = try? await backend.social.communityDistance(from: run.startDay, to: run.endDay) {
+                communityMeters[run.id] = meters
+            }
+        }
+        processSeasonalEvents(source: dataSource)
     }
 
     func react(to milestone: FriendMilestone, with reaction: Reaction) async {
@@ -883,6 +892,38 @@ final class AppModel {
         current.toggle(accessory)
         companion = current
         store.save(current, for: dataSource)
+    }
+
+    // MARK: Seasonal events
+
+    var activeEventRuns: [EventRun] { SeasonalEventCatalog.active(on: today) }
+    var nextEventRun: EventRun? { SeasonalEventCatalog.next(after: today) }
+
+    func eventProgress(_ run: EventRun) -> EventProgress {
+        EventProgress(run: run, progression: progression, collections: collections)
+    }
+
+    /// Pays event tiers, quests and the community reward as they're reached.
+    /// Ids include the event and year, so every run pays once.
+    private func processSeasonalEvents(source: WalkingDataSourceKind) {
+        for run in activeEventRuns {
+            let progress = eventProgress(run)
+            for (index, _) in run.event.tiers.enumerated() where index < progress.tiersReached {
+                if ledger.claim(run.tierReward(index), into: &wallet) {
+                    recordInJournal([JournalEvents.eventTier(run, tier: index + 1, on: today)])
+                    discovery = DiscoveryNews(eventTier: run, tier: index + 1)
+                }
+            }
+            for quest in run.event.quests where progress.progress(of: quest) >= quest.target {
+                _ = ledger.claim(run.questReward(quest), into: &wallet)
+            }
+            if let total = communityMeters[run.id], total >= run.event.communityGoalKilometres * 1_000,
+               progress.meters >= EventRun.communityShareMeters {
+                _ = ledger.claim(run.communityReward, into: &wallet)
+            }
+        }
+        store.save(ledger, for: source)
+        store.save(wallet, for: source)
     }
 
     // MARK: Seasons and world events

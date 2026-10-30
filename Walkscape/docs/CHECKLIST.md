@@ -68,6 +68,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Friend milestones feed with reactions (🎉 👏 ⭐ 💛), and rewards for 100/250/500 km walked together with a friend
 - ✅ Team ledger: every member's day credited to one team once (capped 25 km), kept when they leave; expeditions and totals never go backwards (migration 20261103000001)
 - ✅ Team Campfire: 5 levels (campfire → tent & lantern → gathering place → camp village → expedition HQ) from team distance + expeditions, 10 shared decorations, contributor list, per-player level rewards
+- ✅ Team worlds (Phase 7): 5 worlds of 4-5 zones each opening after the Summit Relay, world tint art, world map, weekly community challenge per world; rewards once per player who walked 2 km for the team
+- ✅ Seasonal festivals (Phase 8): Great Harvest, Winter Wanderer, Spring Awakening, Ocean Expedition, Starfall Festival; yearly dates, 4 tiers (≤ 50 km, 10 km/day cap), festival quests, exclusive companion accessories (sold after the festival), festival titles, community goal (migration 20261104000001)
 - ✅ Cloud save (migration 20261031000001, live)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges

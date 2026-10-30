@@ -78,4 +78,10 @@ public struct SocialService: Sendable {
         let rows: [Row] = try await api.call("walked_together")
         return rows.map { (UserID($0.friend_id.lowercased()), $0.username, $0.meters) }
     }
+
+    /// Everyone's combined distance between two days, for seasonal event community goals.
+    public func communityDistance(from start: LocalDay, to end: LocalDay) async throws -> Int {
+        struct Params: Encodable { let p_start: String; let p_end: String }
+        return try await api.call("community_distance", Params(p_start: start.isoString, p_end: end.isoString))
+    }
 }

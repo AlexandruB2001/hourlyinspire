@@ -42,6 +42,8 @@ public enum UnlockRequirement: Hashable, Sendable {
     case expeditions(Int)
     case creatures(Int)
     case treasures(Int)
+    /// Every tier of a seasonal event, in any year.
+    case eventCompleted(String)
 
     public func isMet(by facts: ProfileFacts) -> Bool {
         switch self {
@@ -58,6 +60,10 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .expeditions(let count): return facts.expeditions >= count
         case .creatures(let count): return facts.collections.wildlife.count >= count
         case .treasures(let count): return facts.collections.treasures.count >= count
+        case .eventCompleted(let id):
+            guard let event = SeasonalEventCatalog.event(withID: id) else { return false }
+            let suffix = "-tier-\(event.tiers.count)"
+            return facts.ledger.claimed.keys.contains { $0.hasPrefix("event-\(id)-") && $0.hasSuffix(suffix) }
         }
     }
 
@@ -79,6 +85,8 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .expeditions(let count): return count == 1 ? "Complete a team expedition." : "Complete \(count) team expeditions."
         case .creatures(let count): return "Spot \(count) different creatures."
         case .treasures(let count): return "Find \(count) treasures."
+        case .eventCompleted(let id):
+            return "Finish every tier of \(SeasonalEventCatalog.event(withID: id)?.name ?? "a seasonal event")."
         }
     }
 }
@@ -120,6 +128,11 @@ public enum TitleCatalog {
         PlayerTitle(id: "wildlife-watcher", name: "Wildlife Watcher", requirement: .creatures(10)),
         PlayerTitle(id: "naturalist", name: "Naturalist", requirement: .creatures(WildlifeCatalog.all.count)),
         PlayerTitle(id: "treasure-hunter", name: "Treasure Hunter", requirement: .treasures(4)),
+        PlayerTitle(id: "harvest-keeper", name: "Harvest Keeper", requirement: .eventCompleted("great-harvest")),
+        PlayerTitle(id: "winter-wanderer", name: "Winter Wanderer", requirement: .eventCompleted("winter-wanderer")),
+        PlayerTitle(id: "bloom-bringer", name: "Bloom Bringer", requirement: .eventCompleted("spring-awakening")),
+        PlayerTitle(id: "ocean-voyager", name: "Ocean Voyager", requirement: .eventCompleted("ocean-expedition")),
+        PlayerTitle(id: "star-catcher", name: "Star Catcher", requirement: .eventCompleted("starfall-festival")),
         PlayerTitle(id: "seasoned-explorer", name: "Seasoned Explorer", requirement: .explorerLevel(10)),
         PlayerTitle(id: "master-explorer", name: "Master Explorer", requirement: .explorerLevel(20)),
         PlayerTitle(id: "legendary-explorer", name: "Legendary Explorer", requirement: .explorerLevel(40)),

@@ -130,13 +130,23 @@ public struct CompanionAccessory: Identifiable, Hashable, Sendable {
     public let price: Int?
     /// Explorer Level that gives it for free, if any.
     public let unlockLevel: Int?
+    /// Seasonal event that gives it. While that event runs it can only be
+    /// earned; afterwards it joins the shop, so nobody misses it forever.
+    public let eventID: String?
 
-    public init(id: String, name: String, slot: Slot, price: Int?, unlockLevel: Int? = nil) {
+    public init(id: String, name: String, slot: Slot, price: Int?, unlockLevel: Int? = nil, eventID: String? = nil) {
         self.id = id
         self.name = name
         self.slot = slot
         self.price = price
         self.unlockLevel = unlockLevel
+        self.eventID = eventID
+    }
+
+    /// Whether it can be bought with coins on `day`.
+    public func isForSale(on day: LocalDay) -> Bool {
+        guard price != nil else { return false }
+        return !SeasonalEventCatalog.isEventExclusiveNow(id, on: day)
     }
 }
 
@@ -152,6 +162,11 @@ public enum CompanionAccessoryCatalog {
         CompanionAccessory(id: "pet-bell", name: "Golden Bell", slot: .neck, price: nil, unlockLevel: 10),
         CompanionAccessory(id: "pet-backpack", name: "Mini Backpack", slot: .back, price: 180),
         CompanionAccessory(id: "pet-cape", name: "Hero Cape", slot: .back, price: 250),
+        CompanionAccessory(id: "pet-pumpkin-hat", name: "Pumpkin Hat", slot: .head, price: 300, eventID: "great-harvest"),
+        CompanionAccessory(id: "pet-snow-hat", name: "Snowy Bobble Hat", slot: .head, price: 300, eventID: "winter-wanderer"),
+        CompanionAccessory(id: "pet-petal-crown", name: "Petal Crown", slot: .head, price: 300, eventID: "spring-awakening"),
+        CompanionAccessory(id: "pet-sailor-hat", name: "Sailor Hat", slot: .head, price: 300, eventID: "ocean-expedition"),
+        CompanionAccessory(id: "pet-star-cape", name: "Starfall Cape", slot: .back, price: 300, eventID: "starfall-festival"),
     ]
 
     public static func accessory(withID id: String) -> CompanionAccessory? { all.first { $0.id == id } }

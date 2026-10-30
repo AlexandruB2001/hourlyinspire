@@ -53,6 +53,34 @@ enum CompanionAccessoryArt {
             onn
             ooo
             """,
+        "pet-pumpkin-hat": """
+            ..g..
+            .oao.
+            oaAao
+            oaaao
+            """,
+        "pet-snow-hat": """
+            ..w..
+            .oro.
+            orwro
+            owwwo
+            """,
+        "pet-petal-crown": """
+            p.m.p
+            opgpo
+            """,
+        "pet-sailor-hat": """
+            .ooo.
+            owwwo
+            ouuuo
+            """,
+        "pet-star-cape": """
+            oo.
+            ovv
+            ovh
+            ovv
+            ooo
+            """,
         "pet-cape": """
             oo.
             orr

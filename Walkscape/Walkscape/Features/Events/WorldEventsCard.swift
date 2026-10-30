@@ -19,6 +19,11 @@ struct WorldEventsCard: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
             }
+            if model.activeEventRuns.isEmpty, let next = model.nextEventRun {
+                Label("Next festival: \(next.event.name) from \(next.startDay.displayDate)", systemImage: "calendar")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.gold)
+            }
             ForEach(events) { scheduled in
                 let zone = model.engine.catalog.zones.first { $0.id == scheduled.zoneID }
                 let found = model.hasFound(scheduled)
