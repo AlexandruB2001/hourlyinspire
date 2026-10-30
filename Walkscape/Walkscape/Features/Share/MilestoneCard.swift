@@ -55,6 +55,7 @@ struct MilestoneCardContent: Identifiable, Hashable {
         case .treasure: eyebrow = "Treasure found"
         case .postcard: eyebrow = "Postcard"
         case .event: eyebrow = "World event"
+        case .shared: eyebrow = "Found together"
         }
         // Zone entries show that zone; everything else shows where you are now.
         let parts = entry.iconID.split(separator: ":").map(String.init)

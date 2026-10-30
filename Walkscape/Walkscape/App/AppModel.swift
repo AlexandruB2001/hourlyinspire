@@ -66,6 +66,8 @@ final class AppModel {
     private(set) var collections: CollectionState
     /// A new creature or treasure to announce; cleared by the UI.
     var discovery: DiscoveryNews?
+    /// Friends' recent milestones, newest first.
+    private(set) var milestoneFeed: [FriendMilestone] = []
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -722,6 +724,46 @@ final class AppModel {
         return true
     }
 
+    // MARK: Social
+
+    /// Shares today's special finds and milestones, then collects shared
+    /// discoveries, the friends' milestone feed and distance walked together.
+    /// Only Apple Health progress is shared; demo walking stays private.
+    private func refreshSocial() async {
+        guard let backend, isSignedIn else { milestoneFeed = []; return }
+        if dataSource == .appleHealth {
+            let reachedCount = min(progression.todayHighestZoneIndex + 1, engine.catalog.zones.count)
+            let reached = engine.catalog.zones.prefix(reachedCount).map(\.id)
+            let finds = SharedDiscoveries.records(on: today, zonesReached: progression.day == today ? reached : [],
+                                                  foundEvents: todaysEvents.filter(hasFound))
+            try? await backend.social.record(discoveries: finds)
+            try? await backend.social.record(milestones: FriendMilestoneCatalog.milestones(in: journal))
+
+            if let shared = try? await backend.social.sharedDiscoveries(since: today.adding(days: -7)) {
+                for found in shared where claim(found.reward) {
+                    recordInJournal([found.journalEntry])
+                    discovery = DiscoveryNews(shared: found)
+                }
+            }
+            if let together = try? await backend.social.walkedTogether() {
+                for friend in together {
+                    for reward in WalkedTogether.rewards(friendID: friend.friendID, meters: friend.meters) where claim(reward) {
+                        let km = Int(reward.id.split(separator: "-")[1].dropLast()) ?? 100
+                        recordInJournal([WalkedTogether.journalEntry(friendName: friend.username, friendID: friend.friendID,
+                                                                     meters: km * 1_000, on: today)])
+                    }
+                }
+            }
+        }
+        if let feed = try? await backend.social.milestoneFeed(since: today.adding(days: -14)) { milestoneFeed = feed }
+    }
+
+    func react(to milestone: FriendMilestone, with reaction: Reaction) async {
+        guard let backend, isSignedIn else { return }
+        try? await backend.social.react(to: milestone, with: reaction)
+        if let feed = try? await backend.social.milestoneFeed(since: today.adding(days: -14)) { milestoneFeed = feed }
+    }
+
     // MARK: Companion life
 
     /// What the companion is saying right now.
@@ -1127,6 +1169,7 @@ final class AppModel {
             friendsError = nil
             announce(friendRequests.incoming.map(GameNotifications.friendRequest))
             if let backend, isSignedIn, let showcases = try? await backend.showcases.friends() { friendShowcases = showcases }
+            await refreshSocial()
             trackFocus.reconcile(with: trackParticipants)
         } catch FriendRepositoryError.notSignedIn {
             handleSessionExpired()

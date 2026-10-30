@@ -20,6 +20,12 @@ struct DiscoveryNews: Equatable {
         spriteID = event.spriteID
     }
 
+    init(shared: SharedDiscovery) {
+        title = "Found together!"
+        subtitle = "You and @\(shared.friendName): \(SharedDiscoveries.name(of: shared.discoveryID))"
+        spriteID = SharedDiscoveries.spriteID(of: shared.discoveryID)
+    }
+
     init(find: CompanionFind) {
         title = "Your companion found something!"
         subtitle = find.title

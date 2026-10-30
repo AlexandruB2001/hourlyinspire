@@ -233,3 +233,14 @@ checked). `set_my_showcase` updates the caller's; `friend_showcases()` lists
 the caller's, their friends' and their teammates'. Which titles are unlocked
 is decided by the app from Apple Health progress (`Titles.swift`), so like
 walking totals it can't be verified by the server.
+
+## Social (migration 20261102000001, not live yet)
+
+- `discoveries` (user, discovery id, date): world events and rare+ sightings,
+  reported by the app for today ±1 day. `my_shared_discoveries(since)` joins
+  the caller's with friends' on id and date; rewards are claimed once per
+  friend by the app's ledger (`shared-<id>-<date>-<friend>`).
+- `friend_milestones` + `milestone_reactions`: `record_milestones`,
+  `friend_milestone_feed(since)`, `react_to_milestone` (friends only, one per
+  friend per milestone), `my_milestone_reactions(since)`.
+- `walked_together()`: both friends' shared distance since becoming friends.

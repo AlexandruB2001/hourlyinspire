@@ -27,6 +27,7 @@ struct FriendsView: View {
                         FocusCard()
                         if model.account != .signedOut {
                             leaderboardSection
+                            MilestoneFeedSection()
                             FriendRequestsSection()
                         }
                         privacyNote
