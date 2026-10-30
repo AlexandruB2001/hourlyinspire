@@ -139,13 +139,12 @@ final class TeamWorldTests: XCTestCase {
     }
 
     func testServerZoneDistancesMatchTheApp() throws {
-        let migration = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent() // WalkscapeDomainTests
-            .deletingLastPathComponent() // Tests
-            .deletingLastPathComponent() // WalkscapeKit
-            .deletingLastPathComponent() // Packages
-            .deletingLastPathComponent() // Walkscape
-            .appendingPathComponent("Walkscape/supabase/migrations/20261106000001_team_worlds.sql")
+        // Walk up from this file to the folder that holds supabase/.
+        var folder = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: folder.appendingPathComponent("supabase").path), folder.pathComponents.count > 1 {
+            folder.deleteLastPathComponent()
+        }
+        let migration = folder.appendingPathComponent("supabase/migrations/20261106000001_team_worlds.sql")
         let sql = try String(contentsOf: migration, encoding: .utf8)
         var rows = 0
         for world in worlds {
