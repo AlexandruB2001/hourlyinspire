@@ -80,7 +80,13 @@ jobs:
           set -o pipefail
           xcodebuild -project Walkscape.xcodeproj -scheme Walkscape \
             -destination 'generic/platform=iOS Simulator' -configuration Debug \
-            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tail -200
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 || {
+              # Compiler errors can be far above the summary, so list them first.
+              grep -E "error:" build.log | sort -u | head -60
+              tail -60 build.log
+              exit 1
+            }
+          tail -40 build.log
       - name: Check bundle contents
         working-directory: Walkscape
         run: |
