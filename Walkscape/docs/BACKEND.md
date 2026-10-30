@@ -195,13 +195,14 @@ To switch it on:
    (APNs)* → download the `.p8` (only once).
 2. Run `20261030000001_push_notifications.sql` in the SQL Editor.
 3. Edge Functions → *Deploy a new function* → name `send-push`, paste
-   `index.ts`, turn **off** "Verify JWT" (webhooks authenticate with the secret).
-4. Edge Functions → Secrets: `WEBHOOK_SECRET` (random), `APNS_KEY_ID`,
-   `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (the .p8 contents), `APNS_TOPIC`
+   `index.ts`, keep **Verify JWT** on.
+4. Edge Functions → Secrets: `APNS_KEY_ID`, `APNS_TEAM_ID`,
+   `APNS_PRIVATE_KEY` (the .p8 contents), `APNS_TOPIC`
    (`com.alexandrub.walkscape`).
 5. Database → Webhooks → two webhooks (INSERT on `public.friendships` and on
-   `public.team_invites`) → *Supabase Edge Functions* → `send-push`, with the
-   HTTP header `x-webhook-secret: <WEBHOOK_SECRET>`.
+   `public.team_invites`) → *Supabase Edge Functions* → `send-push`, with
+   *Add auth header with service key* on. The function only accepts the
+   service role.
 6. The app's entitlements already ask for push (`aps-environment`); automatic
    signing adds the capability to the App ID on the next TestFlight build.
 

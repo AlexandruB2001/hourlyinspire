@@ -5,10 +5,12 @@
 // Webhooks), both "INSERT" events pointing at this function:
 //   * public.friendships   → notifies the addressee of a pending request
 //   * public.team_invites  → notifies the invitee
-// Each webhook sends the header `x-webhook-secret: <WEBHOOK_SECRET>`.
+// Each webhook adds the service-role "Authorization" header (the dashboard's
+// "Add auth header with service key" option). The function is deployed with
+// "Verify JWT" on, so Supabase checks the signature, and below we also
+// require the service role, so only the database can trigger pushes.
 //
 // Secrets (Edge Functions → Secrets):
-//   WEBHOOK_SECRET     any long random string, also set on the webhooks
 //   APNS_KEY_ID        Key ID of an Apple "Apple Push Notifications service" key
 //   APNS_TEAM_ID       Apple Developer Team ID
 //   APNS_PRIVATE_KEY   contents of that key's AuthKey_XXXX.p8
@@ -30,7 +32,7 @@ type Push = { userID: string; title: string; body: string; destination: string; 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 Deno.serve(async (request) => {
-  if (request.headers.get("x-webhook-secret") !== Deno.env.get("WEBHOOK_SECRET")) {
+  if (jwtRole(request.headers.get("authorization")) !== "service_role") {
     return new Response("unauthorized", { status: 401 });
   }
   const payload = (await request.json()) as WebhookPayload;
@@ -50,6 +52,19 @@ Deno.serve(async (request) => {
   const results = await Promise.all((tokens ?? []).map((row) => send(row.token, row.environment, push, jwt)));
   return Response.json({ sent: results.filter((ok) => ok).length, of: results.length });
 });
+
+// The role claim of the bearer token (its signature is checked by Supabase).
+function jwtRole(header: string | null): string | null {
+  const token = header?.replace(/^Bearer\s+/i, "") ?? "";
+  const part = token.split(".")[1];
+  if (!part) return null;
+  try {
+    const json = atob(part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "="));
+    return JSON.parse(json).role ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function username(id: unknown): Promise<string> {
   const { data } = await supabase.from("profiles").select("username").eq("id", id).maybeSingle();
