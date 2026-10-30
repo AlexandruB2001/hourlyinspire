@@ -40,7 +40,15 @@ struct RootTabView: View {
                     .padding(.horizontal, Theme.Spacing.l)
             }
         }
+        .overlay(alignment: .top) {
+            if model.celebration == nil, let level = model.levelUp {
+                LevelUpBanner(level: level) { model.levelUp = nil }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.horizontal, Theme.Spacing.l)
+            }
+        }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.celebration)
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.levelUp)
         .fullScreenCover(isPresented: Binding(get: { model.needsCompanionChoice }, set: { _ in })) {
             CompanionOnboardingView()
         }

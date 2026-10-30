@@ -94,6 +94,30 @@ public struct ProgressionState: Codable, Hashable, Sendable {
         return event
     }
 
+    /// Combines two devices' progression (a cloud save). Everything here only
+    /// ever grows, so the merge takes the union of discoveries and the best
+    /// distance per day; today's counters come from the later day.
+    public func merged(with other: ProgressionState) -> ProgressionState {
+        var result = self
+        result.discoveredZoneIDs.formUnion(other.discoveredZoneIDs)
+        result.collectedItemIDs.formUnion(other.collectedItemIDs)
+        result.dailyBestMeters.merge(other.dailyBestMeters) { max($0, $1) }
+        result.bestDayMeters = max(bestDayMeters, other.bestDayMeters)
+        let otherIsLater = other.day.map { theirs in day.map { theirs > $0 } ?? true } ?? false
+        switch (day, other.day) {
+        case _ where otherIsLater:
+            result.day = other.day
+            result.todayHighestZoneIndex = other.todayHighestZoneIndex
+            result.todayBestMeters = other.todayBestMeters
+        case let (mine?, theirs?) where theirs == mine:
+            result.todayHighestZoneIndex = max(todayHighestZoneIndex, other.todayHighestZoneIndex)
+            result.todayBestMeters = max(todayBestMeters, other.todayBestMeters)
+        default:
+            break
+        }
+        return result
+    }
+
     private mutating func recordHistory(key: String, meters: Int) {
         let best = max(dailyBestMeters[key] ?? 0, meters)
         dailyBestMeters[key] = best

@@ -54,6 +54,9 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Friend day card: tap a walker on the Journey leaderboard for their distance, steps, zone, last update and how far ahead or behind you they are
 - ✅ Local notifications: chests, zones, relics, achievements, companion growth, referral chests, daily reminder (Profile → Notifications)
 - ⬜ Push notifications for friend requests and team invites: code, migration and Edge Function are in the repo; needs an APNs key and the setup in BACKEND.md
+- ✅ Explorer Levels: lifetime XP from walking (capped 25 km/day), zones, relics, achievements and rewards; 25 coins per level; level-up banner and Journal entry
+- ✅ Reward ledger: every quest/event/level reward has an id and pays once
+- ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
 - ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)

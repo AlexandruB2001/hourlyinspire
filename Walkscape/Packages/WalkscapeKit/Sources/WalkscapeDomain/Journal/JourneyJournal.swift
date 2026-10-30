@@ -3,7 +3,7 @@ import Foundation
 /// One remembered moment of the journey.
 public struct JournalEntry: Identifiable, Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable, Hashable {
-        case distance, zone, relic, achievement, companion, referral, team, expedition
+        case distance, zone, relic, achievement, companion, referral, team, expedition, level
     }
 
     /// Stable key for the event (e.g. "zone-meadow"), so it is only ever recorded once.
@@ -42,6 +42,13 @@ public struct JourneyJournal: Codable, Hashable, Sendable {
     }
 
     public func contains(_ id: String) -> Bool { entries.contains { $0.id == id } }
+
+    /// This journal plus any entries only `other` has (a cloud save).
+    public func merged(with other: JourneyJournal) -> JourneyJournal {
+        var result = self
+        result.record(other.entries)
+        return result
+    }
 
     /// Adds entries whose id isn't recorded yet. Returns the ones added.
     @discardableResult

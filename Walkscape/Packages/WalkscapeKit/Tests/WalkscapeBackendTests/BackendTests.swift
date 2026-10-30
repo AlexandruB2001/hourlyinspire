@@ -159,6 +159,47 @@ final class BackendTests: XCTestCase {
         XCTAssertFalse(isSignedIn)
     }
 
+    // MARK: Cloud save
+
+    func saveJSON(coins: Int, schema: Int = 1) throws -> String {
+        var wallet = WalletState(rules: CoinRules(starterCoins: coins))
+        _ = wallet.openChest()
+        let save = CloudSave(progression: ProgressionState(), wallet: wallet, journal: JourneyJournal(),
+                             ledger: RewardLedger(), companion: nil, savedAt: now)
+        var object = try JSONSerialization.jsonObject(with: SupabaseAPI.encoder.encode(save)) as! [String: Any]
+        object["schema"] = schema
+        return String(data: try JSONSerialization.data(withJSONObject: object), encoding: .utf8)!
+    }
+
+    func testCloudSyncMergesAndRetriesAfterAConflict() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, "[{\"version\":3,\"save\":\(try saveJSON(coins: 500))}]")
+        transport.enqueue(400, #"{"code":"40001","message":"save_conflict"}"#)
+        transport.enqueue(200, "[{\"version\":4,\"save\":\(try saveJSON(coins: 700))}]")
+        transport.enqueue(200, "5")
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let local = CloudSave(progression: ProgressionState(), wallet: WalletState(rules: CoinRules(starterCoins: 50)),
+                              journal: JourneyJournal(), ledger: RewardLedger(), companion: nil, savedAt: now)
+
+        let merged = try await CloudSaveService(api: api).sync(local)
+
+        XCTAssertEqual(merged.wallet.coins, 700, "the newer remote earnings win")
+        XCTAssertEqual(transport.path(1), "/rest/v1/rpc/put_player_save")
+        XCTAssertEqual(transport.body(1)["p_base_version"] as? Int, 3)
+        XCTAssertEqual(transport.body(3)["p_base_version"] as? Int, 4)
+        XCTAssertEqual(transport.requestCount, 4)
+    }
+
+    func testCloudSaveFromANewerAppIsLeftAlone() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, "[{\"version\":1,\"save\":{\"schema\":99}}]")
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        do {
+            _ = try await CloudSaveService(api: api).fetch()
+            XCTFail("expected newerSchema")
+        } catch CloudSaveService.SaveError.newerSchema {}
+    }
+
     // MARK: Push
 
     func testPushTokenIsRegisteredAsHex() async throws {

@@ -71,6 +71,9 @@ See Google's "Prepare for Apple's App Store data disclosure requirements".
   demo mode).
 - Row level security limits each table to its owner, and limits daily totals
   to accepted friends while sharing is on. Tested in `supabase/tests`.
+- A cloud save of your Apple Health game progress (discoveries, best distance
+  per day, coins, items, journal, rewards and companion), so a new phone can
+  restore it. Only you can read it.
 - **Delete account** (Profile → Account) removes the server account and all of
   the above immediately.
 - See [`BACKEND.md`](BACKEND.md) for the limits of client-reported totals.

@@ -12,6 +12,7 @@ public final class WalkscapeBackend: Sendable {
     public let teams: SupabaseTeamRepository
     public let referrals: SupabaseReferralRepository
     public let push: PushRegistry
+    public let cloudSave: CloudSaveService
 
     public init(config: SupabaseConfig, transport: HTTPTransport = URLSessionTransport(), sessionStore: SessionStore,
                 catalog: ZoneCatalog = .standard) {
@@ -25,6 +26,7 @@ public final class WalkscapeBackend: Sendable {
         teams = SupabaseTeamRepository(api: api) { await auth.currentSession?.userID }
         referrals = SupabaseReferralRepository(api: api)
         push = PushRegistry(api: api)
+        cloudSave = CloudSaveService(api: api)
     }
 
     /// Permanently deletes the account and everything stored for it, then signs out locally.

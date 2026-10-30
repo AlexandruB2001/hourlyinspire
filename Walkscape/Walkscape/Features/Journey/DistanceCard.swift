@@ -14,6 +14,7 @@ struct DistanceCard: View {
                 if model.sync.phase == .loading {
                     ProgressView().controlSize(.mini).tint(Theme.Palette.creamDim)
                 }
+                ExplorerBadge()
             }
 
             HStack(alignment: .lastTextBaseline) {

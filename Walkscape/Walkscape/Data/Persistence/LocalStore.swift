@@ -32,6 +32,8 @@ struct LocalStore {
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
         static let ads = "walkscape.ads.v1"
+        static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
+        static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
         static let notificationLedger = "walkscape.notificationLedger.v1"
     }
@@ -87,6 +89,21 @@ struct LocalStore {
         nonmutating set { defaults.set(newValue, forKey: Key.pendingReferralCode) }
     }
 
+    // Rewards are per data source, like coins.
+    func loadLedger(_ source: WalkingDataSourceKind) -> RewardLedger {
+        load(RewardLedger.self, Key.ledger(source)) ?? RewardLedger()
+    }
+
+    func save(_ ledger: RewardLedger, for source: WalkingDataSourceKind) {
+        save(ledger, Key.ledger(source))
+    }
+
+    /// The account this phone's Apple Health progress was last saved to.
+    var cloudSaveOwner: String? {
+        get { defaults.string(forKey: Key.cloudSaveOwner) }
+        nonmutating set { defaults.set(newValue, forKey: Key.cloudSaveOwner) }
+    }
+
     // Ad limits are per device, not per data source.
     func loadAdState() -> AdState {
         if let saved = load(AdState.self, Key.ads) { return saved }
@@ -120,9 +137,10 @@ struct LocalStore {
     }
 
     func reset() {
-        var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode]
+        var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode, Key.cloudSaveOwner]
         for source in WalkingDataSourceKind.allCases {
-            keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source)]
+            keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source),
+                     Key.ledger(source)]
         }
         keys.forEach(defaults.removeObject(forKey:))
     }

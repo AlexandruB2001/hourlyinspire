@@ -204,3 +204,24 @@ To switch it on:
    HTTP header `x-webhook-secret: <WEBHOOK_SECRET>`.
 6. The app's entitlements already ask for push (`aps-environment`); automatic
    signing adds the capability to the App ID on the next TestFlight build.
+
+## Cloud save (migration 20261031000001, not live yet)
+
+`player_saves` holds one private JSON row per player: the Apple Health
+progression, wallet, journal, reward ledger and companion (`CloudSave` in
+WalkscapeDomain). Demo data is never uploaded.
+
+- `get_player_save()` returns the caller's save and its version.
+- `put_player_save(save, base_version)` stores it only if `base_version` is
+  the version last read (0 for the first save); otherwise `save_conflict`.
+- The app always fetches, merges and then stores (`CloudSaveService.sync`),
+  retrying on a conflict, so two phones never overwrite each other's progress.
+- Merge rules never lose anything: discoveries and owned items are unioned,
+  the best distance per day is kept, coins = the larger lifetime earnings minus
+  the larger lifetime spending, journal and reward ids are unioned.
+- A phone whose progress was already saved to a different account doesn't mix
+  it into a new one (`cloudSaveOwner` in LocalStore). Deleting an account
+  deletes its save and frees the phone's progress for the next account.
+
+Limits: the save is written by the app, so (like walking totals) it can't be
+verified by the server. Shared rewards are always granted server-side.

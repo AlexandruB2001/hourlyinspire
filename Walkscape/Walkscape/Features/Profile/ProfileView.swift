@@ -9,6 +9,7 @@ struct ProfileView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     ProfileHeader()
+                    ExplorerLevelCard()
                     AchievementsSection()
                     CollectionSection()
                     ReferralSection()

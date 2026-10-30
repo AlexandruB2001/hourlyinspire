@@ -48,6 +48,12 @@ final class AppModel {
     private(set) var wallet: WalletState
     /// Permanent log of milestones.
     private(set) var journal: JourneyJournal
+    /// Every quest/event/level reward already granted, by id.
+    private(set) var ledger: RewardLedger
+    /// Set when the Explorer Level goes up; cleared by the UI.
+    var levelUp: Int?
+    @ObservationIgnored private var lastCloudSync = Date.distantPast
+    @ObservationIgnored private var isSyncingCloud = false
     /// Which notifications the player wants.
     var notificationPreferences: NotificationPreferences {
         didSet {
@@ -108,6 +114,7 @@ final class AppModel {
         wallet = store.loadWallet(source)
         journal = store.loadJournal(source)
         adState = store.loadAdState()
+        ledger = store.loadLedger(source)
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
@@ -244,6 +251,7 @@ final class AppModel {
         async let team: Void = refreshTeam()
         async let referrals: Void = refreshReferrals()
         _ = await (walking, social, team, referrals)
+        await syncCloudSave()
     }
 
     // MARK: Walking data
@@ -277,6 +285,7 @@ final class AppModel {
                 announce([chests])
             }
             updateJournal(source: source)
+            processLevelUps(source: source)
             if let newCelebration = event.celebration {
                 celebrationCoins = coins.coinsEarned
                 celebration = newCelebration
@@ -311,9 +320,11 @@ final class AppModel {
         progression = store.loadProgression(source)
         wallet = store.loadWallet(source)
         journal = store.loadJournal(source)
+        ledger = store.loadLedger(source)
         companion = Self.companion(for: source, store: store, progression: progression, today: today)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
+        levelUp = nil
         Task { await refreshWalking() }
     }
 
@@ -339,6 +350,8 @@ final class AppModel {
         store.save(wallet, for: .demo)
         journal = JourneyJournal()
         store.save(journal, for: .demo)
+        ledger = RewardLedger()
+        store.save(ledger, for: .demo)
         store.save(nil, for: .demo)
         companion = Self.companion(for: .demo, store: store, progression: progression, today: today)
         sync = WalkingSyncStatus()
@@ -630,6 +643,92 @@ final class AppModel {
         store.save(wallet, for: dataSource)
     }
 
+    // MARK: Explorer level
+
+    var explorerXP: ExplorerXP { ExplorerXP(progression: progression, ledger: ledger) }
+    var explorerLevel: ExplorerLevel { ExplorerLevel(totalXP: explorerXP.total) }
+
+    /// Pays and celebrates any levels reached since the last check. Safe to
+    /// call after every refresh: each level is paid once (see `RewardLedger`).
+    private func processLevelUps(source: WalkingDataSourceKind) {
+        let levels = ledger.levelUps(totalXP: explorerXP.total, into: &wallet)
+        guard let top = levels.last else { return }
+        store.save(ledger, for: source)
+        store.save(wallet, for: source)
+        // One entry and one banner, even if several levels arrived at once.
+        recordInJournal([JournalEvents.levelUp(to: top, on: today)])
+        levelUp = top
+    }
+
+    /// Grants a reward once. Returns false if it was already claimed.
+    @discardableResult
+    func claim(_ reward: Reward) -> Bool {
+        guard ledger.claim(reward, into: &wallet) else { return false }
+        store.save(ledger, for: dataSource)
+        store.save(wallet, for: dataSource)
+        processLevelUps(source: dataSource)
+        return true
+    }
+
+    // MARK: Cloud save
+
+    /// Merges this phone's Apple Health progress with the account's cloud save
+    /// and stores the result in both places. Runs at most every two minutes
+    /// unless forced (signing in). Demo data never leaves the phone.
+    func syncCloudSave(force: Bool = false) async {
+        guard let backend, isSignedIn, !isSyncingCloud,
+              force || Date().timeIntervalSince(lastCloudSync) > 120,
+              let accountID = await backend.auth.currentSession?.userID else { return }
+        isSyncingCloud = true
+        defer { isSyncingCloud = false }
+
+        // Progress on this phone that was already saved to a *different*
+        // account stays with that account; this one starts from its own save.
+        let localBelongsToAnother = store.cloudSaveOwner.map { $0 != accountID } ?? false
+        let local = localBelongsToAnother ? freshCloudSave() : healthCloudSave()
+        do {
+            let merged = try await backend.cloudSave.sync(local)
+            lastCloudSync = Date()
+            store.cloudSaveOwner = accountID
+            apply(merged)
+        } catch {
+            // Offline or a save from a newer app version: keep playing locally, retry later.
+        }
+    }
+
+    private func healthCloudSave() -> CloudSave {
+        let isHealth = dataSource == .appleHealth
+        return CloudSave(progression: isHealth ? progression : store.loadProgression(.appleHealth),
+                         wallet: isHealth ? wallet : store.loadWallet(.appleHealth),
+                         journal: isHealth ? journal : store.loadJournal(.appleHealth),
+                         ledger: isHealth ? ledger : store.loadLedger(.appleHealth),
+                         companion: isHealth ? companion : store.loadCompanion(.appleHealth),
+                         savedAt: Date())
+    }
+
+    private func freshCloudSave() -> CloudSave {
+        CloudSave(progression: ProgressionState(), wallet: WalletState(), journal: JourneyJournal(),
+                  ledger: RewardLedger(), companion: nil, savedAt: .distantPast)
+    }
+
+    private func apply(_ save: CloudSave) {
+        store.save(save.progression, for: .appleHealth)
+        store.save(save.wallet, for: .appleHealth)
+        store.save(save.journal, for: .appleHealth)
+        store.save(save.ledger, for: .appleHealth)
+        if let companion = save.companion {
+            store.save(companion, for: .appleHealth)
+            store.companionSpeciesID = companion.speciesID
+        }
+        guard dataSource == .appleHealth else { return }
+        progression = save.progression
+        wallet = save.wallet
+        journal = save.journal
+        ledger = save.ledger
+        if let restored = save.companion { companion = restored }
+        processLevelUps(source: .appleHealth)
+    }
+
     // MARK: Notifications
 
     /// Records events as announced and, while the app is in the background,
@@ -849,6 +948,7 @@ final class AppModel {
         settings.username = profile.username
         settings.shareProgressWithFriends = profile.shareProgress
         Task { await registerPushToken() }
+        Task { await syncCloudSave(force: true) }
     }
 
     /// Changes the username. Returns an error message, or nil on success.
@@ -928,6 +1028,8 @@ final class AppModel {
         } catch {
             return "Couldn't delete your account. Check your connection and try again."
         }
+        // The cloud save is gone; progress on this phone can go to the next account.
+        store.cloudSaveOwner = nil
         account = .signedOut
         trackFocus.backToMe()
         await refreshFriends()

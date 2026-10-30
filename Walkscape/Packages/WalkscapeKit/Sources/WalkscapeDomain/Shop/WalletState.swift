@@ -163,6 +163,47 @@ public struct WalletState: Codable, Hashable, Sendable {
         return chest.coins
     }
 
+    /// Pays a `Reward` (see `RewardLedger.claim`, which makes sure it happens once).
+    public mutating func receiveReward(coins: Int, itemIDs: [String]) {
+        earn(max(0, coins))
+        ownedItemIDs.formUnion(itemIDs)
+    }
+
+    /// Coins spent so far. Derived, so old saves don't need a new field.
+    public var spentCoins: Int { max(0, lifetimeCoins - coins) }
+
+    /// Combines this device's wallet with another one (a cloud save) without
+    /// losing earnings or items: lifetime earnings and spending each take the
+    /// larger side, owned items and opened chests are unioned, and the outfit
+    /// stays as worn here unless nothing is worn.
+    public func merged(with other: WalletState) -> WalletState {
+        var result = self
+        result.lifetimeCoins = max(lifetimeCoins, other.lifetimeCoins)
+        result.coins = max(0, result.lifetimeCoins - max(spentCoins, other.spentCoins))
+        result.ownedItemIDs.formUnion(other.ownedItemIDs)
+        if equipped.isEmpty { result.equipped = other.equipped }
+        result.equipped = result.equipped.filter { result.ownedItemIDs.contains($0.value) }
+        result.pendingChests = max(pendingChests, other.pendingChests)
+        let otherIsLater = other.day.map { theirs in day.map { theirs > $0 } ?? true } ?? false
+        switch (day, other.day) {
+        case _ where otherIsLater:
+            result.day = other.day
+            result.kilometresRewardedToday = other.kilometresRewardedToday
+            result.chestsFoundToday = other.chestsFoundToday
+        case let (mine?, theirs?) where theirs == mine:
+            result.kilometresRewardedToday = max(kilometresRewardedToday, other.kilometresRewardedToday)
+            result.chestsFoundToday = max(chestsFoundToday, other.chestsFoundToday)
+        default:
+            break
+        }
+        result.openedReferralChestIDs.formUnion(other.openedReferralChestIDs)
+        for chest in other.referralChests where !result.referralChests.contains(where: { $0.id == chest.id }) {
+            result.referralChests.append(chest)
+        }
+        result.referralChests.removeAll { result.openedReferralChestIDs.contains($0.id) }
+        return result
+    }
+
     /// Pays for a finished rewarded ad. The daily limit lives in `AdState`.
     public mutating func earnAdReward(_ coins: Int) {
         earn(max(0, coins))

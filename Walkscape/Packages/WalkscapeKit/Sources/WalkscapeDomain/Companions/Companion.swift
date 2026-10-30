@@ -116,6 +116,17 @@ public struct CompanionState: Codable, Hashable, Sendable {
         CompanionGrowth(kilometres: max(0, lifetimeMeters - baselineMeters) / 1_000)
     }
 
+    /// Picks between two devices' companions (a cloud save): the one adopted
+    /// first is the real one; for the same companion, the highest celebrated stage.
+    public func merged(with other: CompanionState) -> CompanionState {
+        guard other.speciesID == speciesID, other.adoptedOn == adoptedOn else {
+            return other.adoptedOn < adoptedOn ? other : self
+        }
+        var result = self
+        result.celebratedStage = max(celebratedStage, other.celebratedStage)
+        return result
+    }
+
     /// Stages reached since the last call, oldest first. Each is returned once.
     public mutating func newEvolutions(lifetimeMeters: Int) -> [CompanionGrowth.Stage] {
         let stage = growth(lifetimeMeters: lifetimeMeters).stage
