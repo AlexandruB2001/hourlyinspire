@@ -44,16 +44,16 @@ public enum StoreCatalog {
     ]
 
     public static let bundles: [StoreProduct] = [
-        StoreProduct(id: prefix + "bundle.seasonal-outfits", kind: .bundle, name: "Seasonal Outfit Bundle",
+        StoreProduct(id: prefix + "bundle.seasonaloutfits", kind: .bundle, name: "Seasonal Outfit Bundle",
                      summary: "Four outfit pieces, one for every season.", fallbackPrice: "$2.99",
                      contents: PremiumOutfits.items.map(\.id)),
-        StoreProduct(id: prefix + "bundle.companion-skins", kind: .bundle, name: "Companion Skins",
+        StoreProduct(id: prefix + "bundle.companionskins", kind: .bundle, name: "Companion Skins",
                      summary: "Golden, Frost and Shadow looks for any companion.", fallbackPrice: "$1.99",
                      contents: CompanionSkinCatalog.all.map(\.id)),
-        StoreProduct(id: prefix + "bundle.trail-sparkles", kind: .bundle, name: "Trail Sparkles",
+        StoreProduct(id: prefix + "bundle.trailsparkles", kind: .bundle, name: "Trail Sparkles",
                      summary: "Sparkles, petals or stars behind you as you walk.", fallbackPrice: "$0.99",
                      contents: TrailEffectCatalog.all.map(\.id)),
-        StoreProduct(id: prefix + "bundle.campsite-decor", kind: .bundle, name: "Cozy Campsite Decor",
+        StoreProduct(id: prefix + "bundle.campsitedecor", kind: .bundle, name: "Cozy Campsite Decor",
                      summary: "A hammock, string lights and a cocoa stand for your team's camp.", fallbackPrice: "$1.99",
                      contents: CampfireCatalog.premiumDecorations.map(\.id)),
     ]

@@ -13,7 +13,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.alexandrub.walkscape.bundle.seasonal-outfits",
+      "productID": "com.alexandrub.walkscape.bundle.seasonaloutfits",
       "referenceName": "Seasonal Outfit Bundle",
       "type": "NonConsumable"
     },
@@ -28,7 +28,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.alexandrub.walkscape.bundle.companion-skins",
+      "productID": "com.alexandrub.walkscape.bundle.companionskins",
       "referenceName": "Companion Skins",
       "type": "NonConsumable"
     },
@@ -43,7 +43,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.alexandrub.walkscape.bundle.trail-sparkles",
+      "productID": "com.alexandrub.walkscape.bundle.trailsparkles",
       "referenceName": "Trail Sparkles",
       "type": "NonConsumable"
     },
@@ -58,7 +58,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.alexandrub.walkscape.bundle.campsite-decor",
+      "productID": "com.alexandrub.walkscape.bundle.campsitedecor",
       "referenceName": "Cozy Campsite Decor",
       "type": "NonConsumable"
     }

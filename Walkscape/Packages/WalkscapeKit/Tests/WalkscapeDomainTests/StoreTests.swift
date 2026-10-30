@@ -31,7 +31,7 @@ final class StoreTests: XCTestCase {
         var entitlements = Entitlements()
         XCTAssertFalse(entitlements.hasPlus(at: now))
         XCTAssertFalse(entitlements.owns("skin-golden"))
-        entitlements.bundles.insert(StoreCatalog.prefix + "bundle.companion-skins")
+        entitlements.bundles.insert(StoreCatalog.prefix + "bundle.companionskins")
         XCTAssertTrue(entitlements.owns("skin-golden"))
         XCTAssertFalse(entitlements.owns("trail-petals"))
         entitlements.plusExpires = now.addingTimeInterval(60)

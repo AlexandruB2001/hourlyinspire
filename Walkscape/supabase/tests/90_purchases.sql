@@ -4,9 +4,9 @@ set client_min_messages = notice;
 reset role;
 
 insert into public.purchases (original_transaction_id, user_id, product_id, environment, purchased_at, expires_at, revoked_at)
-values ('1001', tests.id('kim'), 'com.alexandrub.walkscape.bundle.trail-sparkles', 'Sandbox', now(), null, null),
+values ('1001', tests.id('kim'), 'com.alexandrub.walkscape.bundle.trailsparkles', 'Sandbox', now(), null, null),
        ('1002', tests.id('kim'), 'com.alexandrub.walkscape.plus.monthly', 'Sandbox', now(), now() + interval '30 days', null),
-       ('1003', tests.id('kim'), 'com.alexandrub.walkscape.bundle.companion-skins', 'Sandbox', now(), null, now()),
+       ('1003', tests.id('kim'), 'com.alexandrub.walkscape.bundle.companionskins', 'Sandbox', now(), null, now()),
        ('1004', tests.id('leo'), 'com.alexandrub.walkscape.plus.yearly', 'Sandbox', now() - interval '2 years',
         now() - interval '1 year', null);
 

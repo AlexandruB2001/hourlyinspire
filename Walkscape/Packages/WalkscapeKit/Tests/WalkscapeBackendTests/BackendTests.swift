@@ -207,7 +207,7 @@ final class BackendTests: XCTestCase {
         transport.enqueue(200, #"{"ok":true}"#)
         let expires = PostgresDate.format(now.addingTimeInterval(86_400))
         transport.enqueue(200, """
-        [{"product_id":"com.alexandrub.walkscape.bundle.trail-sparkles","expires_at":null},
+        [{"product_id":"com.alexandrub.walkscape.bundle.trailsparkles","expires_at":null},
          {"product_id":"com.alexandrub.walkscape.plus.monthly","expires_at":"\(expires)"},
          {"product_id":"com.alexandrub.walkscape.unknown","expires_at":null}]
         """)
@@ -218,7 +218,7 @@ final class BackendTests: XCTestCase {
         XCTAssertEqual(transport.body(0)["signedTransaction"] as? String, "header.payload.signature")
 
         let entitlements = try await service.entitlements()
-        XCTAssertEqual(entitlements.bundles, ["com.alexandrub.walkscape.bundle.trail-sparkles"])
+        XCTAssertEqual(entitlements.bundles, ["com.alexandrub.walkscape.bundle.trailsparkles"])
         XCTAssertTrue(entitlements.hasPlus(at: now))
         XCTAssertTrue(entitlements.owns("trail-petals"))
     }
