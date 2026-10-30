@@ -284,7 +284,7 @@ is exposed. Seasonal festivals compare it with their community goal.
   for renewals, expiries and refunds. Its URL goes in App Store Connect → App
   Information → App Store Server Notifications (Production and Sandbox).
 
-## Team world unlocks (migration 20261106000001, not applied yet)
+## Team world unlocks (migration 20261106000001, applied 2026-10-30)
 
 - `team_world_zones`: the 21 team-world zones and the team distance that
   reaches each one, mirroring `TeamWorlds.swift`. `TeamWorldTests` fails if the two drift apart.
