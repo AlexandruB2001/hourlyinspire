@@ -50,6 +50,8 @@ final class AppModel {
     private(set) var journal: JourneyJournal
     /// Every quest/event/level reward already granted, by id.
     private(set) var ledger: RewardLedger
+    /// Today's and this week's quests, and the counters they need.
+    private(set) var questTracker: QuestTracker
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -115,6 +117,7 @@ final class AppModel {
         journal = store.loadJournal(source)
         adState = store.loadAdState()
         ledger = store.loadLedger(source)
+        questTracker = store.loadQuestTracker(source)
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
@@ -246,6 +249,7 @@ final class AppModel {
 
     func refreshAll() async {
         lastAutoRefresh = Date()
+        rollQuests()
         async let walking: Void = refreshWalking()
         async let social: Void = refreshFriends()
         async let team: Void = refreshTeam()
@@ -284,8 +288,13 @@ final class AppModel {
             if let chests = GameNotifications.chests(coins.newChests, on: progress.localDate, total: wallet.chestsFoundToday) {
                 announce([chests])
             }
+            rollQuests()
+            questTracker.recordChestsFound(wallet.chestsFoundToday, on: progress.localDate)
+            store.save(questTracker, for: source)
             updateJournal(source: source)
             processLevelUps(source: source)
+            announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
+                     + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
             if let newCelebration = event.celebration {
                 celebrationCoins = coins.coinsEarned
                 celebration = newCelebration
@@ -321,10 +330,12 @@ final class AppModel {
         wallet = store.loadWallet(source)
         journal = store.loadJournal(source)
         ledger = store.loadLedger(source)
+        questTracker = store.loadQuestTracker(source)
         companion = Self.companion(for: source, store: store, progression: progression, today: today)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
         levelUp = nil
+        rollQuests()
         Task { await refreshWalking() }
     }
 
@@ -352,6 +363,8 @@ final class AppModel {
         store.save(journal, for: .demo)
         ledger = RewardLedger()
         store.save(ledger, for: .demo)
+        questTracker = QuestTracker()
+        store.save(questTracker, for: .demo)
         store.save(nil, for: .demo)
         companion = Self.companion(for: .demo, store: store, progression: progression, today: today)
         sync = WalkingSyncStatus()
@@ -621,6 +634,11 @@ final class AppModel {
     func openChest() -> Int? {
         let coins = wallet.openChest()
         store.save(wallet, for: dataSource)
+        if coins != nil {
+            rollQuests()
+            questTracker.recordChestOpened()
+            store.save(questTracker, for: dataSource)
+        }
         return coins
     }
 
@@ -670,6 +688,53 @@ final class AppModel {
         return true
     }
 
+    // MARK: Quests
+
+    /// Starts a new day or week of quests when needed. Safe to call often.
+    private func rollQuests() {
+        let before = questTracker
+        let stage = companion.map { $0.growth(lifetimeMeters: progression.lifetimeMeters).stage.rawValue }
+        questTracker.roll(to: today, context: questContext, wallet: wallet, companionStage: stage)
+        if questTracker != before { store.save(questTracker, for: dataSource) }
+    }
+
+    private var questContext: QuestContext {
+        let expedition = team?.expeditions
+        return QuestContext(
+            hasFriends: !friends.isEmpty,
+            inTeam: team != nil,
+            hasCompanion: companion != nil,
+            zonesLeftToDiscover: engine.catalog.zones.filter { !progression.discoveredZoneIDs.contains($0.id) }.count,
+            metersLeftInExpedition: expedition?.current.map { $0.goalMeters - (expedition?.metersIntoCurrent ?? 0) },
+            companionKilometresToNextStage: companion?.growth(lifetimeMeters: progression.lifetimeMeters).kilometresToNextStage)
+    }
+
+    var questBoard: QuestBoard {
+        let facts = QuestFacts.make(
+            today: today, steps: steps, meters: distanceMeters, progression: progression, wallet: wallet, journal: journal,
+            tracker: questTracker,
+            friendWalkedToday: friends.contains { $0.progressAvailability != .unavailable && ($0.dailyDistanceMeters ?? 0) > 0 },
+            teamMetersThisWeek: team?.members.compactMap(\.weekMeters).reduce(0, +) ?? 0,
+            companionStage: companion.map { $0.growth(lifetimeMeters: progression.lifetimeMeters).stage.rawValue })
+        return QuestBoard(tracker: questTracker, facts: facts, ledger: ledger)
+    }
+
+    /// Claims a finished quest. Returns the reward, or nil if it isn't claimable.
+    @discardableResult
+    func claimQuest(_ status: QuestStatus) -> Reward? {
+        guard status.isClaimable, claim(status.reward) else { return nil }
+        return status.reward
+    }
+
+    /// Opens the weekly chest once every weekly quest is claimed.
+    @discardableResult
+    func claimWeeklyChest() -> Reward? {
+        let board = questBoard
+        guard board.weeklyChestReady, claim(board.weeklyChest) else { return nil }
+        recordInJournal([JournalEvents.weeklyChest(week: board.week, on: today)])
+        return board.weeklyChest
+    }
+
     // MARK: Cloud save
 
     /// Merges this phone's Apple Health progress with the account's cloud save
@@ -678,7 +743,7 @@ final class AppModel {
     func syncCloudSave(force: Bool = false) async {
         guard let backend, isSignedIn, !isSyncingCloud,
               force || Date().timeIntervalSince(lastCloudSync) > 120,
-              let accountID = await backend.auth.currentSession?.userID else { return }
+              let accountID = await backend.auth.currentSession?.userID.rawValue else { return }
         isSyncingCloud = true
         defer { isSyncingCloud = false }
 

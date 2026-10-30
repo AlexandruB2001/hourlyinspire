@@ -56,6 +56,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ⬜ Push notifications for friend requests and team invites: code, migration and Edge Function are in the repo; needs an APNs key and the setup in BACKEND.md
 - ✅ Explorer Levels: lifetime XP from walking (capped 25 km/day), zones, relics, achievements and rewards; 25 coins per level; level-up banner and Journal entry
 - ✅ Reward ledger: every quest/event/level reward has an id and pays once
+- ✅ Quests: 3 daily (reset at local midnight), 3 weekly + 1 companion (reset Monday), weekly chest for finishing every weekly quest; rewards paid once via the ledger; Journey card + quest log
+- ⬜ Quest rewards beyond coins/XP (exclusive cosmetics, postcards, collection items) arrive with collections in Phase 3
 - ✅ Cloud save (code + migration 20261031000001; run the migration in Supabase to enable)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges

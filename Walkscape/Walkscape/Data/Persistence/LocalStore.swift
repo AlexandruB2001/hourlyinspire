@@ -34,6 +34,7 @@ struct LocalStore {
         static let ads = "walkscape.ads.v1"
         static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
         static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
+        static func quests(_ source: WalkingDataSourceKind) -> String { "walkscape.quests.v1.\(source.rawValue)" }
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
         static let notificationLedger = "walkscape.notificationLedger.v1"
     }
@@ -98,6 +99,14 @@ struct LocalStore {
         save(ledger, Key.ledger(source))
     }
 
+    func loadQuestTracker(_ source: WalkingDataSourceKind) -> QuestTracker {
+        load(QuestTracker.self, Key.quests(source)) ?? QuestTracker()
+    }
+
+    func save(_ tracker: QuestTracker, for source: WalkingDataSourceKind) {
+        save(tracker, Key.quests(source))
+    }
+
     /// The account this phone's Apple Health progress was last saved to.
     var cloudSaveOwner: String? {
         get { defaults.string(forKey: Key.cloudSaveOwner) }
@@ -140,7 +149,7 @@ struct LocalStore {
         var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode, Key.cloudSaveOwner]
         for source in WalkingDataSourceKind.allCases {
             keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source),
-                     Key.ledger(source)]
+                     Key.ledger(source), Key.quests(source)]
         }
         keys.forEach(defaults.removeObject(forKey:))
     }

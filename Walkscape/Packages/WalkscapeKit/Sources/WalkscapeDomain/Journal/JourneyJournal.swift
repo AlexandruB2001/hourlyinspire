@@ -3,7 +3,7 @@ import Foundation
 /// One remembered moment of the journey.
 public struct JournalEntry: Identifiable, Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable, Hashable {
-        case distance, zone, relic, achievement, companion, referral, team, expedition, level
+        case distance, zone, relic, achievement, companion, referral, team, expedition, level, quest
     }
 
     /// Stable key for the event (e.g. "zone-meadow"), so it is only ever recorded once.

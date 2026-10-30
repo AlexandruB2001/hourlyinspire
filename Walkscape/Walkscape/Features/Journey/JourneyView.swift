@@ -12,6 +12,7 @@ struct JourneyView: View {
                     JourneyHero(topInset: proxy.safeAreaInsets.top)
                     VStack(spacing: Theme.Spacing.l) {
                         DistanceCard()
+                        QuestsCard()
                         HealthStatusCard()
                         CompanionCard()
                         TrailStrip()

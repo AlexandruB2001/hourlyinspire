@@ -125,6 +125,12 @@ public enum GameNotifications {
                                  body: "Open your Journey Journal to see everything you found.", destination: .journey)]
     }
 
+    public static func questComplete(_ status: QuestStatus) -> GameNotification {
+        GameNotification(id: "quest-done-\(status.rewardID)", category: .rewards, title: "Quest complete!",
+                         body: "\(status.quest.title). Claim \(status.quest.coins) coins and \(status.quest.xp) XP.",
+                         destination: .journey)
+    }
+
     public static func referralChest(_ chest: ReferralChest) -> GameNotification {
         GameNotification(id: "referral-chest-\(chest.id)", category: .rewards, title: "A friend you invited is walking!",
                          body: "Your referral chest is ready. Claim it now.", destination: .journey)
