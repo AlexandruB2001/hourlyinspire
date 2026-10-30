@@ -140,8 +140,12 @@ final class TeamWorldTests: XCTestCase {
 
     func testServerZoneDistancesMatchTheApp() throws {
         let migration = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("supabase/migrations/20261106000001_team_worlds.sql")
+            .deletingLastPathComponent() // WalkscapeDomainTests
+            .deletingLastPathComponent() // Tests
+            .deletingLastPathComponent() // WalkscapeKit
+            .deletingLastPathComponent() // Packages
+            .deletingLastPathComponent() // Walkscape
+            .appendingPathComponent("Walkscape/supabase/migrations/20261106000001_team_worlds.sql")
         let sql = try String(contentsOf: migration, encoding: .utf8)
         var rows = 0
         for world in worlds {
