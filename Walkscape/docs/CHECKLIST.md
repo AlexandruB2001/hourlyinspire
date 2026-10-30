@@ -71,7 +71,8 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Team worlds (Phase 7): 5 worlds of 4-5 zones each opening after the Summit Relay, world tint art, world map, weekly community challenge per world; rewards once per player who walked 2 km for the team
 - ✅ Seasonal festivals (Phase 8): Great Harvest, Winter Wanderer, Spring Awakening, Ocean Expedition, Starfall Festival; yearly dates, 4 tiers (≤ 50 km, 10 km/day cap), festival quests, exclusive companion accessories (sold after the festival), festival titles, community goal (migration 20261104000001)
 - ✅ Store (Phase 9, code): Walkscape Plus ($2.99/mo, $19.99/yr) and 4 cosmetic bundles via StoreKit 2; server-verified purchases (migration 20261105000001, verify-purchase + app-store-notifications functions); premium outfits, companion skins, trails, Journal themes, Plus frames, campsite decor, monthly Plus gift
-- ⬜ Store: Paid Apps agreement + bank/tax (owner), create products in App Store Connect, run the purchases migration, deploy both functions, set the Server Notification URL
+- ✅ Store server: purchases migration applied, verify-purchase and app-store-notifications deployed (2026-10-30)
+- ⬜ Store: Paid Apps agreement + bank/tax (owner), create products in App Store Connect, set the Server Notification URL
 - ✅ Cloud save (migration 20261031000001, live)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges

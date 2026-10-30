@@ -270,7 +270,7 @@ walking totals it can't be verified by the server.
 two days (capped at 25 km a day, ranges limited to ~2 months). Only the total
 is exposed. Seasonal festivals compare it with their community goal.
 
-## Purchases (migration 20261105000001, not live yet)
+## Purchases (migration 20261105000001, applied 2026-10-30)
 
 - `purchases`: one row per App Store purchase (original transaction), written
   only by the Edge Functions after checking Apple's signature with Apple's
