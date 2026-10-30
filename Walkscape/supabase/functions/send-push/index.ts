@@ -32,7 +32,10 @@ type Push = { userID: string; title: string; body: string; destination: string; 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
 Deno.serve(async (request) => {
-  if (jwtRole(request.headers.get("authorization")) !== "service_role") {
+  const auth = request.headers.get("authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!(serviceKey && token === serviceKey) && jwtRole(auth) !== "service_role") {
     return new Response("unauthorized", { status: 401 });
   }
   const payload = (await request.json()) as WebhookPayload;
