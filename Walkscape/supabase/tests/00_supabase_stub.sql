@@ -86,4 +86,26 @@ begin
     return n;
 end $$;
 
+-- Gives the signed-in test player `p_amount` coins in their cloud save, the
+-- way the app's wallet stores them (schema 2, keyed earnings).
+create function tests.give_coins(p_amount integer) returns void
+language plpgsql security definer as $$
+begin
+    insert into public.player_saves (user_id, save)
+    values (auth.uid(), jsonb_build_object('schema', 2, 'wallet',
+            jsonb_build_object('earned', jsonb_build_object('test-grant', p_amount), 'spent', '{}'::jsonb)))
+    on conflict (user_id) do update
+        set save = jsonb_set(public.player_saves.save, '{wallet,earned,test-grant}',
+                             to_jsonb(coalesce((public.player_saves.save #>> '{wallet,earned,test-grant}')::integer, 0) + p_amount)),
+            version = public.player_saves.version + 1;
+end $$;
+
+-- Coins the signed-in test player has left in their cloud save.
+create function tests.coins() returns bigint
+language sql security definer as $$
+    select (select coalesce(sum(value::bigint), 0) from jsonb_each_text(s.save -> 'wallet' -> 'earned'))
+         - (select coalesce(sum(value::bigint), 0) from jsonb_each_text(coalesce(s.save -> 'wallet' -> 'spent', '{}'::jsonb)))
+    from public.player_saves s where s.user_id = auth.uid()
+$$;
+
 grant execute on all functions in schema tests to anon, authenticated;

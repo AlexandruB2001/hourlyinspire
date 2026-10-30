@@ -12,6 +12,7 @@ update public.profiles set username = (select name from tests.users where id = p
 where id in (tests.id('quin'), tests.id('remy'), tests.id('sol'));
 
 select tests.as_user('quin');
+select tests.give_coins(25);
 select public.create_team('Wayfarers');
 select id as wayfarers_id, join_code as wayfarers_code from public.my_team() \gset
 select tests.ok(tests.count('select * from public.record_team_world_unlocks()') = 0, 'nothing is unlocked before 100 km');

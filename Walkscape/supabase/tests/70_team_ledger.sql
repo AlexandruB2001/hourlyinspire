@@ -12,6 +12,7 @@ update public.profiles set username = (select name from tests.users where id = p
 where id in (tests.id('nia'), tests.id('oli'), tests.id('pam'));
 
 select tests.as_user('nia');
+select tests.give_coins(25);
 select public.create_team('Campers');
 select join_code as campers_code from public.my_team() \gset
 reset role;
@@ -43,6 +44,7 @@ reset role;
 
 -- Switching teams doesn't count the same day twice.
 select tests.as_user('pam');
+select tests.give_coins(25);
 select public.create_team('Hoppers');
 select join_code as hoppers_code from public.my_team() \gset
 reset role;

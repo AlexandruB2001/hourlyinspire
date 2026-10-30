@@ -88,6 +88,7 @@ select tests.fails($$select public.create_team('x')$$, 'invalid_team_name', 'tea
 reset role;
 
 select tests.as_user('alice');
+select tests.give_coins(25);
 select public.create_team('  Trail   Blazers ');
 select tests.ok((select name from public.my_team()) = 'Trail Blazers', 'team names are tidied');
 select tests.ok((select is_owner and member_count = 1 from public.my_team()), 'the creator owns a one-person team');
@@ -197,5 +198,5 @@ select tests.ok(not exists (select 1 from public.teams where name = 'Trail Blaze
 -- ------------------------------------------------------------- privileges
 select tests.ok(not has_function_privilege('authenticated', 'public.shared_meters(uuid, date, date)', 'execute'),
                 'internal helpers are not callable');
-select tests.ok(not has_function_privilege('anon', 'public.create_team(text)', 'execute'), 'anon cannot create teams');
+select tests.ok(not has_function_privilege('anon', 'public.create_team(text, uuid)', 'execute'), 'anon cannot create teams');
 select tests.ok(not has_function_privilege('anon', 'public.redeem_referral_code(text)', 'execute'), 'anon cannot redeem codes');

@@ -3,6 +3,8 @@
 set client_min_messages = notice;
 reset role;
 
+-- Earlier tests gave some players coins (a save); start these from none.
+delete from public.player_saves;
 insert into tests.users values ('ivan', '00000000-0000-0000-0000-000000000012');
 insert into auth.users (id, email) values (tests.id('ivan'), 'ivan@example.com');
 
