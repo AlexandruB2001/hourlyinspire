@@ -47,7 +47,12 @@ final class HealthKitWalkingDataProvider: WalkingDataProvider, @unchecked Sendab
         guard Self.isAvailable else { throw WalkingDataError.healthDataUnavailable }
         let interval = day.interval(in: timeZone)
         let end = min(max(now, interval.start), interval.end)
-        let predicate = HKQuery.predicateForSamples(withStart: interval.start, end: end, options: .strictStartDate)
+        // Only walking a device recorded counts: distance typed into the Health
+        // app by hand would move you (and your team and leaderboard) for free.
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: interval.start, end: end, options: .strictStartDate),
+            NSPredicate(format: "metadata.%K != YES", HKMetadataKeyWasUserEntered),
+        ])
 
         async let steps = cumulativeSum(of: stepType, unit: .count(), predicate: predicate)
         async let meters = cumulativeSum(of: distanceType, unit: .meter(), predicate: predicate)

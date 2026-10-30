@@ -87,6 +87,10 @@ jobs:
               exit 1
             }
           tail -40 build.log
+          # Our own compiler warnings (not the Google SDKs'), shown as annotations without failing the build.
+          warnings=$(grep -E "/Walkscape/(Walkscape|Packages)/.*warning:" build.log | grep -v SourcePackages | sort -u || true)
+          echo "App warnings: $(printf '%s' "$warnings" | grep -c . || true)"
+          printf '%s\n' "$warnings" | grep . | head -50 | sed 's/^/::warning::/' || true
       - name: Check bundle contents
         working-directory: Walkscape
         run: |

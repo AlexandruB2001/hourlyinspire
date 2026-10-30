@@ -57,7 +57,9 @@ struct RootTabView: View {
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.levelUp)
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.discovery)
-        .fullScreenCover(item: $model.teamWorldArrival) { TeamWorldArrivalView(arrival: $0) }
+        // Waits until the companion is chosen, so the two full-screen views never compete.
+        .fullScreenCover(item: Binding(get: { model.needsCompanionChoice ? nil : model.teamWorldArrival },
+                                       set: { model.teamWorldArrival = $0 })) { TeamWorldArrivalView(arrival: $0) }
         .fullScreenCover(isPresented: Binding(get: { model.needsCompanionChoice }, set: { _ in })) {
             CompanionOnboardingView()
         }

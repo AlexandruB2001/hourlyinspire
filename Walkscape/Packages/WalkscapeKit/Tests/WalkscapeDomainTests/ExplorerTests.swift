@@ -113,8 +113,8 @@ final class ExplorerTests: XCTestCase {
         ledgerB.claim(Reward(id: "b", coins: 250, xp: 20), into: &phoneB)     // earned 300, spent 0
 
         let merged = phoneA.merged(with: phoneB)
-        XCTAssertEqual(merged.lifetimeCoins, 300)
-        XCTAssertEqual(merged.coins, 200)
+        XCTAssertEqual(merged.lifetimeCoins, 400, "both rewards count, the starter coins once")
+        XCTAssertEqual(merged.coins, 300)
         XCTAssertTrue(merged.ownedItemIDs.contains("straw-hat"))
         XCTAssertEqual(merged.merged(with: phoneB), merged, "merging again changes nothing")
 

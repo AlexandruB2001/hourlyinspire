@@ -53,7 +53,7 @@ final class AdRulesTests: XCTestCase {
 
     func testAdRewardsAddToTheWallet() {
         var wallet = WalletState(rules: CoinRules(starterCoins: 0))
-        wallet.earnAdReward(15)
+        wallet.earnAdReward(15, id: "ad-1")
         XCTAssertEqual(wallet.coins, 15)
         XCTAssertEqual(wallet.lifetimeCoins, 15)
     }

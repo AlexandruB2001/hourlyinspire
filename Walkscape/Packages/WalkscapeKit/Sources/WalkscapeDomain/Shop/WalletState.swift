@@ -54,14 +54,22 @@ public enum PurchaseResult: Hashable, Sendable {
 /// Coins, owned items and the current outfit. Like `ProgressionState`,
 /// `apply(_:)` is idempotent: re-applying the same (or a lower) distance
 /// never pays out twice.
+///
+/// Every coin earned or spent is kept under a stable key (a day's walking,
+/// a reward id, an item bought, one ad view...). Merging two phones takes the
+/// larger amount per key, so an earning or purchase seen on both counts once
+/// and nothing from either phone is lost or doubled.
 public struct WalletState: Codable, Hashable, Sendable {
-    public private(set) var coins: Int
-    public private(set) var lifetimeCoins: Int
+    /// Coins earned, by source key.
+    public private(set) var earned: [String: Int]
+    /// Coins spent, by purchase key.
+    public private(set) var spent: [String: Int]
     public private(set) var ownedItemIDs: Set<String>
     /// Item id per `EquipmentSlot.rawValue`.
     public private(set) var equipped: [String: String]
-    /// Chests reached but not yet opened. Kept across days.
-    public private(set) var pendingChests: Int
+    /// Chests found and opened, by the day they were found ("legacy" for older saves).
+    public private(set) var chestsFound: [String: Int]
+    public private(set) var chestsOpened: [String: Int]
     /// The local day the two counters below belong to.
     public private(set) var day: LocalDay?
     public private(set) var kilometresRewardedToday: Int
@@ -71,12 +79,16 @@ public struct WalletState: Codable, Hashable, Sendable {
     /// Referral chests already opened; a chest id is only ever paid once.
     public private(set) var openedReferralChestIDs: Set<String>
 
+    static let legacyKey = "legacy"
+    static let starterKey = "starter"
+
     public init(rules: CoinRules = .standard) {
-        coins = rules.starterCoins
-        lifetimeCoins = rules.starterCoins
+        earned = [Self.starterKey: rules.starterCoins]
+        spent = [:]
         ownedItemIDs = []
         equipped = [:]
-        pendingChests = 0
+        chestsFound = [:]
+        chestsOpened = [:]
         day = nil
         kilometresRewardedToday = 0
         chestsFoundToday = 0
@@ -84,26 +96,83 @@ public struct WalletState: Codable, Hashable, Sendable {
         openedReferralChestIDs = []
     }
 
-    enum CodingKeys: String, CodingKey {
-        case coins, lifetimeCoins, ownedItemIDs, equipped, pendingChests, day, kilometresRewardedToday, chestsFoundToday
-        case referralChests, openedReferralChestIDs
+    public var lifetimeCoins: Int { earned.values.reduce(0, +) }
+    /// Coins spent so far.
+    public var spentCoins: Int { spent.values.reduce(0, +) }
+    public var coins: Int { max(0, lifetimeCoins - spentCoins) }
+    /// Chests reached but not yet opened. Kept across days.
+    public var pendingChests: Int {
+        chestsFound.reduce(0) { $0 + max(0, $1.value - (chestsOpened[$1.key] ?? 0)) }
     }
 
-    /// Fields added after the first release decode as empty, so an app update
-    /// never resets anyone's coins or items.
+    enum CodingKeys: String, CodingKey {
+        case earned, spent, chestsFound, chestsOpened
+        case ownedItemIDs, equipped, day, kilometresRewardedToday, chestsFoundToday
+        case referralChests, openedReferralChestIDs
+        // Totals, and the only fields in older saves.
+        case coins, lifetimeCoins, pendingChests
+    }
+
+    /// Saves from before keyed coins move their totals into a "legacy" entry.
+    /// An app update never changes anyone's coins, chests or items.
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        coins = try container.decode(Int.self, forKey: .coins)
-        lifetimeCoins = try container.decode(Int.self, forKey: .lifetimeCoins)
         ownedItemIDs = try container.decode(Set<String>.self, forKey: .ownedItemIDs)
         equipped = try container.decode([String: String].self, forKey: .equipped)
-        pendingChests = try container.decode(Int.self, forKey: .pendingChests)
         day = try container.decodeIfPresent(LocalDay.self, forKey: .day)
         kilometresRewardedToday = try container.decode(Int.self, forKey: .kilometresRewardedToday)
         chestsFoundToday = try container.decode(Int.self, forKey: .chestsFoundToday)
         referralChests = try container.decodeIfPresent([ReferralChest].self, forKey: .referralChests) ?? []
         openedReferralChestIDs = try container.decodeIfPresent(Set<String>.self, forKey: .openedReferralChestIDs) ?? []
+        if let earned = try container.decodeIfPresent([String: Int].self, forKey: .earned) {
+            self.earned = earned
+            spent = try container.decodeIfPresent([String: Int].self, forKey: .spent) ?? [:]
+            chestsFound = try container.decodeIfPresent([String: Int].self, forKey: .chestsFound) ?? [:]
+            chestsOpened = try container.decodeIfPresent([String: Int].self, forKey: .chestsOpened) ?? [:]
+            return
+        }
+        let coins = try container.decode(Int.self, forKey: .coins)
+        let lifetime = try container.decode(Int.self, forKey: .lifetimeCoins)
+        let pending = try container.decode(Int.self, forKey: .pendingChests)
+        // The starter coins keep their key, so a new phone's starter coins aren't added again.
+        let starter = min(lifetime, CoinRules.standard.starterCoins)
+        earned = [Self.starterKey: starter, Self.legacyKey: lifetime - starter]
+        spent = [Self.legacyKey: max(0, lifetime - coins)]
+        chestsFound = pending > 0 ? [Self.legacyKey: pending] : [:]
+        chestsOpened = [:]
+        if let day {
+            // Today's walking is already inside the legacy total. It gets its
+            // own key (so later kilometres today add on top) with a matching
+            // offset, so two older saves never count the same day twice.
+            let walk = kilometresRewardedToday * CoinRules.standard.coinsPerKilometre
+            earned[Self.walkKey(day)] = walk
+            spent["legacy-\(Self.walkKey(day))"] = walk
+            // Today's chests so far are counted as handled; any still waiting are in the legacy pile.
+            chestsFound[day.isoString] = chestsFoundToday
+            chestsOpened[day.isoString] = chestsFoundToday
+        }
     }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(earned, forKey: .earned)
+        try container.encode(spent, forKey: .spent)
+        try container.encode(chestsFound, forKey: .chestsFound)
+        try container.encode(chestsOpened, forKey: .chestsOpened)
+        try container.encode(ownedItemIDs, forKey: .ownedItemIDs)
+        try container.encode(equipped, forKey: .equipped)
+        try container.encodeIfPresent(day, forKey: .day)
+        try container.encode(kilometresRewardedToday, forKey: .kilometresRewardedToday)
+        try container.encode(chestsFoundToday, forKey: .chestsFoundToday)
+        try container.encode(referralChests, forKey: .referralChests)
+        try container.encode(openedReferralChestIDs, forKey: .openedReferralChestIDs)
+        try container.encode(coins, forKey: .coins)
+        try container.encode(lifetimeCoins, forKey: .lifetimeCoins)
+        try container.encode(pendingChests, forKey: .pendingChests)
+    }
+
+    static func walkKey(_ day: LocalDay) -> String { "walk-\(day.isoString)" }
+    static func chestKey(_ found: String) -> String { "chests-\(found)" }
 
     // MARK: Earning
 
@@ -121,24 +190,28 @@ public struct WalletState: Codable, Hashable, Sendable {
         let kilometres = meters / 1_000
         if kilometres > kilometresRewardedToday {
             event.coinsEarned = (kilometres - kilometresRewardedToday) * rules.coinsPerKilometre
-            earn(event.coinsEarned)
             kilometresRewardedToday = kilometres
+            let key = Self.walkKey(progress.localDate)
+            earned[key] = max(earned[key] ?? 0, kilometres * rules.coinsPerKilometre)
         }
 
         let chests = Self.chestsReached(meters: meters, on: progress.localDate, rules: rules)
         if chests > chestsFoundToday {
             event.newChests = chests - chestsFoundToday
-            pendingChests += event.newChests
             chestsFoundToday = chests
+            let key = progress.localDate.isoString
+            chestsFound[key] = max(chestsFound[key] ?? 0, chests)
         }
         return event
     }
 
-    /// Opens one waiting chest. Returns the coins it held, or nil if there were none.
+    /// Opens one waiting chest (the oldest first). Returns the coins it held, or nil if there were none.
     public mutating func openChest(rules: CoinRules = .standard) -> Int? {
-        guard pendingChests > 0 else { return nil }
-        pendingChests -= 1
-        earn(rules.coinsPerChest)
+        guard let key = chestsFound.keys.sorted().first(where: { (chestsFound[$0] ?? 0) > (chestsOpened[$0] ?? 0) }) else {
+            return nil
+        }
+        chestsOpened[key, default: 0] += 1
+        earned[Self.chestKey(key), default: 0] += rules.coinsPerChest
         return rules.coinsPerChest
     }
 
@@ -159,13 +232,13 @@ public struct WalletState: Codable, Hashable, Sendable {
         guard let index = referralChests.firstIndex(where: { $0.id == id }) else { return nil }
         let chest = referralChests.remove(at: index)
         openedReferralChestIDs.insert(chest.id)
-        earn(chest.coins)
+        earned["referral-\(chest.id)"] = chest.coins
         return chest.coins
     }
 
     /// Pays a `Reward` (see `RewardLedger.claim`, which makes sure it happens once).
-    public mutating func receiveReward(coins: Int, itemIDs: [String]) {
-        earn(max(0, coins))
+    public mutating func receiveReward(id: String, coins: Int, itemIDs: [String]) {
+        if coins > 0 { earned["reward-\(id)"] = max(earned["reward-\(id)"] ?? 0, coins) }
         ownedItemIDs.formUnion(itemIDs)
     }
 
@@ -175,21 +248,19 @@ public struct WalletState: Codable, Hashable, Sendable {
         equipped = equipped.filter { !itemIDs.contains($0.value) }
     }
 
-    /// Coins spent so far. Derived, so old saves don't need a new field.
-    public var spentCoins: Int { max(0, lifetimeCoins - coins) }
-
-    /// Combines this device's wallet with another one (a cloud save) without
-    /// losing earnings or items: lifetime earnings and spending each take the
-    /// larger side, owned items and opened chests are unioned, and the outfit
-    /// stays as worn here unless nothing is worn.
+    /// Combines this device's wallet with another one (a cloud save). Every
+    /// earning and purchase key takes the larger side, so nothing is lost or
+    /// counted twice; owned items and opened chests are unioned, and the
+    /// outfit stays as worn here unless nothing is worn.
     public func merged(with other: WalletState) -> WalletState {
         var result = self
-        result.lifetimeCoins = max(lifetimeCoins, other.lifetimeCoins)
-        result.coins = max(0, result.lifetimeCoins - max(spentCoins, other.spentCoins))
+        result.earned.merge(other.earned) { max($0, $1) }
+        result.spent.merge(other.spent) { max($0, $1) }
+        result.chestsFound.merge(other.chestsFound) { max($0, $1) }
+        result.chestsOpened.merge(other.chestsOpened) { max($0, $1) }
         result.ownedItemIDs.formUnion(other.ownedItemIDs)
         if equipped.isEmpty { result.equipped = other.equipped }
         result.equipped = result.equipped.filter { result.ownedItemIDs.contains($0.value) }
-        result.pendingChests = max(pendingChests, other.pendingChests)
         let otherIsLater = other.day.map { theirs in day.map { theirs > $0 } ?? true } ?? false
         switch (day, other.day) {
         case _ where otherIsLater:
@@ -210,14 +281,10 @@ public struct WalletState: Codable, Hashable, Sendable {
         return result
     }
 
-    /// Pays for a finished rewarded ad. The daily limit lives in `AdState`.
-    public mutating func earnAdReward(_ coins: Int) {
-        earn(max(0, coins))
-    }
-
-    private mutating func earn(_ amount: Int) {
-        coins += amount
-        lifetimeCoins += amount
+    /// Pays for a finished rewarded ad. `id` is unique to that one ad view
+    /// (the daily limit lives in `AdState`).
+    public mutating func earnAdReward(_ coins: Int, id: String) {
+        earned["ad-\(id)"] = max(0, coins)
     }
 
     // MARK: Chests
@@ -252,7 +319,7 @@ public struct WalletState: Codable, Hashable, Sendable {
     @discardableResult
     public mutating func buy(itemID: String, price: Int) -> Bool {
         guard !ownedItemIDs.contains(itemID), coins >= price else { return false }
-        coins -= price
+        spent["item-\(itemID)"] = price
         ownedItemIDs.insert(itemID)
         return true
     }
@@ -260,7 +327,7 @@ public struct WalletState: Codable, Hashable, Sendable {
     public mutating func buy(_ item: ShopItem) -> PurchaseResult {
         guard !owns(item) else { return .alreadyOwned }
         guard coins >= item.price else { return .notEnoughCoins(needed: item.price - coins) }
-        coins -= item.price
+        spent["item-\(item.id)"] = item.price
         ownedItemIDs.insert(item.id)
         return .purchased(item)
     }
@@ -286,7 +353,7 @@ public struct WalletState: Codable, Hashable, Sendable {
             roll -= rarity.mysteryBoxWeight
         }
         let item = unowned.filter { $0.rarity == chosen }.randomElement(using: &generator)!
-        coins -= price
+        spent["box-\(item.id)"] = price
         ownedItemIDs.insert(item.id)
         return .purchased(item)
     }

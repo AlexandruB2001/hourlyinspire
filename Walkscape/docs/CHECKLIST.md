@@ -50,10 +50,11 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Starter companions (Mossling, Emberfox, Moonmoth) that grow with real walking: a detail per km, new shapes at 5/20/50/100 km
 - ✅ Shareable milestone cards (current progress or any journal entry) via the share sheet / Save Image
 - ✅ Ads (AdMob): app-open ad at most every 4 hours, none in the first 5 days or after a quick glance (<1 min away); rewarded ads for 15 coins, 3 per day; UMP consent + ATT
-- ⬜ Ads: real AdMob ids in `Config/Base.xcconfig`, App Store privacy label, `app-ads.txt` on a developer website, GDPR message in AdMob → Privacy & messaging
+- ✅ Ads: real AdMob ids in `Config/Base.xcconfig` (used only by App Store builds; TestFlight shows test ads)
+- ⬜ Ads: App Store privacy label, `app-ads.txt` on a developer website, GDPR message in AdMob → Privacy & messaging
 - ✅ Friend day card: tap a walker on the Journey leaderboard for their distance, steps, zone, last update and how far ahead or behind you they are
 - ✅ Local notifications: chests, zones, relics, achievements, companion growth, referral chests, daily reminder (Profile → Notifications)
-- ⬜ Push notifications for friend requests and team invites: code, migration and Edge Function are in the repo; needs an APNs key and the setup in BACKEND.md
+- 🔶 Push notifications for friend requests and team invites: APNs key, `send-push` and webhooks set up; delivery to a real device not yet confirmed
 - ✅ Explorer Levels: lifetime XP from walking (capped 25 km/day), zones, relics, achievements and rewards; 25 coins per level; level-up banner and Journal entry
 - ✅ Reward ledger: every quest/event/level reward has an id and pays once
 - ✅ Quests: 3 daily (reset at local midnight), 3 weekly + 1 companion (reset Monday), weekly chest for finishing every weekly quest; rewards paid once via the ledger; Journey card + quest log
@@ -80,13 +81,16 @@ Legend: ✅ done · 🔶 done but unverified on device · ⬜ to do
 - ✅ Seasonal festivals (Phase 8): Great Harvest, Winter Wanderer, Spring Awakening, Ocean Expedition, Starfall Festival; yearly dates, 4 tiers (≤ 50 km, 10 km/day cap), festival quests, exclusive companion accessories (sold after the festival), festival titles, community goal (migration 20261104000001)
 - ✅ Store (Phase 9, code): Walkscape Plus ($2.99/mo, $19.99/yr) and 4 cosmetic bundles via StoreKit 2; server-verified purchases (migration 20261105000001, verify-purchase + app-store-notifications functions); premium outfits, companion skins, trails, Journal themes, Plus frames, campsite decor, monthly Plus gift
 - ✅ Store server: purchases migration applied, verify-purchase and app-store-notifications deployed (2026-10-30)
-- ⬜ Store: Paid Apps agreement + bank/tax (owner), create products in App Store Connect, set the Server Notification URL
+- ✅ Store: 6 products created in App Store Connect; Server Notification URLs (production + sandbox) set
+- ⬜ Store: Paid Apps agreement + bank/tax (owner), then sandbox purchase/restore/refund test
 - ✅ Cloud save (migration 20261031000001, live)
 - ✅ Referrals: invite codes, server-side qualification (5 km over 2 days), 25–100 coin referral chest
 - ✅ Teams: create/join/invite, member day/week totals, weekly standings, expeditions, badges
 - ✅ `20261027000001` and `20261028000001` applied to the live project on 2026-10-28 (20 zones, 12 achievements, 20 policies)
 - ⬜ Referral fraud hardening: Apple-ID-level duplicate detection (auth.identities) and/or DeviceCheck
-- ⬜ Sync coins and owned items to the server (local per data source for now)
+- ✅ Coins and items sync through the cloud save; every coin earned or spent has a key, so merging two phones never duplicates or loses coins (cloud save schema 2)
+- ✅ Distance typed into the Health app by hand doesn't count (only device-recorded samples)
+- ⬜ Server-authoritative coins (today the client and its cloud save are trusted)
 - ⬜ Richer scenes: day/night tint, more wildlife, zone-specific particles
 - ⬜ Achievement unlock toasts
 - ⬜ Local notifications (daily reminder, friend passed you)

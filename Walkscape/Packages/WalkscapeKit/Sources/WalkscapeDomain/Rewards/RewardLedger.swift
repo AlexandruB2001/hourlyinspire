@@ -50,7 +50,7 @@ public struct RewardLedger: Codable, Hashable, Sendable {
     public mutating func claim(_ reward: Reward, into wallet: inout WalletState) -> Bool {
         guard claimed[reward.id] == nil else { return false }
         claimed[reward.id] = reward.xp
-        wallet.receiveReward(coins: reward.coins, itemIDs: reward.itemIDs)
+        wallet.receiveReward(id: reward.id, coins: reward.coins, itemIDs: reward.itemIDs)
         return true
     }
 

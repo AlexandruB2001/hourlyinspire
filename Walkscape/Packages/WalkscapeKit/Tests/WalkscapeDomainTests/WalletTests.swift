@@ -186,4 +186,80 @@ final class WalletTests: XCTestCase {
         let decoded = try JSONDecoder().decode(WalletState.self, from: JSONEncoder().encode(wallet))
         XCTAssertEqual(decoded, wallet)
     }
+
+    // MARK: Two phones
+
+    func testSpendingOnTwoPhonesIsNeverRefunded() {
+        var phoneA = wallet(coins: 300)
+        var phoneB = phoneA
+        XCTAssertEqual(phoneA.buy(ShopCatalog.item(withID: "straw-hat")!), .purchased(ShopCatalog.item(withID: "straw-hat")!))
+        XCTAssertTrue(phoneB.buy(itemID: "pet-straw-hat", price: 120))
+        let merged = phoneA.merged(with: phoneB)
+        XCTAssertEqual(merged.spentCoins, phoneA.spentCoins + phoneB.spentCoins, "both purchases are paid for")
+        XCTAssertEqual(merged.coins, 300 - phoneA.spentCoins - 120)
+        XCTAssertEqual(merged, phoneB.merged(with: phoneA), "merge order doesn't matter")
+        XCTAssertEqual(merged.merged(with: phoneA), merged, "merging again changes nothing")
+    }
+
+    func testTheSameEarningOnTwoPhonesCountsOnce() {
+        var phoneA = wallet(coins: 0)
+        var phoneB = wallet(coins: 0)
+        _ = phoneA.apply(progress(3_200))
+        _ = phoneB.apply(progress(4_100))
+        var ledgerA = RewardLedger()
+        var ledgerB = RewardLedger()
+        ledgerA.claim(Reward(id: "quest-1", coins: 30), into: &phoneA)
+        ledgerB.claim(Reward(id: "quest-1", coins: 30), into: &phoneB)
+        phoneA.earnAdReward(15, id: "view-a")
+        phoneB.earnAdReward(15, id: "view-b")
+        let merged = phoneA.merged(with: phoneB)
+        XCTAssertEqual(merged.lifetimeCoins, 40 + 30 + 15 + 15, "today's walk and the quest once; both ads")
+        XCTAssertEqual(merged.coins, merged.lifetimeCoins)
+    }
+
+    func testChestsOpenedOnEitherPhoneArePaidOnce() {
+        var phoneA = wallet(coins: 0)
+        _ = phoneA.apply(progress(1_000))
+        var phoneB = phoneA
+        XCTAssertEqual(phoneA.pendingChests, 2)
+        XCTAssertEqual(phoneA.openChest(), 5)
+        XCTAssertEqual(phoneB.openChest(), 5)
+        let merged = phoneA.merged(with: phoneB)
+        XCTAssertEqual(merged.pendingChests, 1, "the same chest opened on both phones")
+        XCTAssertEqual(merged.coins, 10 + 5)
+    }
+
+    func testOlderSavesKeepTheirCoinsAndChests() throws {
+        let saved = """
+        {"coins":180,"lifetimeCoins":420,"ownedItemIDs":["straw-hat"],"equipped":{"head":"straw-hat"},
+         "pendingChests":2,"day":"2026-10-27","kilometresRewardedToday":3,"chestsFoundToday":6}
+        """
+        var old = try JSONDecoder().decode(WalletState.self, from: Data(saved.utf8))
+        XCTAssertEqual(old.coins, 180)
+        XCTAssertEqual(old.pendingChests, 2)
+        let before = old.coins
+        _ = old.apply(progress(3_500))
+        XCTAssertEqual(old.coins, before, "kilometres already paid today aren't paid again")
+        _ = old.apply(progress(4_000))
+        XCTAssertEqual(old.coins, before + 10, "the next kilometre is")
+        // A brand-new phone merging with the older save doesn't add its starter coins on top.
+        let merged = WalletState().merged(with: try JSONDecoder().decode(WalletState.self, from: Data(saved.utf8)))
+        XCTAssertEqual(merged.coins, 180)
+        // Round trip.
+        XCTAssertEqual(try JSONDecoder().decode(WalletState.self, from: JSONEncoder().encode(old)), old)
+    }
+
+    func testTwoOlderSavesFromDifferentDaysDontCountADayTwice() throws {
+        func save(coins: Int, lifetime: Int, day: String, km: Int) -> Data {
+            Data("""
+            {"coins":\(coins),"lifetimeCoins":\(lifetime),"ownedItemIDs":[],"equipped":{},
+             "pendingChests":0,"day":"\(day)","kilometresRewardedToday":\(km),"chestsFoundToday":0}
+            """.utf8)
+        }
+        // The cloud save is from yesterday; this phone has walked on since and includes it.
+        let cloud = try JSONDecoder().decode(WalletState.self, from: save(coins: 300, lifetime: 500, day: "2026-10-26", km: 5))
+        let phone = try JSONDecoder().decode(WalletState.self, from: save(coins: 340, lifetime: 540, day: "2026-10-27", km: 4))
+        XCTAssertEqual(phone.merged(with: cloud).coins, 340)
+        XCTAssertEqual(phone.merged(with: cloud).lifetimeCoins - phone.merged(with: cloud).spentCoins, 340)
+    }
 }

@@ -4,7 +4,9 @@ import Foundation
 /// Apple Health progression, wallet, journal, reward ledger and companion.
 /// Demo-mode data is never saved to the cloud.
 public struct CloudSave: Codable, Hashable, Sendable {
-    public static let currentSchema = 1
+    /// 2: wallets keep coins by key (see `WalletState`). Older app versions
+    /// leave a schema 2 save alone instead of overwriting it.
+    public static let currentSchema = 2
 
     public var schema: Int
     public var progression: ProgressionState

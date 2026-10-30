@@ -995,7 +995,7 @@ final class AppModel {
             let outfits = bundle.contents.filter { id in PremiumOutfits.items.contains { $0.id == id } }
             guard !outfits.isEmpty else { continue }
             if owned.bundles.contains(bundle.id) {
-                wallet.receiveReward(coins: 0, itemIDs: outfits)
+                wallet.receiveReward(id: bundle.id, coins: 0, itemIDs: outfits)
                 changed = true
             } else if outfits.contains(where: wallet.owns(itemID:)) {
                 wallet.removeItems(outfits)
@@ -1375,7 +1375,7 @@ final class AppModel {
         defer { isWatchingAd = false }
         guard await ads.presentRewardedAd(), let coins = adState.recordRewardedAd(on: today) else { return nil }
         store.save(adState)
-        updateHealthWallet { $0.earnAdReward(coins) }
+        updateHealthWallet { $0.earnAdReward(coins, id: UUID().uuidString) }
         return coins
     }
 
