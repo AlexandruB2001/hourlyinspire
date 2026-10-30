@@ -6,9 +6,13 @@ import WalkscapeDomain
 struct TeamSection: View {
     @Environment(AppModel.self) private var model
     @State private var message: String?
+    @State private var guide: GuideSection.ID?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+            if model.isSignedIn, model.shouldShowTip(.team) {
+                TipCard(tip: .team) { guide = $0 }
+            }
             if model.usesSampleFriends {
                 ContentUnavailableView {
                     Label("Teams need an account", systemImage: "person.3.fill")
@@ -39,6 +43,7 @@ struct TeamSection: View {
                 .font(Theme.Typography.micro)
                 .foregroundStyle(Theme.Palette.creamDim.opacity(0.85))
         }
+        .sheet(item: $guide) { GuideView(start: $0) }
         .alert("Team", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {

@@ -40,6 +40,7 @@ struct LocalStore {
         static func quests(_ source: WalkingDataSourceKind) -> String { "walkscape.quests.v1.\(source.rawValue)" }
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
         static let notificationLedger = "walkscape.notificationLedger.v1"
+        static let seenTips = "walkscape.seenTips.v1"
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -125,6 +126,12 @@ struct LocalStore {
     func save(_ showcase: ProfileShowcase) { save(showcase, Key.showcase) }
 
     /// The account this phone's Apple Health progress was last saved to.
+    /// First-time tips already shown and dismissed.
+    var seenTips: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.seenTips) ?? []) }
+        nonmutating set { defaults.set(newValue.sorted(), forKey: Key.seenTips) }
+    }
+
     var cloudSaveOwner: String? {
         get { defaults.string(forKey: Key.cloudSaveOwner) }
         nonmutating set { defaults.set(newValue, forKey: Key.cloudSaveOwner) }

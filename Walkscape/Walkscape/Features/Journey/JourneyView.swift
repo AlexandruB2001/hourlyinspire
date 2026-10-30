@@ -4,13 +4,17 @@ import WalkscapeDomain
 /// The main screen: today's walk as a journey through the world.
 struct JourneyView: View {
     @Environment(AppModel.self) private var model
+    @State private var guide: GuideSection.ID?
 
     var body: some View {
         GeometryReader { proxy in
             ScrollView {
                 VStack(spacing: Theme.Spacing.l) {
-                    JourneyHero(topInset: proxy.safeAreaInsets.top)
+                    JourneyHero(topInset: proxy.safeAreaInsets.top) { guide = .journey }
                     VStack(spacing: Theme.Spacing.l) {
+                        if let tip = model.journeyTip {
+                            TipCard(tip: tip) { guide = $0 }
+                        }
                         DistanceCard()
                         if let run = model.activeEventRuns.first { SeasonalEventCard(run: run) }
                         QuestsCard()
@@ -33,6 +37,8 @@ struct JourneyView: View {
             .refreshable { await model.refreshAll() }
         }
         .background(Theme.Palette.night.ignoresSafeArea())
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.journeyTip)
+        .sheet(item: $guide) { GuideView(start: $0) }
     }
 }
 
@@ -40,6 +46,7 @@ struct JourneyView: View {
 private struct JourneyHero: View {
     @Environment(AppModel.self) private var model
     let topInset: CGFloat
+    let openGuide: () -> Void
 
     var body: some View {
         let zone = model.zoneProgress.currentZone
@@ -69,6 +76,11 @@ private struct JourneyHero: View {
                 }
                 .padding(.top, topInset + Theme.Spacing.s)
             }
+            .overlay(alignment: .topTrailing) {
+                GuideButton(action: openGuide)
+                    .padding(.top, topInset + Theme.Spacing.s)
+                    .padding(.trailing, Theme.Spacing.l)
+            }
             .overlay(alignment: .bottomTrailing) {
                 ChestPopUp()
                     .padding(.trailing, Theme.Spacing.xl)
@@ -80,7 +92,8 @@ private struct JourneyHero: View {
                     .padding(.bottom, Theme.Spacing.xxl + Theme.Spacing.xl)
             }
             .animation(.easeInOut(duration: 0.8), value: zone.biome)
-            .accessibilityElement(children: .ignore)
+            // The scene itself is hidden from VoiceOver; the chips, chests and guide button stay reachable.
+            .accessibilityElement(children: .contain)
             .accessibilityLabel("You are in \(zone.name). \(zone.tagline)")
     }
 }
@@ -167,32 +180,150 @@ private struct ZoneSign: View {
 }
 
 /// "Apple Health · Updated 2 min ago" or "Demo data".
+/// The small Apple Health sync chip on the Journey scene. Tap it for what
+/// it means and what to do.
 struct DataSourceChip: View {
     @Environment(AppModel.self) private var model
+    @State private var explaining = false
 
     var body: some View {
-        let freshness = model.freshness
-        let updated = model.sync.lastSuccessfulRefresh.map { RelativeTime.short(since: $0, now: model.now) }
-        Group {
-            if model.isDemo {
-                StatusChip(text: "Demo data · not from Apple Health", systemImage: "sparkles", tint: Theme.Palette.crystal)
-            } else if model.sync.phase == .loading && updated == nil {
-                StatusChip(text: "Reading Apple Health…", systemImage: "heart.fill")
-            } else if let updated {
-                StatusChip(text: "Apple Health · updated \(updated)",
-                           systemImage: freshness == .stale ? "exclamationmark.triangle.fill" : "heart.fill",
-                           tint: freshness == .stale ? Theme.Palette.ember : Theme.Palette.cream)
-            } else {
-                StatusChip(text: "Apple Health · not synced yet", systemImage: "heart")
+        let state = model.healthSyncIndicator
+        Button { explaining = true } label: { chip(state) }
+            .buttonStyle(.plain)
+            .animation(.easeInOut(duration: 0.3), value: state)
+            .accessibilityLabel(accessibilityText(state))
+            .accessibilityHint("Explains your Apple Health sync")
+            .sheet(isPresented: $explaining) {
+                HealthSyncSheet()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
-        }
-        .accessibilityLabel(accessibilityText)
     }
 
-    private var accessibilityText: String {
-        if model.isDemo { return "Showing demo data, not your Apple Health data" }
-        guard let last = model.sync.lastSuccessfulRefresh else { return "Apple Health has not synced yet" }
-        let stale = model.freshness == .stale ? ". This data may be out of date." : ""
-        return "Apple Health data updated \(RelativeTime.short(since: last, now: model.now))\(stale)"
+    @ViewBuilder private func chip(_ state: HealthSyncIndicator) -> some View {
+        switch state {
+        case .demo:
+            StatusChip(text: "Demo data · not from Apple Health", systemImage: "sparkles", tint: Theme.Palette.crystal)
+        case .synced(let date):
+            StatusChip(text: "Synced · \(RelativeTime.short(since: date, now: model.now))", systemImage: "checkmark.circle.fill",
+                       tint: Theme.Palette.leaf)
+        case .syncing:
+            StatusChip(text: "Syncing steps…", systemImage: "arrow.triangle.2.circlepath")
+        case .noStepsYet:
+            StatusChip(text: "Synced · no steps yet today", systemImage: "checkmark.circle", tint: Theme.Palette.cream)
+        case .stale(let date):
+            StatusChip(text: "Last synced \(RelativeTime.short(since: date, now: model.now))", systemImage: "clock",
+                       tint: Theme.Palette.gold)
+        case .needsAccess:
+            StatusChip(text: "Health access needed", systemImage: "heart.text.square", tint: Theme.Palette.ember)
+        case .unavailable:
+            StatusChip(text: "Apple Health unavailable", systemImage: "heart.slash", tint: Theme.Palette.ember)
+        case .problem:
+            StatusChip(text: "Couldn't sync · tap for help", systemImage: "exclamationmark.triangle.fill", tint: Theme.Palette.ember)
+        }
+    }
+
+    private func accessibilityText(_ state: HealthSyncIndicator) -> String {
+        switch state {
+        case .demo: return "Showing demo data, not your Apple Health data"
+        case .synced(let date): return "Apple Health synced \(RelativeTime.short(since: date, now: model.now))"
+        case .syncing: return "Syncing your steps from Apple Health"
+        case .noStepsYet: return "Apple Health synced. No steps recorded yet today"
+        case .stale(let date): return "Apple Health last synced \(RelativeTime.short(since: date, now: model.now)). This may be out of date."
+        case .needsAccess: return "Apple Health access is needed"
+        case .unavailable: return "Apple Health isn't available on this device"
+        case .problem: return "Apple Health couldn't sync"
+        }
+    }
+}
+
+/// What the sync chip means, with the action that fixes it.
+private struct HealthSyncSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        let state = model.healthSyncIndicator
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            Eyebrow("Apple Health", color: state.needsAttention ? Theme.Palette.ember : Theme.Palette.gold)
+            Text(title(state))
+                .font(Theme.Typography.title)
+                .foregroundStyle(Theme.Palette.cream)
+            Text(explanation(state))
+                .font(Theme.Typography.body)
+                .foregroundStyle(Theme.Palette.cream.opacity(0.9))
+                .fixedSize(horizontal: false, vertical: true)
+            actions(state)
+            Spacer(minLength: 0)
+        }
+        .padding(Theme.Spacing.l)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.Palette.night.ignoresSafeArea())
+    }
+
+    private func title(_ state: HealthSyncIndicator) -> String {
+        switch state {
+        case .demo: return "You're using demo data"
+        case .synced: return "Your walking is up to date"
+        case .syncing: return "Syncing your steps"
+        case .noStepsYet: return "No steps yet today"
+        case .stale: return "Waiting for new data"
+        case .needsAccess: return "Connect Apple Health"
+        case .unavailable: return "Apple Health isn't available"
+        case .problem: return "Couldn't read Apple Health"
+        }
+    }
+
+    private func explanation(_ state: HealthSyncIndicator) -> String {
+        switch state {
+        case .demo:
+            return "These numbers are sample data for trying Walkscape out. Switch to Apple Health in your Profile to walk for real."
+        case .synced:
+            return "Walkscape has your latest steps and distance from Apple Health. New walking appears when you open the app, and now and then in the background."
+        case .syncing:
+            return "Walkscape is reading today's steps and distance from Apple Health. This usually takes a moment."
+        case .noStepsYet:
+            return "Apple Health has nothing recorded since midnight. If you have walked, Walkscape may not be allowed to read your data: in the Health app, tap your profile picture, then Apps › Walkscape, and turn on Steps and Walking + Running Distance."
+        case .stale:
+            return "The last update is a while ago. Health data can't be read while your iPhone is locked, and steps from an Apple Watch can take a few minutes to arrive."
+        case .needsAccess:
+            return "Walkscape reads only your steps and walking distance to move your character. Nothing is written to Health and no location is used."
+        case .unavailable:
+            return "This device doesn't have Apple Health, so Walkscape can't read your walking. You can explore with demo data instead."
+        case .problem(let error):
+            switch error {
+            case .queryFailed(let detail) where detail.contains("locked"):
+                return "Health data can't be read while your iPhone is locked. Unlock it and try again."
+            default:
+                return "Something went wrong reading Apple Health. Try again in a moment. If it keeps happening, check that Walkscape can read Steps and Walking + Running Distance in the Health app."
+            }
+        }
+    }
+
+    @ViewBuilder private func actions(_ state: HealthSyncIndicator) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            switch state {
+            case .needsAccess:
+                Button("Connect Apple Health") { Task { await model.connectAppleHealth(); dismiss() } }
+                    .buttonStyle(.pixel)
+            case .unavailable:
+                Button("Use demo data") { model.switchDataSource(to: .demo); dismiss() }
+                    .buttonStyle(.pixel)
+            case .noStepsYet, .problem:
+                Button("Try again") { Task { await model.refreshWalking() } }
+                    .buttonStyle(.pixel)
+                Button("Open the Health app") {
+                    if let url = URL(string: "x-apple-health://") { openURL(url) }
+                }
+                .buttonStyle(.pixelQuiet)
+            case .synced, .stale, .syncing:
+                Button("Sync now") { Task { await model.refreshWalking() } }
+                    .buttonStyle(.pixelSecondary)
+                    .disabled(state == .syncing)
+            case .demo:
+                EmptyView()
+            }
+        }
     }
 }

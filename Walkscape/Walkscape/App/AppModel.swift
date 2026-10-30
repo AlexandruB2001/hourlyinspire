@@ -68,6 +68,8 @@ final class AppModel {
     private(set) var collections: CollectionState
     /// A new creature or treasure to announce; cleared by the UI.
     var discovery: DiscoveryNews?
+    /// First-time tips the player has dismissed.
+    private(set) var seenTips: Set<String> = []
     /// Friends' recent milestones, newest first.
     private(set) var milestoneFeed: [FriendMilestone] = []
     /// The team's shared campsite, when in a team.
@@ -150,6 +152,7 @@ final class AppModel {
         questTracker = store.loadQuestTracker(source)
         showcase = store.loadShowcase()
         premiumLook = store.loadPremiumLook()
+        seenTips = store.seenTips
         collections = store.loadCollections(source)
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
@@ -196,6 +199,10 @@ final class AppModel {
     var isDistanceEstimated: Bool { todayProgress?.isEstimated ?? false }
     var zoneProgress: ZoneProgress { engine.progress(forMeters: distanceMeters) }
     var freshness: DataFreshness { sync.freshness(now: now) }
+    /// The Journey screen's sync chip.
+    var healthSyncIndicator: HealthSyncIndicator {
+        .evaluate(isDemo: isDemo, authorization: authorization, status: sync, now: now)
+    }
     var needsHealthConnection: Bool { !isDemo && authorization == .notDetermined }
     var healthUnavailable: Bool { !isDemo && authorization == .unavailable }
 
@@ -418,6 +425,30 @@ final class AppModel {
     // MARK: Companion & journal
 
     var needsCompanionChoice: Bool { companion == nil }
+
+    // MARK: First-time tips
+
+    /// The one tip to show on the Journey screen, if any: the first unseen tip
+    /// whose moment has come, and none while a celebration is on screen.
+    var journeyTip: GameTip? {
+        guard !needsCompanionChoice, celebration == nil, levelUp == nil, discovery == nil, teamWorldArrival == nil else {
+            return nil
+        }
+        let due: [(GameTip, Bool)] = [
+            (.firstChest, wallet.pendingChests > 0),
+            (.firstZone, progression.discoveredZoneIDs.count > 1),
+            (.companionGrowth, (companionGrowth?.stage.rawValue ?? 0) > CompanionGrowth.Stage.hatchling.rawValue),
+            (.firstQuest, true),
+        ]
+        return due.first { $0.1 && !seenTips.contains($0.0.rawValue) }?.0
+    }
+
+    func shouldShowTip(_ tip: GameTip) -> Bool { !seenTips.contains(tip.rawValue) }
+
+    func dismissTip(_ tip: GameTip) {
+        seenTips.insert(tip.rawValue)
+        store.seenTips = seenTips
+    }
 
     var companionGrowth: CompanionGrowth? { companion?.growth(lifetimeMeters: progression.lifetimeMeters) }
 
