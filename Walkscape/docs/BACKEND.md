@@ -170,6 +170,12 @@ achievements, a referral code on every profile, 20 RLS policies). Before using
 
 ## Push notifications (migration 20261030000001, applied 2026-10-30)
 
+Set up on 2026-10-30: APNs key "Walkscape Push" (Key ID RRFKC3AJR4, sandbox and
+production), `send-push` deployed with Verify JWT on, secrets APNS_KEY_ID,
+APNS_TEAM_ID, APNS_TOPIC (and APNS_PRIVATE_KEY, added by the account owner),
+webhooks `push_friend_requests` and `push_team_invites` (INSERT, service-role
+auth header).
+
 Game events (chests, zones, relics, achievements, companion growth, referral
 chests, the daily reminder) are **local** notifications: the app posts them
 itself after a background HealthKit refresh, so they need no server.
