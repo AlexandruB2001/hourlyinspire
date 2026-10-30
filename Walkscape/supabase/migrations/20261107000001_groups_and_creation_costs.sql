@@ -23,28 +23,28 @@ security definer
 set search_path = ''
 as $$
 declare
-    save jsonb;
+    doc jsonb;
     earned bigint;
     spent bigint;
 begin
-    select s.save into save from public.player_saves s where s.user_id = p_user for update;
-    if save is null then
+    select s.save into doc from public.player_saves s where s.user_id = p_user for update;
+    if doc is null then
         raise exception 'no_cloud_save' using errcode = 'P0002';
     end if;
-    if coalesce((save ->> 'schema')::integer, 0) < 2 or jsonb_typeof(save -> 'wallet' -> 'earned') is distinct from 'object' then
+    if coalesce((doc ->> 'schema')::integer, 0) < 2 or jsonb_typeof(doc -> 'wallet' -> 'earned') is distinct from 'object' then
         raise exception 'update_app' using errcode = '22023';
     end if;
-    if coalesce(save -> 'wallet' -> 'spent', '{}'::jsonb) ? p_key then
+    if coalesce(doc -> 'wallet' -> 'spent', '{}'::jsonb) ? p_key then
         return; -- already paid
     end if;
-    select coalesce(sum(value::bigint), 0) into earned from jsonb_each_text(save -> 'wallet' -> 'earned');
-    select coalesce(sum(value::bigint), 0) into spent from jsonb_each_text(coalesce(save -> 'wallet' -> 'spent', '{}'::jsonb));
+    select coalesce(sum(value::bigint), 0) into earned from jsonb_each_text(doc -> 'wallet' -> 'earned');
+    select coalesce(sum(value::bigint), 0) into spent from jsonb_each_text(coalesce(doc -> 'wallet' -> 'spent', '{}'::jsonb));
     if earned - spent < p_amount then
         raise exception 'insufficient_coins' using errcode = '22023';
     end if;
-    save := jsonb_set(save, '{wallet,spent}', coalesce(save -> 'wallet' -> 'spent', '{}'::jsonb) || jsonb_build_object(p_key, p_amount));
-    save := jsonb_set(save, '{wallet,coins}', to_jsonb(earned - spent - p_amount));
-    update public.player_saves set save = charge_coins.save, version = version + 1, updated_at = now() where user_id = p_user;
+    doc := jsonb_set(doc, '{wallet,spent}', coalesce(doc -> 'wallet' -> 'spent', '{}'::jsonb) || jsonb_build_object(p_key, p_amount));
+    doc := jsonb_set(doc, '{wallet,coins}', to_jsonb(earned - spent - p_amount));
+    update public.player_saves set save = doc, version = version + 1, updated_at = now() where user_id = p_user;
 end;
 $$;
 
