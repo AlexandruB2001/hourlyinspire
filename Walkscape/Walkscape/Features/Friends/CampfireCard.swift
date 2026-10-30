@@ -1,3 +1,4 @@
+import PixelArt
 import SwiftUI
 import WalkscapeDomain
 
