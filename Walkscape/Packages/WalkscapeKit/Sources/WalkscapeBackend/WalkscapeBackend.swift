@@ -10,6 +10,7 @@ public final class WalkscapeBackend: Sendable {
     public let profiles: ProfileService
     public let progressSync: DailyProgressSyncer
     public let teams: SupabaseTeamRepository
+    public let groups: SupabaseGroupRepository
     public let referrals: SupabaseReferralRepository
     public let push: PushRegistry
     public let cloudSave: CloudSaveService
@@ -27,6 +28,7 @@ public final class WalkscapeBackend: Sendable {
         profiles = ProfileService(api: api)
         progressSync = DailyProgressSyncer(api: api)
         teams = SupabaseTeamRepository(api: api) { await auth.currentSession?.userID }
+        groups = SupabaseGroupRepository(api: api)
         referrals = SupabaseReferralRepository(api: api)
         push = PushRegistry(api: api)
         cloudSave = CloudSaveService(api: api)

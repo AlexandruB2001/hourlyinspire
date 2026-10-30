@@ -1,15 +1,13 @@
 import SwiftUI
 import WalkscapeDomain
 
+/// The Social tab: friends, your team and your groups, switched with the dropdown.
 struct FriendsView: View {
-    enum Mode: String, CaseIterable, Identifiable {
-        case friends = "Friends"
-        case team = "Team"
-        var id: String { rawValue }
-    }
+    typealias Mode = SocialSection
 
     @Environment(AppModel.self) private var model
-    @State private var mode: Mode = .friends
+    /// Remembered between launches.
+    @AppStorage("walkscape.socialMode") private var mode: Mode = .friends
     @State private var showingAddFriend = false
     @State private var pendingRemoval: TrackParticipant?
     @State private var pendingBlock: TrackParticipant?
@@ -19,8 +17,10 @@ struct FriendsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     modePicker
-                    if mode == .team {
+                    if mode == .teams {
                         TeamSection()
+                    } else if mode == .groups {
+                        GroupsSection()
                     } else {
                         if model.account == .signedOut { SignInCard() }
                         trackSection
@@ -49,7 +49,11 @@ struct FriendsView: View {
                 }
             }
             .refreshable {
-                if mode == .team { await model.refreshTeam() } else { await model.refreshFriends() }
+                switch mode {
+                case .friends: await model.refreshFriends()
+                case .teams: await model.refreshTeam()
+                case .groups: await model.refreshGroups()
+                }
             }
             .sheet(isPresented: $showingAddFriend) { AddFriendSheet() }
             .confirmationDialog("Remove \(pendingRemoval?.name ?? "friend")?", isPresented: removalBinding,
@@ -67,7 +71,7 @@ struct FriendsView: View {
         }
     }
 
-    /// Switches between the friend track and your team.
+    /// Switches between the friend track, your team and your groups.
     private var modePicker: some View {
         Menu {
             Picker("View", selection: $mode) {
@@ -75,8 +79,8 @@ struct FriendsView: View {
             }
         } label: {
             HStack(spacing: Theme.Spacing.s) {
-                ItemIcon(spriteID: mode == .team ? "team-badge" : "boot", pixel: 2)
-                Text(mode == .team ? "Team view" : "Friends view")
+                ItemIcon(spriteID: mode.spriteID, pixel: 2)
+                Text(mode.rawValue)
                     .font(Theme.Typography.headline)
                 Image(systemName: "chevron.down").font(.caption.weight(.heavy))
             }
@@ -229,7 +233,7 @@ private struct FocusCard: View {
     }
 }
 
-/// Shown on the Friends tab when the backend is configured but nobody is signed in.
+/// Shown on the Social tab when the backend is configured but nobody is signed in.
 struct SignInCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {

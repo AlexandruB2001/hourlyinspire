@@ -423,4 +423,71 @@ final class BackendTests: XCTestCase {
         XCTAssertNotNil(PostgresDate.parse("2025-10-25T13:55:31Z"))
         XCTAssertNil(PostgresDate.parse("yesterday"))
     }
+
+    // MARK: Groups and creation costs
+
+    func testCreatingAGroupSendsTheRequestIDAndMapsErrors() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, "\"9f1c0000-0000-4000-8000-000000000001\"")
+        transport.enqueue(400, #"{"code":"22023","message":"insufficient_coins"}"#)
+        transport.enqueue(400, #"{"code":"23514","message":"group_limit"}"#)
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let groups = SupabaseGroupRepository(api: api)
+        let request = UUID()
+
+        let id = try await groups.createGroup(requestID: request, name: "Fit4Less Windsor", description: "", emblem: "boot")
+        XCTAssertEqual(id, "9f1c0000-0000-4000-8000-000000000001")
+        XCTAssertEqual(transport.path(0), "/rest/v1/rpc/create_group")
+        XCTAssertEqual(transport.body(0)["p_request_id"] as? String, request.uuidString.lowercased())
+        do {
+            _ = try await groups.createGroup(requestID: request, name: "Fit4Less Windsor", description: "", emblem: "boot")
+            XCTFail("expected an error")
+        } catch let error as GroupError {
+            XCTAssertEqual(error, .insufficientCoins)
+        }
+        do {
+            _ = try await groups.join(code: "AB3K9Z")
+            XCTFail("expected an error")
+        } catch let error as GroupError {
+            XCTAssertEqual(error, .limitReached)
+        }
+    }
+
+    func testLeaderboardRowsDecodeWithThePinnedPlayer() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, """
+        [{"user_id":"A","username":"ana","avatar_id":"fern","rank":1,"steps":9000,"distance_meters":7000,"estimated":false,
+          "sharing":true,"updated_at":"2026-10-30T12:00:00+00:00","is_me":false,"total":40},
+         {"user_id":"B","username":"me","avatar_id":"fern","rank":12,"steps":null,"distance_meters":null,"estimated":false,
+          "sharing":false,"updated_at":null,"is_me":true,"total":40}]
+        """)
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let page = try await SupabaseGroupRepository(api: api).leaderboard(
+            groupID: "g", period: .week, day: LocalDay(year: 2026, month: 10, day: 30), limit: 1, offset: 0)
+        XCTAssertEqual(transport.body(0)["p_period"] as? String, "week")
+        XCTAssertEqual(transport.body(0)["p_day"] as? String, "2026-10-30")
+        XCTAssertEqual(page.rows.map(\.username), ["ana"])
+        XCTAssertEqual(page.me?.rank, 12)
+        XCTAssertFalse(page.me?.isSharing ?? true)
+        XCTAssertEqual(page.memberCount, 40)
+        XCTAssertNotNil(page.lastUpdated)
+    }
+
+    func testCreatingATeamSendsARequestIDAndNeedsCoins() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, "\"t1\"")
+        transport.enqueue(400, #"{"code":"22023","message":"insufficient_coins"}"#)
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let teams = SupabaseTeamRepository(api: api) { nil }
+        let request = UUID()
+        try await teams.createTeam(named: "Trail Blazers", requestID: request)
+        XCTAssertEqual(transport.path(0), "/rest/v1/rpc/create_team")
+        XCTAssertEqual(transport.body(0)["p_request_id"] as? String, request.uuidString.lowercased())
+        do {
+            try await teams.createTeam(named: "Trail Blazers", requestID: UUID())
+            XCTFail("expected an error")
+        } catch let error as TeamRepositoryError {
+            XCTAssertEqual(error, .insufficientCoins)
+        }
+    }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 import WalkscapeDomain
 
-/// The Team side of the Friends tab: create or join a team, then walk
+/// The Teams view of the Social tab: create or join a team, then walk
 /// together toward expeditions and climb the weekly standings.
 struct TeamSection: View {
     @Environment(AppModel.self) private var model
@@ -57,8 +57,12 @@ private struct CreateTeamCard: View {
     @Binding var message: String?
     @State private var name = ""
     @State private var isWorking = false
+    /// Kept across retries of one attempt, so it's only ever charged once.
+    @State private var requestID = UUID()
 
     var body: some View {
+        let cost = CreationCosts.team
+        let affordable = model.spendableCoins >= cost
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             HStack(spacing: Theme.Spacing.m) {
                 ItemIcon(spriteID: "team-badge", pixel: 3)
@@ -71,21 +75,26 @@ private struct CreateTeamCard: View {
                         .foregroundStyle(Theme.Palette.creamDim)
                 }
             }
+            CreationCostRow(cost: cost, balance: model.spendableCoins)
             HStack {
                 TextField("Team name", text: $name)
                     .font(Theme.Typography.body)
                     .padding(Theme.Spacing.s)
                     .background(RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.forestRaised))
                     .foregroundStyle(Theme.Palette.cream)
-                Button("Create") {
+                Button {
                     isWorking = true
                     Task {
-                        message = await model.createTeam(named: name)
+                        message = await model.createTeam(named: name, requestID: requestID)
+                        if message == nil { requestID = UUID() }
                         isWorking = false
                     }
+                } label: {
+                    if isWorking { ProgressView().tint(Theme.Palette.ink) } else { CoinPriceLabel(text: "Create", price: cost) }
                 }
                 .buttonStyle(.pixel)
-                .disabled(name.trimmingCharacters(in: .whitespaces).count < 3 || isWorking)
+                .disabled(name.trimmingCharacters(in: .whitespaces).count < 3 || isWorking || !affordable)
+                .opacity(affordable ? 1 : 0.5)
             }
         }
         .pixelPanel()

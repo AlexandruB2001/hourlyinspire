@@ -293,3 +293,14 @@ is exposed. Seasonal festivals compare it with their community goal.
 - `record_team_world_unlocks()`: any member records the reached zones and gets
   the team's unlocks back. The app pays a zone's reward only once the zone is on
   record. Servers without this function fall back to the app's own calculation.
+
+## Groups and creation costs (migration 20261107000001, applied 2026-10-30)
+
+- `charge_coins(user, key, amount)` (internal only) locks the player's cloud save, checks the keyed wallet balance there (`wallet.earned` minus `wallet.spent`), and records `spent[key] = amount`. A key that's already spent pays nothing again. The app records the same key locally (`WalletState.recordServerCharge`), so the charge counts once however the phone and the cloud copy merge. Limitation: the cloud save is written by the app, so this is only as strong as that save. A modified client could still inflate its own save.
+- Charging needs a cloud save at schema 2 (`no_cloud_save` / `update_app` otherwise). The app syncs before it creates anything.
+- `create_team(name, request_id)` costs 25 coins, and a retry with the same request returns the same team. Joining stays free. Builds before 14 can't create teams any more (`update_app`).
+- Groups:
+  - Tables `groups` and `group_members`, with RLS on and no direct access.
+  - RPCs: `create_group` (500 coins, idempotent by request id), `preview_group`, `join_group` (free; at most 5 groups per player; 5,000 members per group), `leave_group`, `remove_group_member`, `update_group`, `regenerate_group_code`, `my_groups`, `group_member_list` (paged), `group_leaderboard`.
+  - A trigger keeps exactly one owner: the longest-standing member takes over, and the group closes when the last member leaves.
+  - Leaderboards use members' local calendar dates from `daily_progress`: daily is today's date; weekly runs from Monday to today. Members who don't share are listed without numbers. The caller's row is always returned.

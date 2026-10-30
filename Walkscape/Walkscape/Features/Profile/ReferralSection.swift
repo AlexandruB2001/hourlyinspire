@@ -28,7 +28,7 @@ struct ReferralSection: View {
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.ember)
             } else if !model.isSignedIn {
-                Text("Sign in with Apple (Friends tab) to get your invite code.")
+                Text("Sign in with Apple (Social tab) to get your invite code.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.cream)
                 if let pending = model.pendingReferralCode {

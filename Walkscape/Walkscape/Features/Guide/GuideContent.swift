@@ -88,11 +88,13 @@ enum GuideContent {
               body: "Accessories come from the Mystery Box in the Shop, Explorer level gifts and festivals. They show on every growth stage."),
     ])
 
-    static let friends = GuideSection(id: .friends, title: "Friends", spriteID: "compass", entries: [
+    static let friends = GuideSection(id: .friends, title: "Friends & Groups", spriteID: "compass", entries: [
+        .init(title: "The Social tab",
+              body: "Friends, your team and your groups all live in the Social tab: switch between them with the menu at the top."),
         .init(title: "Adding friends",
-              body: "Sign in with Apple in the Friends tab, then add friends by their username. They accept your request before you can see each other. You can also share your invite code from your Profile."),
+              body: "Sign in with Apple, choose Friends in the Social tab, then add friends by their username. They accept your request before you can see each other. You can also share your invite code from your Profile."),
         .init(title: "The friend track",
-              body: "The Friends tab shows today's walk as a shared track. Everyone appears at today's distance, so friends who've walked about as far as you are bunched up next to you. Tap someone to see their day."),
+              body: "Friends shows today's walk as a shared track. Everyone appears at today's distance, so friends who've walked about as far as you are bunched up next to you. Tap someone to see their day."),
         .init(title: "What friends see",
               body: "Only your daily totals and profile are shared, and only with friends you've accepted. You can stop sharing in your Profile."),
         .init(title: "Milestones & reactions",
@@ -100,11 +102,15 @@ enum GuideContent {
                     WalkedTogether.milestones.map { km($0) }.joined(separator: ", ") + " on the same days as a friend earns rewards."),
         .init(title: "Shared discoveries",
               body: "If you and a friend find the same world event or rare creature on the same day, you both get a Journal entry and 25 coins."),
+        .init(title: "Groups",
+              body: "Groups are walking communities, like your gym, workplace, class or family. Everyone walks on their own and competes on the group's daily and weekly leaderboards: nothing is pooled. Creating a group costs \(CreationCosts.group) coins; joining with a six-character code or QR code is free. You can be in up to \(GroupRules.maxGroups) groups."),
+        .init(title: "Group leaderboards",
+              body: "Ranked by walking distance, with steps shown too. Today's board resets at midnight and the weekly one on Monday at midnight. Only members can see a group, and only while you share your progress."),
     ])
 
     static let teams = GuideSection(id: .teams, title: "Teams & Team Worlds", spriteID: "team-badge", entries: [
         .init(title: "Joining a team",
-              body: "In the Friends tab, create a team, join one with its code, or accept an invite from a friend. You can be in one team at a time."),
+              body: "In the Social tab, choose Teams to create a team (\(CreationCosts.team) coins), join one with its code, or accept an invite from a friend. Joining is free. You can be in one team at a time."),
         .init(title: "Team distance",
               body: "From the day you join, each day's walk counts for your team, up to 25 km a person per day. A day only ever counts for one team, and what you walked stays with the team if you leave, so the team total never goes down."),
         .init(title: "Expeditions",

@@ -106,9 +106,11 @@ public struct SupabaseTeamRepository: TeamRepository {
         return rows.map { TeamInvite(id: $0.id.lowercased(), teamName: $0.teamName, fromUsername: $0.fromUsername) }
     }
 
-    public func createTeam(named name: String) async throws {
-        struct Params: Encodable { let p_name: String }
-        _ = try await run { try await api.call("create_team", Params(p_name: name)) as IgnoredResult }
+    public func createTeam(named name: String, requestID: UUID) async throws {
+        struct Params: Encodable { let p_name: String; let p_request_id: String }
+        _ = try await run {
+            try await api.call("create_team", Params(p_name: name, p_request_id: requestID.uuidString.lowercased())) as IgnoredResult
+        }
     }
 
     public func joinTeam(code: String) async throws {
@@ -183,6 +185,9 @@ public struct SupabaseTeamRepository: TeamRepository {
             case "not_in_team": return .notInTeam
             case "not_friends": return .notFriends
             case "invalid_team_name": return .invalidName
+            case "insufficient_coins": return .insufficientCoins
+            case "no_cloud_save": return .needsCloudSave
+            case "update_app": return .updateApp
             case "team_full": return .network("That team is full (12 walkers).")
             case "not_authenticated": return .notSignedIn
             default: return .network(message)

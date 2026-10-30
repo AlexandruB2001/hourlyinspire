@@ -20,7 +20,7 @@ struct RootTabView: View {
                 .tabItem { Label("Journey", systemImage: "figure.walk") }
                 .tag(AppModel.Tab.journey)
             FriendsView()
-                .tabItem { Label("Friends", systemImage: "person.2.fill") }
+                .tabItem { Label("Social", systemImage: "person.3.fill") }
                 .tag(AppModel.Tab.friends)
             WorldView()
                 .tabItem { Label("World", systemImage: "map.fill") }

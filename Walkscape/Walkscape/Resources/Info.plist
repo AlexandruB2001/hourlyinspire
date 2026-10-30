@@ -34,6 +34,8 @@
 	<string>Walkscape reads your step count and walking distance to move your character through the world. Only daily totals are ever shared, and only with friends you accept.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Walkscape never writes to Apple Health. It only reads your steps and walking distance to move your character through the world.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Walkscape uses the camera only to scan a group's QR code when you join it. Nothing is recorded or saved.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Walkscape is free thanks to ads. Allowing this lets ads be more relevant to you. Your walking and Health data are never used for ads.</string>
 	<key>SKAdNetworkItems</key>

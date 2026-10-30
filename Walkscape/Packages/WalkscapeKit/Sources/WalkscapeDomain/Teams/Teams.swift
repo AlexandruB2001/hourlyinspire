@@ -221,6 +221,10 @@ public enum TeamRepositoryError: Error, Hashable, Sendable {
     case notInTeam
     case notFriends
     case invalidName
+    case insufficientCoins
+    /// No cloud save to pay from yet.
+    case needsCloudSave
+    case updateApp
     case network(String)
 }
 
@@ -228,7 +232,9 @@ public protocol TeamRepository: Sendable {
     /// Nil when the caller isn't in a team.
     func dashboard(for day: LocalDay, now: Date) async throws -> TeamDashboard?
     func invites() async throws -> [TeamInvite]
-    func createTeam(named name: String) async throws
+    /// Costs `CreationCosts.team` coins. `requestID` stays the same across
+    /// retries of one attempt, so it's charged and created once.
+    func createTeam(named name: String, requestID: UUID) async throws
     func joinTeam(code: String) async throws
     func leaveTeam() async throws
     func invite(friend: UserID) async throws

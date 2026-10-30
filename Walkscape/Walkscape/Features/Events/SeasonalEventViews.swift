@@ -174,7 +174,7 @@ struct SeasonalEventSheet: View {
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
             PixelProgressBar(fraction: Double(km) / Double(goal), segments: 16, fill: Theme.Palette.leaf)
-            Text(model.isSignedIn ? "\(km.formatted()) km so far" : "Sign in (Friends tab) to see the community total.")
+            Text(model.isSignedIn ? "\(km.formatted()) km so far" : "Sign in (Social tab) to see the community total.")
                 .font(Theme.Typography.micro)
                 .foregroundStyle(Theme.Palette.creamDim)
         }

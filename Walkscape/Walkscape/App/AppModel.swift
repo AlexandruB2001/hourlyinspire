@@ -325,7 +325,8 @@ final class AppModel {
         async let social: Void = refreshFriends()
         async let team: Void = refreshTeam()
         async let referrals: Void = refreshReferrals()
-        _ = await (walking, social, team, referrals)
+        async let communityGroups: Void = refreshGroups()
+        _ = await (walking, social, team, referrals, communityGroups)
         await syncCloudSave()
         await refreshPurchases()
     }
@@ -712,6 +713,12 @@ final class AppModel {
             case .notInTeam: return "You're not in a team."
             case .notFriends: return "You can only invite friends."
             case .invalidName: return "Team names need 3–24 letters, numbers or spaces."
+            case .insufficientCoins:
+                return spendableCoins >= CreationCosts.team
+                    ? "Your latest coins are still syncing. Try again in a moment."
+                    : "You need \(CreationCosts.team) coins to start a team."
+            case .needsCloudSave: return "Your progress hasn't reached the server yet. Try again in a moment."
+            case .updateApp: return "Update Walkscape to do that."
             case .notSignedIn:
                 handleSessionExpired()
                 return "Please sign in again."
@@ -723,12 +730,135 @@ final class AppModel {
         }
     }
 
-    func createTeam(named name: String) async -> String? { await teamAction { try await $0.createTeam(named: name) } }
+    /// Creates a team for `CreationCosts.team` coins. Keep `requestID` the same
+    /// when retrying one attempt, so the team is made and paid for once.
+    func createTeam(named name: String, requestID: UUID) async -> String? {
+        guard spendableCoins >= CreationCosts.team else { return "You need \(CreationCosts.team) coins to start a team." }
+        await syncCloudSave(force: true)
+        let error = await teamAction { try await $0.createTeam(named: name, requestID: requestID) }
+        if error == nil { await settleCharge(.team, requestID: requestID, amount: CreationCosts.team) }
+        return error
+    }
     func joinTeam(code: String) async -> String? { await teamAction { try await $0.joinTeam(code: code) } }
     func leaveTeam() async -> String? { await teamAction { try await $0.leaveTeam() } }
     func inviteToTeam(_ friend: UserID) async -> String? { await teamAction { try await $0.invite(friend: friend) } }
     func respond(to invite: TeamInvite, accept: Bool) async -> String? {
         await teamAction { try await $0.respond(to: invite, accept: accept) }
+    }
+
+    // MARK: Groups
+
+    private(set) var groups: [CommunityGroup] = []
+    private(set) var hasLoadedGroups = false
+    private(set) var groupsError: String?
+
+    /// Coins that can pay for creating a team or group: the Apple Health
+    /// wallet, which is the one in the cloud save the server charges.
+    var spendableCoins: Int { dataSource == .appleHealth ? wallet.coins : store.loadWallet(.appleHealth).coins }
+
+    func refreshGroups() async {
+        guard let backend, isSignedIn else {
+            groups = []
+            return
+        }
+        do {
+            groups = try await backend.groups.myGroups()
+            groupsError = nil
+            hasLoadedGroups = true
+        } catch {
+            groupsError = groupMessage(error)
+        }
+    }
+
+    /// Creates a group for `CreationCosts.group` coins and returns its id.
+    /// The server checks and takes the coins with the creation; keep
+    /// `requestID` the same when retrying one attempt so it's paid for once.
+    func createGroup(requestID: UUID, name: String, description: String, emblem: String) async -> Result<String, GroupError> {
+        guard let backend, isSignedIn else { return .failure(.notSignedIn) }
+        guard spendableCoins >= CreationCosts.group else { return .failure(.insufficientCoins) }
+        // The server pays from the cloud save, so bring it up to date first.
+        await syncCloudSave(force: true)
+        do {
+            let id = try await backend.groups.createGroup(requestID: requestID, name: name, description: description, emblem: emblem)
+            await settleCharge(.group, requestID: requestID, amount: CreationCosts.group)
+            await refreshGroups()
+            return .success(id)
+        } catch let error as GroupError {
+            if error == .notSignedIn { handleSessionExpired() }
+            if error == .insufficientCoins, spendableCoins >= CreationCosts.group { return .failure(.needsCloudSave) }
+            return .failure(error)
+        } catch {
+            return .failure(.network(""))
+        }
+    }
+
+    /// Records a charge the server made, under its key, and syncs, so the
+    /// phone shows the coins gone straight away and never pays twice.
+    private func settleCharge(_ kind: CreationCosts.Kind, requestID: UUID, amount: Int) async {
+        updateHealthWallet { $0.recordServerCharge(key: CreationCosts.chargeKey(kind, requestID: requestID), amount: amount) }
+        await syncCloudSave(force: true)
+    }
+
+    func previewGroup(code: String) async -> Result<GroupPreview?, GroupError> {
+        await groupCall { try await $0.preview(code: code) }
+    }
+
+    func joinGroup(code: String) async -> Result<String, GroupError> {
+        let result = await groupCall { try await $0.join(code: code) }
+        if case .success = result { await refreshGroups() }
+        return result
+    }
+
+    func leaveGroup(_ group: CommunityGroup) async -> String? {
+        await groupAction { try await $0.leave(groupID: group.id) }
+    }
+
+    func removeMember(_ member: GroupMember, from group: CommunityGroup) async -> String? {
+        await groupAction { try await $0.remove(member: member.userID, from: group.id) }
+    }
+
+    func updateGroup(_ group: CommunityGroup, name: String, description: String, emblem: String) async -> String? {
+        await groupAction { try await $0.update(groupID: group.id, name: name, description: description, emblem: emblem) }
+    }
+
+    func regenerateCode(for group: CommunityGroup) async -> Result<String, GroupError> {
+        let result = await groupCall { try await $0.regenerateCode(groupID: group.id) }
+        if case .success = result { await refreshGroups() }
+        return result
+    }
+
+    func groupMembers(_ group: CommunityGroup, offset: Int) async -> Result<(members: [GroupMember], total: Int), GroupError> {
+        await groupCall { try await $0.members(groupID: group.id, limit: GroupRules.pageSize, offset: offset) }
+    }
+
+    /// A leaderboard page for today's local date (or this week, Monday onwards).
+    func groupLeaderboard(_ group: CommunityGroup, period: LeaderboardPeriod, offset: Int, limit: Int) async
+        -> Result<GroupLeaderboardPage, GroupError> {
+        let day = today
+        return await groupCall { try await $0.leaderboard(groupID: group.id, period: period, day: day, limit: limit, offset: offset) }
+    }
+
+    private func groupCall<T>(_ body: (SupabaseGroupRepository) async throws -> T) async -> Result<T, GroupError> {
+        guard let backend, isSignedIn else { return .failure(.notSignedIn) }
+        do {
+            return .success(try await body(backend.groups))
+        } catch let error as GroupError {
+            if error == .notSignedIn { handleSessionExpired() }
+            return .failure(error)
+        } catch {
+            return .failure(.network(""))
+        }
+    }
+
+    private func groupAction(_ body: (SupabaseGroupRepository) async throws -> Void) async -> String? {
+        let result = await groupCall(body)
+        await refreshGroups()
+        if case .failure(let error) = result { return error.message }
+        return nil
+    }
+
+    private func groupMessage(_ error: Error) -> String {
+        (error as? GroupError)?.message ?? "Couldn't load your groups. Check your connection."
     }
 
     // MARK: Shop
@@ -1509,7 +1639,7 @@ final class AppModel {
         await refreshFriends()
     }
 
-    /// Opens the Friends tab focused on `id`.
+    /// Opens the Social tab focused on `id`.
     func showOnTrack(_ id: UserID) {
         trackFocus.focus(on: id, currentUserID: currentUserID)
         selectedTab = .friends
@@ -1632,6 +1762,7 @@ final class AppModel {
         trackFocus.backToMe()
         await refreshFriends()
         await refreshTeam()
+        await refreshGroups()
         await refreshReferrals()
     }
 
@@ -1649,6 +1780,7 @@ final class AppModel {
         trackFocus.backToMe()
         await refreshFriends()
         await refreshTeam()
+        await refreshGroups()
         await refreshReferrals()
         return nil
     }
@@ -1660,6 +1792,7 @@ final class AppModel {
         friendRequests = FriendRequests()
         team = nil
         teamInvites = []
+        groups = []
         referral = nil
         accountError = "You've been signed out. Sign in again to see your friends."
     }

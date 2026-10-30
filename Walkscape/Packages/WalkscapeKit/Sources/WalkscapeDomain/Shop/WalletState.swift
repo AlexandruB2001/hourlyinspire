@@ -271,6 +271,13 @@ public struct WalletState: Codable, Hashable, Sendable {
         ownedItemIDs.formUnion(itemIDs)
     }
 
+    /// Records coins the server charged (creating a group or team) under the
+    /// key it used. The server wrote the same key into the cloud save, so
+    /// however the two meet, the charge counts once.
+    public mutating func recordServerCharge(key: String, amount: Int) {
+        spent[key] = max(spent[key] ?? 0, amount)
+    }
+
     /// Takes away items (a refunded purchase), taking them off if worn.
     public mutating func removeItems(_ itemIDs: [String]) {
         ownedItemIDs.subtract(itemIDs)
