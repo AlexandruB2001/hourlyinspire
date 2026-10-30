@@ -27,6 +27,8 @@ struct PixelSceneView: View {
     var season: Season?
     /// A world event happening here today, drawn in the scene.
     var eventSpriteID: String?
+    /// Team worlds recolour the biome in the world's palette.
+    var tint: WorldTint?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -34,7 +36,7 @@ struct PixelSceneView: View {
         GeometryReader { geometry in
             let width = max(32, Int((geometry.size.width / pixel).rounded(.up)))
             let height = max(40, Int((geometry.size.height / pixel).rounded(.up)))
-            if let images = PixelArtCache.shared.scene(biome, width: width, height: height, season: season) {
+            if let images = PixelArtCache.shared.scene(biome, width: width, height: height, season: season, tint: tint) {
                 let frames = characterFrames()
                 if animated && !reduceMotion {
                     TimelineView(.animation(minimumInterval: 1 / 30)) { context in

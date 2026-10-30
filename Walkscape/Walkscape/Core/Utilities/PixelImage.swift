@@ -42,10 +42,10 @@ final class PixelArtCache {
         return image
     }
 
-    func scene(_ biome: Biome, width: Int, height: Int, season: Season? = nil) -> SceneImages? {
-        let key = "\(biome.rawValue)-\(width)x\(height)-\(season?.rawValue ?? "none")"
+    func scene(_ biome: Biome, width: Int, height: Int, season: Season? = nil, tint: WorldTint? = nil) -> SceneImages? {
+        let key = "\(biome.rawValue)-\(width)x\(height)-\(season?.rawValue ?? "none")-\(tint?.rawValue ?? "none")"
         if let cached = scenes[key] { return cached }
-        let layers = SceneRenderer.render(biome, width: width, height: height, season: season)
+        let layers = SceneRenderer.render(biome, width: width, height: height, season: season, tint: tint)
         guard let sky = layers.sky.makeCGImage(), let clouds = layers.clouds.makeCGImage(),
               let far = layers.far.makeCGImage(), let mid = layers.mid.makeCGImage(),
               let ground = layers.ground.makeCGImage() else { return nil }

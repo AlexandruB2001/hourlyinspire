@@ -79,6 +79,46 @@ public enum SeasonalPass {
     }
 }
 
+/// Colour mood for team worlds: shifts any biome toward the world's palette
+/// so every world has its own look without separate artwork.
+public enum WorldTintPass {
+    public static func apply(_ layers: SceneLayers, tint: WorldTint) -> SceneLayers {
+        let (skyTone, landTone, amount): (UInt32, UInt32, Double) = {
+            switch tint {
+            case .enchanted: return (0x3A2A5E, 0x6B4FA8, 0.32)
+            case .crystal: return (0x9FD8F0, 0x8FB8E8, 0.35)
+            case .desert: return (0xF2C27A, 0xD9A05B, 0.35)
+            case .skyward: return (0xBFE3FF, 0xF4E6FF, 0.28)
+            case .ancient: return (0xC9B48A, 0x9A8466, 0.30)
+            }
+        }()
+        var sky = layers.sky
+        var far = layers.far
+        var mid = layers.mid
+        var ground = layers.ground
+        sky.recolor { c, _, _ in c.a == 0 ? c : c.mixed(with: PixelColor(skyTone, alpha: c.a), amount) }
+        for index in 0..<3 {
+            let weight = amount * [1.0, 0.8, 0.6][index]
+            let transform: (PixelColor, Int, Int) -> PixelColor = { c, x, y in
+                guard c.a > 0 else { return c }
+                // A few magical sparkles in the enchanted and crystal worlds.
+                if (tint == .enchanted || tint == .crystal) && index < 2
+                    && SeasonalPass.hash(x, y, 0xA11CE + UInt64(index)) % 160 == 0 {
+                    return PixelColor(tint == .enchanted ? 0xE8C8FF : 0xE8FCFF, alpha: c.a)
+                }
+                return c.mixed(with: PixelColor(landTone, alpha: c.a), weight)
+            }
+            switch index {
+            case 0: far.recolor(transform)
+            case 1: mid.recolor(transform)
+            default: ground.recolor(transform)
+            }
+        }
+        return SceneLayers(biome: layers.biome, width: layers.width, height: layers.height, sky: sky, clouds: layers.clouds,
+                           far: far, mid: mid, ground: ground, footY: layers.footY)
+    }
+}
+
 extension String {
     /// FNV-1a, stable across launches.
     var stableHash: UInt64 {

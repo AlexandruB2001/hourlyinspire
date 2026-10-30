@@ -744,9 +744,36 @@ final class AppModel {
         campsite = site
         // Level rewards are per player, so moving teams can't collect them twice.
         guard dataSource == .appleHealth else { return }
+        processTeamWorlds(dashboard)
         for level in CampfireCatalog.levels where level.level > 1 && level.level <= site.level.level {
             if claim(level.reward) {
                 recordInJournal([JournalEvents.campfire(level, teamName: dashboard.team.name, on: today)])
+            }
+        }
+    }
+
+    // MARK: Team worlds
+
+    var teamWorldProgress: TeamWorldProgress? { team.map { TeamWorldProgress(teamMeters: $0.team.totalMeters) } }
+
+    /// What the player has walked for their current team.
+    var myTeamContribution: Int {
+        guard let me = team?.members.first(where: \.isCurrentUser)?.id else { return 0 }
+        return teamContributions.first { $0.userID == me }?.meters ?? 0
+    }
+
+    /// Zones and challenges the team has reached pay each player once, ever,
+    /// and only players who have walked for the team themselves.
+    private func processTeamWorlds(_ dashboard: TeamDashboard) {
+        let progress = TeamWorldProgress(teamMeters: dashboard.team.totalMeters)
+        guard progress.isUnlocked, myTeamContribution >= TeamWorldCatalog.minimumContribution else { return }
+        for world in TeamWorldCatalog.worlds {
+            for zone in progress.reachedZones(in: world) where claim(zone.reward) {
+                recordInJournal([JournalEvents.teamWorldZone(zone, world: world, teamName: dashboard.team.name, on: today)])
+            }
+            let weekMeters = dashboard.members.compactMap(\.weekMeters).reduce(0, +)
+            if progress.challengeOpen(in: world), weekMeters >= world.challenge.weekMeters, claim(world.challengeReward) {
+                recordInJournal([JournalEvents.teamWorldChallenge(world, teamName: dashboard.team.name, on: today)])
             }
         }
     }

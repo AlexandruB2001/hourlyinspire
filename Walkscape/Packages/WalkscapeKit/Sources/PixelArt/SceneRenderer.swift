@@ -36,10 +36,13 @@ public struct SceneLayers: Hashable, Sendable {
 /// numbers of cycles across the width and decorations wrap, so each layer
 /// tiles seamlessly.
 public enum SceneRenderer {
-    public static func render(_ biome: Biome, width: Int = 160, height: Int = 100, season: Season? = nil) -> SceneLayers {
+    public static func render(_ biome: Biome, width: Int = 160, height: Int = 100, season: Season? = nil,
+                              tint: WorldTint? = nil) -> SceneLayers {
         var painter = ScenePainter(biome: biome, width: max(24, width), height: max(24, height))
-        let layers = painter.paint()
-        return season.map { SeasonalPass.apply(layers, season: $0) } ?? layers
+        var layers = painter.paint()
+        if let season { layers = SeasonalPass.apply(layers, season: season) }
+        if let tint { layers = WorldTintPass.apply(layers, tint: tint) }
+        return layers
     }
 
     /// A single flattened frame, e.g. for World screen thumbnails.

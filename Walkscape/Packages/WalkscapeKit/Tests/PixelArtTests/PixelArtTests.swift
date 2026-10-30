@@ -190,4 +190,11 @@ final class PixelArtTests: XCTestCase {
         }
         XCTAssertEqual(levels[0].width, CampfireRenderer.width)
     }
+
+    func testEveryTeamWorldHasItsOwnLook() {
+        let plain = SceneRenderer.render(.pineForest, width: 80, height: 50)
+        let tinted = WorldTint.allCases.map { SceneRenderer.render(.pineForest, width: 80, height: 50, tint: $0) }
+        XCTAssertEqual(Set(tinted.map(\.mid)).count, WorldTint.allCases.count)
+        for layers in tinted { XCTAssertNotEqual(layers.mid, plain.mid) }
+    }
 }
