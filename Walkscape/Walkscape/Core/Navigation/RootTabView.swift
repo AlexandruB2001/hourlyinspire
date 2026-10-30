@@ -48,7 +48,15 @@ struct RootTabView: View {
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.celebration)
+        .overlay(alignment: .top) {
+            if model.celebration == nil, model.levelUp == nil, let news = model.discovery {
+                DiscoveryBanner(news: news) { model.discovery = nil }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.horizontal, Theme.Spacing.l)
+            }
+        }
         .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.levelUp)
+        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: model.discovery)
         .fullScreenCover(isPresented: Binding(get: { model.needsCompanionChoice }, set: { _ in })) {
             CompanionOnboardingView()
         }

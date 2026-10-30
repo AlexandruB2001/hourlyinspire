@@ -14,10 +14,13 @@ public struct CloudSave: Codable, Hashable, Sendable {
     public var companion: CompanionState?
     /// Profile look. Nil in saves from before titles existed.
     public var showcase: ProfileShowcase?
+    /// Wildlife and treasures. Nil in saves from before collections existed.
+    public var collections: CollectionState?
     public var savedAt: Date
 
     public init(progression: ProgressionState, wallet: WalletState, journal: JourneyJournal, ledger: RewardLedger,
-                companion: CompanionState?, showcase: ProfileShowcase? = nil, savedAt: Date) {
+                companion: CompanionState?, showcase: ProfileShowcase? = nil, collections: CollectionState? = nil,
+                savedAt: Date) {
         schema = Self.currentSchema
         self.progression = progression
         self.wallet = wallet
@@ -25,6 +28,7 @@ public struct CloudSave: Codable, Hashable, Sendable {
         self.ledger = ledger
         self.companion = companion
         self.showcase = showcase
+        self.collections = collections
         self.savedAt = savedAt
     }
 
@@ -43,6 +47,7 @@ public struct CloudSave: Codable, Hashable, Sendable {
                          companion: companion,
                          // A phone still on the default look takes the saved one.
                          showcase: (showcase == nil || showcase == ProfileShowcase()) ? (other.showcase ?? showcase) : showcase,
+                         collections: (collections ?? CollectionState()).merged(with: other.collections ?? CollectionState()),
                          savedAt: max(savedAt, other.savedAt))
     }
 }

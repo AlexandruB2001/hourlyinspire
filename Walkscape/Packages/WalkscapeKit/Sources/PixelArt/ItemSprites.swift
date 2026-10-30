@@ -403,10 +403,10 @@ public enum ItemSprites {
             """,
     ]
 
-    public static let allIDs: [String] = art.keys.sorted()
+    public static let allIDs: [String] = (Array(art.keys) + Array(CreatureSprites.art.keys)).sorted()
 
     public static func sprite(_ id: String) -> Sprite? {
-        art[id].map { Sprite(name: id, palette: palette, art: $0) }
+        (art[id] ?? CreatureSprites.art[id]).map { Sprite(name: id, palette: palette, art: $0) }
     }
 
     public static func render(_ id: String) -> PixelCanvas {

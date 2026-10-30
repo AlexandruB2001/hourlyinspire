@@ -9,14 +9,16 @@ public struct ProfileFacts: Hashable, Sendable {
     public var journal: JourneyJournal
     /// Highest companion stage ever reached (raw value), if any.
     public var companionStage: Int?
+    public var collections: CollectionState
 
     public init(progression: ProgressionState, explorerLevel: Int, ledger: RewardLedger, journal: JourneyJournal,
-                companionStage: Int?) {
+                companionStage: Int?, collections: CollectionState = CollectionState()) {
         self.progression = progression
         self.explorerLevel = explorerLevel
         self.ledger = ledger
         self.journal = journal
         self.companionStage = companionStage
+        self.collections = collections
     }
 
     var questsClaimed: Int {
@@ -38,6 +40,8 @@ public enum UnlockRequirement: Hashable, Sendable {
     case weeklyChests(Int)
     case companionStage(CompanionGrowth.Stage)
     case expeditions(Int)
+    case creatures(Int)
+    case treasures(Int)
 
     public func isMet(by facts: ProfileFacts) -> Bool {
         switch self {
@@ -52,6 +56,8 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .weeklyChests(let count): return facts.weeklyChests >= count
         case .companionStage(let stage): return (facts.companionStage ?? -1) >= stage.rawValue
         case .expeditions(let count): return facts.expeditions >= count
+        case .creatures(let count): return facts.collections.wildlife.count >= count
+        case .treasures(let count): return facts.collections.treasures.count >= count
         }
     }
 
@@ -71,6 +77,8 @@ public enum UnlockRequirement: Hashable, Sendable {
         case .weeklyChests(let count): return count == 1 ? "Open a weekly quest chest." : "Open \(count) weekly quest chests."
         case .companionStage(let stage): return "Grow your companion to a \(stage.name)."
         case .expeditions(let count): return count == 1 ? "Complete a team expedition." : "Complete \(count) team expeditions."
+        case .creatures(let count): return "Spot \(count) different creatures."
+        case .treasures(let count): return "Find \(count) treasures."
         }
     }
 }
@@ -109,6 +117,9 @@ public enum TitleCatalog {
         PlayerTitle(id: "companions-friend", name: "Companion's Friend", requirement: .companionStage(.companion)),
         PlayerTitle(id: "elder-keeper", name: "Elder Keeper", requirement: .companionStage(.elder)),
         PlayerTitle(id: "team-spirit", name: "Team Spirit", requirement: .expeditions(1)),
+        PlayerTitle(id: "wildlife-watcher", name: "Wildlife Watcher", requirement: .creatures(10)),
+        PlayerTitle(id: "naturalist", name: "Naturalist", requirement: .creatures(WildlifeCatalog.all.count)),
+        PlayerTitle(id: "treasure-hunter", name: "Treasure Hunter", requirement: .treasures(4)),
         PlayerTitle(id: "seasoned-explorer", name: "Seasoned Explorer", requirement: .explorerLevel(10)),
         PlayerTitle(id: "master-explorer", name: "Master Explorer", requirement: .explorerLevel(20)),
         PlayerTitle(id: "legendary-explorer", name: "Legendary Explorer", requirement: .explorerLevel(40)),

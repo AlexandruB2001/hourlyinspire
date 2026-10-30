@@ -35,6 +35,7 @@ struct LocalStore {
         static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
         static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
         static let showcase = "walkscape.showcase.v1"
+        static func collections(_ source: WalkingDataSourceKind) -> String { "walkscape.collections.v1.\(source.rawValue)" }
         static func quests(_ source: WalkingDataSourceKind) -> String { "walkscape.quests.v1.\(source.rawValue)" }
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
         static let notificationLedger = "walkscape.notificationLedger.v1"
@@ -108,6 +109,14 @@ struct LocalStore {
         save(tracker, Key.quests(source))
     }
 
+    func loadCollections(_ source: WalkingDataSourceKind) -> CollectionState {
+        load(CollectionState.self, Key.collections(source)) ?? CollectionState()
+    }
+
+    func save(_ collections: CollectionState, for source: WalkingDataSourceKind) {
+        save(collections, Key.collections(source))
+    }
+
     func loadShowcase() -> ProfileShowcase { load(ProfileShowcase.self, Key.showcase) ?? ProfileShowcase() }
     func save(_ showcase: ProfileShowcase) { save(showcase, Key.showcase) }
 
@@ -153,7 +162,7 @@ struct LocalStore {
         var keys = [Key.settings, Key.companionSpecies, Key.pendingReferralCode, Key.cloudSaveOwner, Key.showcase]
         for source in WalkingDataSourceKind.allCases {
             keys += [Key.progression(source), Key.lastProgress(source), Key.wallet(source), Key.journal(source), Key.companion(source),
-                     Key.ledger(source), Key.quests(source)]
+                     Key.ledger(source), Key.quests(source), Key.collections(source)]
         }
         keys.forEach(defaults.removeObject(forKey:))
     }

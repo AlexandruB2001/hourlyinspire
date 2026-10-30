@@ -62,6 +62,10 @@ final class AppModel {
     }
     /// Friends' and teammates' titles and frames.
     private(set) var friendShowcases: [UserID: PublicShowcase] = [:]
+    /// Wildlife and treasures found (postcards and memories are derived).
+    private(set) var collections: CollectionState
+    /// A new creature or treasure to announce; cleared by the UI.
+    var discovery: DiscoveryNews?
     /// Set when the Explorer Level goes up; cleared by the UI.
     var levelUp: Int?
     @ObservationIgnored private var lastCloudSync = Date.distantPast
@@ -129,6 +133,7 @@ final class AppModel {
         ledger = store.loadLedger(source)
         questTracker = store.loadQuestTracker(source)
         showcase = store.loadShowcase()
+        collections = store.loadCollections(source)
         notificationPreferences = store.loadNotificationPreferences(legacyReminder: settings.dailyReminderEnabled)
         notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
@@ -303,6 +308,7 @@ final class AppModel {
             questTracker.recordChestsFound(wallet.chestsFoundToday, on: progress.localDate)
             store.save(questTracker, for: source)
             updateJournal(source: source)
+            processCollections(on: progress.localDate, source: source)
             processLevelUps(source: source)
             announce(questBoard.daily.filter(\.isComplete).map(GameNotifications.questComplete)
                      + (questBoard.weekly + questBoard.companion).filter(\.isComplete).map(GameNotifications.questComplete))
@@ -342,6 +348,8 @@ final class AppModel {
         journal = store.loadJournal(source)
         ledger = store.loadLedger(source)
         questTracker = store.loadQuestTracker(source)
+        collections = store.loadCollections(source)
+        discovery = nil
         companion = Self.companion(for: source, store: store, progression: progression, today: today)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
@@ -376,6 +384,8 @@ final class AppModel {
         store.save(ledger, for: .demo)
         questTracker = QuestTracker()
         store.save(questTracker, for: .demo)
+        collections = CollectionState()
+        store.save(collections, for: .demo)
         store.save(nil, for: .demo)
         companion = Self.companion(for: .demo, store: store, progression: progression, today: today)
         sync = WalkingSyncStatus()
@@ -649,6 +659,12 @@ final class AppModel {
             rollQuests()
             questTracker.recordChestOpened()
             store.save(questTracker, for: dataSource)
+            // Now and then a chest also holds a treasure. The roll is fixed per
+            // day and chest, so reopening the app can't re-roll it.
+            let seed = "chest#\(today.isoString)#\(questTracker.chestsOpenedToday)"
+            if WildlifeCatalog.roll(seed) < TreasureCatalog.chestTreasureChance {
+                awardTreasure(seed: seed)
+            }
         }
         return coins
     }
@@ -699,6 +715,58 @@ final class AppModel {
         return true
     }
 
+    // MARK: Collections
+
+    /// Spots wildlife in the zones reached today and records new postcards.
+    /// Every grant goes through the ledger, so refreshes never repeat one.
+    private func processCollections(on day: LocalDay, source: WalkingDataSourceKind) {
+        guard day == today else { return }
+        let reachedCount = min(progression.todayHighestZoneIndex + 1, engine.catalog.zones.count)
+        let reached = engine.catalog.zones.prefix(reachedCount).map(\.id)
+        let fresh = collections.recordSightings(WildlifeCatalog.sightings(on: day, zonesReached: reached), on: day)
+        if !fresh.isEmpty {
+            store.save(collections, for: source)
+            for creature in fresh { _ = ledger.claim(creature.reward, into: &wallet) }
+            recordInJournal(fresh.map { JournalEvents.wildlife($0, on: day) })
+            discovery = DiscoveryNews(creatures: fresh)
+        }
+        for (id, earnedOn) in Postcards.earned(in: progression) {
+            guard let postcard = PostcardCatalog.postcard(withID: id), ledger.claim(postcard.reward, into: &wallet) else { continue }
+            recordInJournal([JournalEvents.postcard(postcard, on: earnedOn)])
+        }
+        store.save(ledger, for: source)
+        store.save(wallet, for: source)
+    }
+
+    private func awardTreasure(seed: String) {
+        guard let treasure = TreasureCatalog.pick(seed: seed, excluding: Set(collections.treasures.keys)),
+              collections.recordTreasure(treasure, on: today) else { return }
+        store.save(collections, for: dataSource)
+        claim(treasure.reward)
+        recordInJournal([JournalEvents.treasure(treasure, on: today)])
+        discovery = DiscoveryNews(treasure: treasure)
+    }
+
+    var collectionProgress: [CollectionProgress] {
+        [CollectionProgress(category: .relics, found: progression.collectedItemIDs.count,
+                            total: engine.catalog.allCollectibles.count),
+         CollectionProgress(category: .wildlife, found: collections.wildlife.count, total: WildlifeCatalog.all.count),
+         CollectionProgress(category: .postcards, found: Postcards.earned(in: progression).count, total: PostcardCatalog.all.count),
+         CollectionProgress(category: .treasures, found: collections.treasures.count, total: TreasureCatalog.all.count),
+         CollectionProgress(category: .memories, found: MemoryCatalog.reached(in: progression).count, total: MemoryCatalog.all.count)]
+    }
+
+    /// Completion rewards (25/50/75/100 % of a book) waiting to be claimed.
+    var claimableCollectionRewards: [Reward] {
+        collectionProgress.flatMap(\.milestoneRewards).filter { !ledger.hasClaimed($0.id) }
+    }
+
+    func claimCollectionRewards() -> Int {
+        let rewards = claimableCollectionRewards
+        rewards.forEach { claim($0) }
+        return rewards.reduce(0) { $0 + $1.coins }
+    }
+
     // MARK: Titles and profile
 
     /// Unlocks always come from Apple Health progress, so demo walking can't unlock titles.
@@ -707,7 +775,7 @@ final class AppModel {
         let level = ExplorerLevel(totalXP: ExplorerXP(progression: health.progression, ledger: health.ledger).total).level
         let stage = health.companion.map { max($0.celebratedStage, $0.growth(lifetimeMeters: health.progression.lifetimeMeters).stage.rawValue) }
         return ProfileFacts(progression: health.progression, explorerLevel: level, ledger: health.ledger,
-                            journal: health.journal, companionStage: stage)
+                            journal: health.journal, companionStage: stage, collections: health.collections ?? CollectionState())
     }
 
     /// The showcase with anything not (or no longer) unlocked replaced by defaults.
@@ -773,6 +841,7 @@ final class AppModel {
         let board = questBoard
         guard board.weeklyChestReady, claim(board.weeklyChest) else { return nil }
         recordInJournal([JournalEvents.weeklyChest(week: board.week, on: today)])
+        awardTreasure(seed: "week#\(board.week.isoString)")
         return board.weeklyChest
     }
 
@@ -810,6 +879,7 @@ final class AppModel {
                          ledger: isHealth ? ledger : store.loadLedger(.appleHealth),
                          companion: isHealth ? companion : store.loadCompanion(.appleHealth),
                          showcase: showcase,
+                         collections: isHealth ? collections : store.loadCollections(.appleHealth),
                          savedAt: Date())
     }
 
@@ -834,6 +904,10 @@ final class AppModel {
         ledger = save.ledger
         if let restored = save.companion { companion = restored }
         if let restored = save.showcase, restored != showcase { showcase = restored }
+        if let restored = save.collections {
+            store.save(restored, for: .appleHealth)
+            if dataSource == .appleHealth { collections = restored }
+        }
         processLevelUps(source: .appleHealth)
     }
 
