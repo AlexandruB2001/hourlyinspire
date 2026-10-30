@@ -50,6 +50,23 @@ final class TeamWorldTests: XCTestCase {
         XCTAssertFalse(ids.contains { $0.contains("team-") }, "ids don't include the team, so switching teams can't repeat them")
     }
 
+    func testEachWorldHasItsOwnScenery() {
+        let own: [String: Biome] = ["enchanted-forest": .enchantedForest, "crystal-kingdom": .crystalPalace,
+                                    "forgotten-desert": .desertRuins, "floating-isles": .skyIslands,
+                                    "ancient-kingdom": .ancientCity]
+        for world in worlds {
+            XCTAssertEqual(world.zones.first?.biome, own[world.id], "the world map shows its own art")
+            XCTAssertTrue(world.zones.allSatisfy { !$0.biome.isTeamWorld || $0.biome == own[world.id] }, world.id)
+        }
+    }
+
+    func testTheSoloTrailNeverShowsTeamWorldScenery() {
+        let trail = ZoneCatalog.standard
+        XCTAssertFalse(trail.zones.contains { $0.biome.isTeamWorld })
+        XCTAssertFalse((0..<60).map { trail.zone(at: trail.zones.count + $0).biome }.contains { $0.isTeamWorld })
+        XCTAssertEqual(Biome.trailBiomes.count, 20)
+    }
+
     func testEverythingAfterTheLastWorldStaysInIt() {
         let huge = TeamWorldProgress(teamMeters: 100_000_000)
         XCTAssertEqual(huge.currentWorld?.id, worlds.last?.id)

@@ -18,7 +18,7 @@ public struct ZoneCatalog: Codable, Hashable, Sendable {
     public let beyondBiomes: [Biome]
     public let beyondLengthMeters: Int
 
-    public init(zones: [Zone], beyondBiomes: [Biome] = Biome.allCases, beyondLengthMeters: Int = 1_000) throws {
+    public init(zones: [Zone], beyondBiomes: [Biome] = Biome.trailBiomes, beyondLengthMeters: Int = 1_000) throws {
         guard let first = zones.first else { throw ValidationError.empty }
         guard first.startMeters == 0 else { throw ValidationError.doesNotStartAtZero }
         guard !beyondBiomes.isEmpty, beyondLengthMeters > 0 else { throw ValidationError.invalidBeyondConfiguration }
@@ -38,7 +38,7 @@ public struct ZoneCatalog: Codable, Hashable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         try self.init(zones: try container.decode([Zone].self, forKey: .zones),
-                      beyondBiomes: try container.decodeIfPresent([Biome].self, forKey: .beyondBiomes) ?? Biome.allCases,
+                      beyondBiomes: try container.decodeIfPresent([Biome].self, forKey: .beyondBiomes) ?? Biome.trailBiomes,
                       beyondLengthMeters: try container.decodeIfPresent(Int.self, forKey: .beyondLengthMeters) ?? 1_000)
     }
 

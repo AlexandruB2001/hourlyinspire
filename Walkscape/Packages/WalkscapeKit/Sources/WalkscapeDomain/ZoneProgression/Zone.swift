@@ -7,6 +7,19 @@ public enum Biome: String, Codable, Sendable, Hashable, CaseIterable {
     // The far side of the Summit, down to the coast.
     case starlightPass, hotSprings, autumnWoods, bambooGrove, blossomOrchard
     case lavenderFields, redCanyon, fireflyMarsh, sandyShore, lighthousePoint
+    // Team worlds only; never part of the solo trail.
+    case enchantedForest, crystalPalace, desertRuins, skyIslands, ancientCity
+
+    /// Biomes of the solo trail, cycled through after its last defined zone.
+    public static let trailBiomes: [Biome] = allCases.filter { !$0.isTeamWorld }
+
+    /// Drawn only inside a team world, with its own colours.
+    public var isTeamWorld: Bool {
+        switch self {
+        case .enchantedForest, .crystalPalace, .desertRuins, .skyIslands, .ancientCity: true
+        default: false
+        }
+    }
 }
 
 /// A permanent discovery found the first time a zone is reached.

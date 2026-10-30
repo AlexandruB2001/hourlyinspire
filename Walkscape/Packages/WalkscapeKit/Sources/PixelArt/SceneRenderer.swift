@@ -41,7 +41,7 @@ public enum SceneRenderer {
         var painter = ScenePainter(biome: biome, width: max(24, width), height: max(24, height))
         var layers = painter.paint()
         if let season { layers = SeasonalPass.apply(layers, season: season) }
-        if let tint { layers = WorldTintPass.apply(layers, tint: tint) }
+        if let tint, !biome.isTeamWorld { layers = WorldTintPass.apply(layers, tint: tint) }
         return layers
     }
 
@@ -153,6 +153,11 @@ struct ScenePainter {
         case .fireflyMarsh: paintFireflyMarsh(&far, &mid, &ground, style, footY)
         case .sandyShore: paintSandyShore(&far, &mid, &ground, style, footY)
         case .lighthousePoint: paintLighthousePoint(&far, &mid, &ground, style, footY)
+        case .enchantedForest: paintEnchantedForest(&far, &mid, &ground, style, footY)
+        case .crystalPalace: paintCrystalPalace(&far, &mid, &ground, style, footY)
+        case .desertRuins: paintDesertRuins(&far, &mid, &ground, style, footY)
+        case .skyIslands: paintSkyIslands(&far, &mid, &ground, style, footY)
+        case .ancientCity: paintAncientCity(&far, &mid, &ground, style, footY)
         }
         return SceneLayers(biome: biome, width: width, height: height, sky: sky, clouds: clouds, far: far,
                            mid: mid, ground: ground, footY: footY)

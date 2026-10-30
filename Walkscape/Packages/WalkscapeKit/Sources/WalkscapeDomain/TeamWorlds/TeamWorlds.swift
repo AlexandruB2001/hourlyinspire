@@ -1,6 +1,7 @@
 import Foundation
 
-/// The colour mood of a team world, applied over the zone's biome art.
+/// The colour mood of a team world, applied over borrowed trail biomes
+/// (the world's own biomes already have their colours).
 public enum WorldTint: String, Codable, CaseIterable, Sendable {
     case enchanted, crystal, desert, skyward, ancient
 }
@@ -64,7 +65,7 @@ public enum TeamWorldCatalog {
         TeamWorld(id: "enchanted-forest", name: "The Enchanted Forest", tagline: "Where the trees whisper back.", tint: .enchanted,
                   zones: [
                     TeamWorldZone(id: "ef-gate", name: "Moonlit Gate", tagline: "Two ancient trees form an archway of light.",
-                                  biome: .pineForest, metersFromWorldStart: 0,
+                                  biome: .enchantedForest, metersFromWorldStart: 0,
                                   relic: relic("ef-acorn", "Silver Acorn", "It chimes softly when shaken.", "golden-acorn")),
                     TeamWorldZone(id: "ef-glade", name: "Glowcap Glade", tagline: "Mushrooms glow in every colour.",
                                   biome: .cloudForest, metersFromWorldStart: 100_000,
@@ -76,7 +77,7 @@ public enum TeamWorldCatalog {
                                   biome: .fireflyMarsh, metersFromWorldStart: 450_000,
                                   relic: relic("ef-lantern", "Fairy Lantern", "Its flame is the size of a firefly.", "lantern")),
                     TeamWorldZone(id: "ef-heart", name: "Heartwood", tagline: "The oldest tree in any world.",
-                                  biome: .autumnWoods, metersFromWorldStart: 700_000,
+                                  biome: .enchantedForest, metersFromWorldStart: 700_000,
                                   relic: relic("ef-seed", "Heartwood Seed", "A new forest, waiting to happen.", "pinecone")),
                   ],
                   challenge: WorldChallenge(name: "Wake the Ancient Tree",
@@ -84,7 +85,7 @@ public enum TeamWorldCatalog {
         TeamWorld(id: "crystal-kingdom", name: "Crystal Kingdom", tagline: "A palace carved from living crystal.", tint: .crystal,
                   zones: [
                     TeamWorldZone(id: "ck-steps", name: "Prism Steps", tagline: "Every step throws a rainbow.",
-                                  biome: .snowyRidge, metersFromWorldStart: 0,
+                                  biome: .crystalPalace, metersFromWorldStart: 0,
                                   relic: relic("ck-prism", "Pocket Prism", "Light comes out a different colour.", "crystal")),
                     TeamWorldZone(id: "ck-caverns", name: "Echo Caverns", tagline: "Your footsteps echo as music.",
                                   biome: .crystalCaves, metersFromWorldStart: 150_000,
@@ -93,7 +94,7 @@ public enum TeamWorldCatalog {
                                   biome: .lakeside, metersFromWorldStart: 350_000,
                                   relic: relic("ck-flake", "Eternal Snowflake", "It never melts, not even in your hand.", "snowflake")),
                     TeamWorldZone(id: "ck-throne", name: "Crystal Throne", tagline: "The crystal queen's empty throne.",
-                                  biome: .summit, metersFromWorldStart: 600_000,
+                                  biome: .crystalPalace, metersFromWorldStart: 600_000,
                                   relic: relic("ck-gem", "Queen's Gem", "It glows when your team walks together.", "ruby")),
                   ],
                   challenge: WorldChallenge(name: "Light the Crystal Crown",
@@ -101,13 +102,13 @@ public enum TeamWorldCatalog {
         TeamWorld(id: "forgotten-desert", name: "Forgotten Desert", tagline: "Golden dunes over buried cities.", tint: .desert,
                   zones: [
                     TeamWorldZone(id: "fd-oasis", name: "Palm Oasis", tagline: "Cool water under swaying palms.",
-                                  biome: .sandyShore, metersFromWorldStart: 0,
+                                  biome: .desertRuins, metersFromWorldStart: 0,
                                   relic: relic("fd-shell", "Desert Shell", "From a sea that dried up long ago.", "shell")),
                     TeamWorldZone(id: "fd-mesa", name: "Sunset Mesa", tagline: "Red rocks glowing at dusk.",
                                   biome: .redCanyon, metersFromWorldStart: 150_000,
                                   relic: relic("fd-agate", "Sun Agate", "Warm, like it remembers the sun.", "agate")),
                     TeamWorldZone(id: "fd-ruins", name: "Sand-Swept Ruins", tagline: "Pillars of a forgotten city.",
-                                  biome: .village, metersFromWorldStart: 400_000,
+                                  biome: .desertRuins, metersFromWorldStart: 400_000,
                                   relic: relic("fd-map", "Ruin Map", "Shows a city that no longer exists.", "old-map")),
                     TeamWorldZone(id: "fd-tomb", name: "Starlit Tomb", tagline: "Where an old king watches the stars.",
                                   biome: .starlightPass, metersFromWorldStart: 700_000,
@@ -118,7 +119,7 @@ public enum TeamWorldCatalog {
         TeamWorld(id: "floating-isles", name: "Floating Isles", tagline: "Islands drifting above the clouds.", tint: .skyward,
                   zones: [
                     TeamWorldZone(id: "fi-dock", name: "Cloud Dock", tagline: "Where the sky-boats tie up.",
-                                  biome: .lighthousePoint, metersFromWorldStart: 0,
+                                  biome: .skyIslands, metersFromWorldStart: 0,
                                   relic: relic("fi-feather", "Sky Feather", "It floats gently upward.", "feather")),
                     TeamWorldZone(id: "fi-meadow", name: "Sky Meadow", tagline: "Flowers that grow on clouds.",
                                   biome: .meadow, metersFromWorldStart: 200_000,
@@ -127,7 +128,7 @@ public enum TeamWorldCatalog {
                                   biome: .hotSprings, metersFromWorldStart: 450_000,
                                   relic: relic("fi-bottle", "Bottled Cloud", "A tiny storm, safely corked.", "bottle")),
                     TeamWorldZone(id: "fi-spire", name: "Wind Spire", tagline: "The highest point of any world.",
-                                  biome: .summit, metersFromWorldStart: 750_000,
+                                  biome: .skyIslands, metersFromWorldStart: 750_000,
                                   relic: relic("fi-star", "Star Shard", "Still humming from the sky.", "star-shard")),
                   ],
                   challenge: WorldChallenge(name: "Ride the Great Wind",
@@ -135,7 +136,7 @@ public enum TeamWorldCatalog {
         TeamWorld(id: "ancient-kingdom", name: "Ancient Kingdom", tagline: "A grand old kingdom, waiting to wake.", tint: .ancient,
                   zones: [
                     TeamWorldZone(id: "ak-road", name: "King's Road", tagline: "Stone paths worn smooth by time.",
-                                  biome: .rollingHills, metersFromWorldStart: 0,
+                                  biome: .ancientCity, metersFromWorldStart: 0,
                                   relic: relic("ak-coin", "Old Crown Coin", "Stamped with a smiling king.", "coin")),
                     TeamWorldZone(id: "ak-gardens", name: "Royal Gardens", tagline: "Hedges shaped like dragons.",
                                   biome: .blossomOrchard, metersFromWorldStart: 200_000,
@@ -144,7 +145,7 @@ public enum TeamWorldCatalog {
                                   biome: .riverside, metersFromWorldStart: 450_000,
                                   relic: relic("ak-box", "Royal Music Box", "Plays the kingdom's anthem.", "music-box")),
                     TeamWorldZone(id: "ak-castle", name: "Sleeping Castle", tagline: "The castle wakes as you arrive.",
-                                  biome: .village, metersFromWorldStart: 800_000,
+                                  biome: .ancientCity, metersFromWorldStart: 800_000,
                                   relic: relic("ak-key", "Castle Key", "Opens every door in the kingdom.", "spyglass")),
                   ],
                   challenge: WorldChallenge(name: "Wake the Kingdom",

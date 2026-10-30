@@ -69,6 +69,22 @@ struct BiomeStyle {
         case .lighthousePoint:
             return BiomeStyle(sky: [PixelColor(0x4E5296), PixelColor(0x9A74A6), PixelColor(0xEC9C8A), PixelColor(0xF8D29A)],
                               sun: PixelColor(0xFFD890), cloud: PixelColor(0xFFE0CC), cloudShade: PixelColor(0xE8A8A0))
+        case .enchantedForest:
+            // Twilight under the old trees; the "sun" is a moon.
+            return BiomeStyle(sky: [PixelColor(0x241C4A), PixelColor(0x382A66), PixelColor(0x564088), PixelColor(0x8462A2)],
+                              sun: PixelColor(0xF4EFD8), clouds: false, stars: true)
+        case .crystalPalace:
+            return BiomeStyle(sky: [PixelColor(0x8CC8EA), PixelColor(0xAAD8F0), PixelColor(0xCDE8F6), PixelColor(0xF2E8FA)],
+                              sun: PixelColor(0xFFFFF0), cloud: PixelColor(0xFFFFFF), cloudShade: PixelColor(0xDCE4F6))
+        case .desertRuins:
+            return BiomeStyle(sky: [PixelColor(0x4E92D2), PixelColor(0x86B8E0), PixelColor(0xEECB94), PixelColor(0xFADCA0)],
+                              sun: PixelColor(0xFFF0B8), cloud: PixelColor(0xFFF6E6), cloudShade: PixelColor(0xF2D8B4))
+        case .skyIslands:
+            return BiomeStyle(sky: [PixelColor(0x5AA6EA), PixelColor(0x7EBCF0), PixelColor(0xA8D4F6), PixelColor(0xDCEEFA)],
+                              sun: PixelColor(0xFFF6D0), cloudShade: PixelColor(0xD8E6F4))
+        case .ancientCity:
+            return BiomeStyle(sky: [PixelColor(0x6A96CE), PixelColor(0x9CB4D6), PixelColor(0xE6C8A0), PixelColor(0xF6DCA8)],
+                              sun: PixelColor(0xFFE6A0), cloud: PixelColor(0xFFF2E0), cloudShade: PixelColor(0xEED0B0))
         }
     }
 }
