@@ -53,6 +53,8 @@ as $$
                        where m.user_id = p.id and m.team_id = public.caller_team_id()));
 $$;
 
-revoke all on function public.valid_item_ids(text[]) from public, anon, authenticated;
+-- Check constraints run with the caller's rights; this only checks a format.
+revoke all on function public.valid_item_ids(text[]) from public, anon;
+grant execute on function public.valid_item_ids(text[]) to authenticated;
 revoke all on function public.set_my_outfit(text[]), public.friend_showcases() from public, anon;
 grant execute on function public.set_my_outfit(text[]), public.friend_showcases() to authenticated;

@@ -998,11 +998,31 @@ final class AppModel {
         // Level rewards are per player, so moving teams can't collect them twice.
         guard dataSource == .appleHealth else { return }
         processTeamWorlds(dashboard, serverUnlocks: serverUnlocks)
+        processWaypointChallenge(dashboard)
         for level in CampfireCatalog.levels where level.level > 1 && level.level <= site.level.level {
             if claim(level.reward) {
                 recordInJournal([JournalEvents.campfire(level, teamName: dashboard.team.name, on: today)])
             }
         }
+    }
+
+    // MARK: Team map
+
+    /// The challenge at the team's latest 5 km stop, if it has reached one.
+    func waypointChallenge(for dashboard: TeamDashboard) -> WaypointChallenge? {
+        let stop = TeamMap.reachedWaypoint(teamMeters: dashboard.team.totalMeters)
+        guard stop >= 1 else { return nil }
+        return WaypointChallenge(waypoint: stop, teamID: dashboard.team.id, memberCount: dashboard.members.count)
+    }
+
+    /// Pays the stop's challenge to a player who walked today once the team completes it.
+    private func processWaypointChallenge(_ dashboard: TeamDashboard) {
+        guard let challenge = waypointChallenge(for: dashboard),
+              challenge.isComplete(todayMeters: dashboard.members.map(\.dayMeters)),
+              (dashboard.members.first(where: \.isCurrentUser)?.dayMeters ?? 0) >= WaypointChallenge.participationMeters,
+              claim(challenge.reward) else { return }
+        recordInJournal([JournalEvents.waypointChallenge(challenge, teamName: dashboard.team.name, on: today)])
+        discovery = DiscoveryNews(waypoint: challenge, teamName: dashboard.team.name)
     }
 
     // MARK: Team worlds

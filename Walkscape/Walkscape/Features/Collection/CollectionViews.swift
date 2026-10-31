@@ -38,6 +38,12 @@ struct DiscoveryNews: Equatable {
         spriteID = find.treasure?.spriteID ?? find.creature?.spriteID ?? "coin"
     }
 
+    init(waypoint challenge: WaypointChallenge, teamName: String) {
+        title = "Team challenge complete!"
+        subtitle = "\(teamName) cleared stop \(challenge.waypoint) · +\(challenge.reward.coins) coins"
+        spriteID = "flag"
+    }
+
     init(treasure: Treasure) {
         title = "Treasure found!"
         subtitle = "\(treasure.name) · \(treasure.rarity.displayName)"
