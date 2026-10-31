@@ -94,6 +94,11 @@ insert into public.daily_progress (user_id, local_date, time_zone, steps, distan
 values (tests.id('weekly'), :'week_day'::date, 'Pacific/Kiritimati', 5300, 4000, 'recorded', now()),
        (tests.id('weekly'), :'week_day'::date - 1, 'Pacific/Kiritimati', 66000, 50000, 'recorded', now());
 
+select sum(d.distance_meters) as expected_week from public.daily_progress d
+join public.group_members m on m.user_id = d.user_id and m.group_id = :'haul_id'
+where d.local_date between :'week_day'::date - (extract(isodow from :'week_day'::date)::integer - 1) and :'week_day'::date
+  and public.progress_review_reason(d.local_date, d.time_zone, d.steps, d.distance_meters, d.updated_at) is null \gset
+
 select tests.as_user('walk5');
 select tests.ok((select array_agg(username order by rank)
                  from public.group_leaderboard(:'haul_id', 'day', current_date, 100, 0) where distance_meters >= 5000)
@@ -112,12 +117,7 @@ select tests.ok((select distance_meters = 54000
                  from public.group_leaderboard(:'haul_id', 'week', :'week_day'::date, 100, 0) where username = 'weekly'),
                 'the weekly board adds up full days');
 select tests.ok((select sum(distance_meters) from public.group_leaderboard(:'haul_id', 'week', :'week_day'::date, 100, 0))
-                = (select sum(d.distance_meters) from public.daily_progress d
-                   join public.group_members m on m.user_id = d.user_id and m.group_id = :'haul_id'
-                   where d.local_date between :'week_day'::date - (extract(isodow from :'week_day'::date)::integer - 1)
-                                         and :'week_day'::date
-                     and public.progress_review_reason(d.local_date, d.time_zone, d.steps, d.distance_meters,
-                                                       d.updated_at) is null),
+                = :expected_week,
                 'weekly totals are exactly the sum of plausible days');
 
 -- Pagination: pages of two give the same order as one long page, and the
