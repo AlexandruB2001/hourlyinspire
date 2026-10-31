@@ -211,6 +211,11 @@ struct StandingRow: View {
                         .font(Theme.Typography.micro)
                         .foregroundStyle(Theme.Palette.creamDim)
                 }
+                if standing.underReview {
+                    Text("A day is being double-checked")
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(Theme.Palette.gold)
+                }
             }
             Spacer(minLength: 0)
             if let meters = standing.meters {
@@ -235,7 +240,8 @@ struct StandingRow: View {
         let name = standing.isMe ? "You" : standing.username
         guard let meters = standing.meters else { return "\(name), not sharing" }
         let estimated = standing.estimated ? ", estimated" : ""
-        return "Number \(standing.rank), \(name), \(DistanceFormatting.kilometres(meters))\(estimated), \(standing.steps ?? 0) steps"
+        let review = standing.underReview ? ", a day is being double-checked" : ""
+        return "Number \(standing.rank), \(name), \(DistanceFormatting.kilometres(meters))\(estimated), \(standing.steps ?? 0) steps\(review)"
     }
 }
 

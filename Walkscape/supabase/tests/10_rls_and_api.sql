@@ -107,7 +107,7 @@ select tests.ok((select distance_meters from public.daily_progress where user_id
                 'newer uploads replace the totals');
 
 select tests.fails($$select public.upsert_daily_progress(current_date, 'UTC', 10, 999999, 'recorded', now())$$,
-                   'daily_progress_distance_range', 'implausible distances are rejected');
+                   'daily_progress_distance_range', 'physically impossible distances (over 350 km) are rejected');
 select tests.fails($$select public.upsert_daily_progress(current_date - 30, 'UTC', 10, 10, 'recorded', now())$$,
                    'local_date_out_of_range', 'old dates are rejected');
 select tests.fails($$select public.upsert_daily_progress(current_date + 5, 'UTC', 10, 10, 'recorded', now())$$,

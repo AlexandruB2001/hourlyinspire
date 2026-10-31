@@ -107,15 +107,26 @@ All client access goes through `POST /rest/v1/rpc/<function>`:
 ## What the server can't guarantee
 
 Totals come from the user's phone, so a determined user could submit fake
-numbers. The database rejects only the implausible:
+numbers. There is no daily distance ceiling: a marathon or an ultra counts in
+full everywhere. The database rejects only the physically impossible:
 
-- steps and distance capped at 150,000 / 150 km per day;
-- dates more than 7 days in the past or more than 1 day ahead (UTC) rejected;
-- client timestamps more than 10 minutes in the future rejected.
+- more than 300,000 steps or 350 km in a day (above the 24-hour running world
+  record of about 320 km);
+- dates more than 7 days in the past or more than 1 day ahead (UTC);
+- client timestamps more than 10 minutes in the future.
 
-Leaderboards are among friends who chose each other, which limits the
-incentive to cheat. If public competition is added, this needs a stronger
-design (e.g. server-side anomaly checks).
+Since migration 20261109000001, each day is also checked when it's uploaded
+(`progress_review_reason`). A day of 15 km or more that couldn't have been
+walked (more than 2.5 m a step, or faster than 25 km/h on average since local
+midnight at upload time) is **held**: it stays unchanged in `daily_progress`
+and on the player's own Journey, but doesn't count towards the team ledger,
+team week standings, group leaderboards or community goals until a later
+upload of that day is plausible. Group leaderboards tell only the player
+themselves (`under_review`). Held days and days of 100 km or more are logged
+in the private `progress_flags` table for review.
+
+These checks stop naive tampering; they can't prove a day is real, because
+HealthKit data can't be verified server-side.
 
 ## Running the database tests
 
@@ -254,7 +265,8 @@ walking totals it can't be verified by the server.
 
 ## Team ledger and Campfire (migration 20261103000001, applied 2026-10-30)
 
-- `team_contributions` (user, day → team, metres ≤ 25 km), primary key
+- `team_contributions` (user, day → team, full metres; the 25 km cap was
+  removed in 20261109000001, and held days aren't credited), primary key
   (user, day): a day counts for one team only. `sync_team_contributions()`
   credits the caller's team from members' shared daily totals since they
   joined; the app calls it before loading the team. `my_team()` now returns
@@ -267,7 +279,8 @@ walking totals it can't be verified by the server.
 ## Community goals (migration 20261104000001, applied 2026-10-30)
 
 `community_distance(start, end)` returns everyone's combined distance between
-two days (capped at 25 km a day, ranges limited to ~2 months). Only the total
+two days (full days, held days excluded since 20261109000001; ranges limited
+to ~2 months). Only the total
 is exposed. Seasonal festivals compare it with their community goal.
 
 ## Purchases (migration 20261105000001, applied 2026-10-30)
@@ -304,3 +317,29 @@ is exposed. Seasonal festivals compare it with their community goal.
   - RPCs: `create_group` (500 coins, idempotent by request id), `preview_group`, `join_group` (free; at most 5 groups per player; 5,000 members per group), `leave_group`, `remove_group_member`, `update_group`, `regenerate_group_code`, `my_groups`, `group_member_list` (paged), `group_leaderboard`.
   - A trigger keeps exactly one owner: the longest-standing member takes over, and the group closes when the last member leaves.
   - Leaderboards use members' local calendar dates from `daily_progress`: daily is today's date; weekly runs from Monday to today. Members who don't share are listed without numbers. The caller's row is always returned.
+
+## Fair distance and coin charges (migration 20261109000001, not yet applied)
+
+- Removes the 25 km daily cap from `sync_team_contributions` and
+  `community_distance`; raises the hard limits to 350 km / 300,000 steps;
+  adds `progress_review_reason`, the private `progress_flags` log, and
+  `under_review` on `group_leaderboard` (see "What the server can't guarantee").
+- `coin_charges` (private): every team and group creation fee, keyed like the
+  wallet (`team-<request id>`, `group-<request id>`). `charge_coins` takes
+  idempotency and spent totals from it; `put_player_save` writes every
+  recorded charge back into the saved wallet, so editing the save can't
+  refund or lower a fee. Existing fees are backfilled from saves.
+- `put_player_save` rejects malformed wallets (`invalid_wallet`): earned and
+  spent must be maps of whole amounts between 0 and 100,000.
+
+## Wallet
+
+The wallet is **not yet server-authoritative**. Coins are earned on the phone
+(walking, chests, quests, achievements, levels, rewarded ads, referral
+chests, mystery boxes) and the cloud save carries the result. The server
+guarantees that fees it charged stay charged, but it can't tell whether an
+`earned` entry or an owned item is genuine, so a modified client can still
+add coins or items to its own save (documented by the "KNOWN GAP" tests in
+`supabase/tests/99_fair_distance_and_wallet.sql`). Making it authoritative
+means moving coin grants and purchases to server functions; see the proposal
+in the launch stabilization report.

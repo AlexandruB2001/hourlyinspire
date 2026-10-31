@@ -49,7 +49,7 @@ enum GuideContent {
         .init(title: "When the day resets",
               body: "Your trail starts again at local midnight, in your iPhone's time zone. Relics, coins, items, your companion and everything you've collected are kept forever."),
         .init(title: "Explorer Level",
-              body: "You earn XP for walking (\(explorer.xpPerKilometre) XP a kilometre, counting up to \(km(explorer.dailyXPCapMeters)) a day), new zones, relics, achievements, quests and other rewards. Each new level pays \(explorer.coinsPerLevel) coins."),
+              body: "You earn XP for walking (\(explorer.xpPerKilometre) XP for every kilometre, however far you go), new zones, relics, achievements, quests and other rewards. Each new level pays \(explorer.coinsPerLevel) coins."),
     ])
 
     static let chests = GuideSection(id: .chests, title: "Chests & Coins", spriteID: "chest", entries: [

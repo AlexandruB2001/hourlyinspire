@@ -66,11 +66,6 @@ final class ExplorerTests: XCTestCase {
         XCTAssertEqual(ExplorerXP(progression: progression, ledger: RewardLedger()).total, before)
     }
 
-    func testHugeDaysAreCapped() {
-        let xp = ExplorerXP(progression: state([(day1, 60_000)]), ledger: RewardLedger())
-        XCTAssertEqual(xp.walking, 2_500)
-    }
-
     // MARK: Ledger
 
     func testRewardsAreClaimedOnce() {
@@ -156,5 +151,15 @@ final class ExplorerTests: XCTestCase {
                              ledger: RewardLedger(), companion: nil, savedAt: Date(timeIntervalSince1970: 1_800_000_000))
         let decoded = try JSONDecoder().decode(CloudSave.self, from: JSONEncoder().encode(save))
         XCTAssertEqual(decoded, save)
+    }
+
+    func testEveryKilometreEarnsXPWithNoDailyCap() {
+        for meters in [5_000, 25_000, 42_195, 60_000, 100_000] {
+            let xp = ExplorerXP(progression: state([(day1, meters)]), ledger: RewardLedger(), achievements: [])
+            XCTAssertEqual(xp.walking, meters * ExplorerRules.standard.xpPerKilometre / 1_000, "\(meters) m")
+        }
+        let week = state([(day1, 42_195), (day2, 60_000)])
+        XCTAssertEqual(ExplorerXP(progression: week, ledger: RewardLedger(), achievements: []).walking, 10_219,
+                       "days add up in full")
     }
 }

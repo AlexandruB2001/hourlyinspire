@@ -156,13 +156,14 @@ select tests.ok((select day_meters is null and week_meters is null
 select public.sync_team_contributions();
 select total_meters as alice_team_total from public.my_team() \gset
 reset role;
-select coalesce(sum(least(d.distance_meters, 25000)), 0) as expected_total
+select coalesce(sum(d.distance_meters), 0) as expected_total
 from public.team_members m
 join public.profiles p on p.id = m.user_id
 join public.daily_progress d on d.user_id = m.user_id
 where m.team_id = (select id from public.teams where name = 'Trail Blazers')
   and p.share_progress
-  and d.local_date between (m.joined_at at time zone 'utc')::date and current_date + 1 \gset
+  and d.local_date between (m.joined_at at time zone 'utc')::date and current_date + 1
+  and public.progress_review_reason(d.local_date, d.time_zone, d.steps, d.distance_meters, d.updated_at) is null \gset
 select tests.ok(:alice_team_total = :expected_total, 'expedition distance adds up members who share (team ledger)');
 
 select coalesce(sum(d.distance_meters), 0) as expected_week

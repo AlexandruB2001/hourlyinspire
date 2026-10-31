@@ -21,15 +21,15 @@ select public.join_team(:'campers_code');
 reset role;
 
 insert into public.daily_progress (user_id, local_date, time_zone, steps, distance_meters, distance_source, client_updated_at)
-values (tests.id('nia'), current_date, 'UTC', 40000, 30000, 'recorded', now()),
+values (tests.id('nia'), current_date, 'Pacific/Kiritimati', 40000, 30000, 'recorded', now()),
        (tests.id('nia'), current_date - 3, 'UTC', 9000, 7000, 'recorded', now()),
        (tests.id('oli'), current_date, 'UTC', 7000, 5000, 'recorded', now());
 
 select tests.as_user('nia');
 select public.sync_team_contributions();
 select public.sync_team_contributions();
-select tests.ok((select total_meters from public.my_team()) = 30000,
-                'days since joining count once, capped at 25 km a day; days before joining don''t');
+select tests.ok((select total_meters from public.my_team()) = 35000,
+                'days since joining count once and in full (no daily cap); days before joining don''t');
 reset role;
 
 -- Leaving keeps your past days with the team.
@@ -37,7 +37,7 @@ select tests.as_user('oli');
 select public.leave_team();
 reset role;
 select tests.as_user('nia');
-select tests.ok((select total_meters from public.my_team()) = 30000, 'the team total never goes down when someone leaves');
+select tests.ok((select total_meters from public.my_team()) = 35000, 'the team total never goes down when someone leaves');
 select tests.ok((select not is_member and meters = 5000 from public.team_contribution_totals() where username = 'oli'),
                 'past members are still listed with what they walked');
 reset role;

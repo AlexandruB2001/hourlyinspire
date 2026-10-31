@@ -2,9 +2,8 @@ import Foundation
 
 /// How lifetime Explorer XP is earned. Separate from coins: XP never gets spent.
 public struct ExplorerRules: Hashable, Sendable {
+    /// Every kilometre walked counts; there is no daily ceiling.
     public var xpPerKilometre: Int
-    /// Distance above this in one day earns no extra XP, so a huge day can't skip levels.
-    public var dailyXPCapMeters: Int
     public var xpPerZone: Int
     public var xpPerRelic: Int
     public var xpPerAchievement: Int
@@ -15,11 +14,10 @@ public struct ExplorerRules: Hashable, Sendable {
     public var levelExponent: Double
     public var maxLevel: Int
 
-    public init(xpPerKilometre: Int = 100, dailyXPCapMeters: Int = 25_000, xpPerZone: Int = 50, xpPerRelic: Int = 75,
+    public init(xpPerKilometre: Int = 100, xpPerZone: Int = 50, xpPerRelic: Int = 75,
                 xpPerAchievement: Int = 100, coinsPerLevel: Int = 25, baseLevelXP: Double = 100,
                 levelExponent: Double = 1.5, maxLevel: Int = 100) {
         self.xpPerKilometre = xpPerKilometre
-        self.dailyXPCapMeters = dailyXPCapMeters
         self.xpPerZone = xpPerZone
         self.xpPerRelic = xpPerRelic
         self.xpPerAchievement = xpPerAchievement
@@ -46,8 +44,8 @@ public struct ExplorerXP: Hashable, Sendable {
 
     public init(progression: ProgressionState, ledger: RewardLedger,
                 achievements catalog: [Achievement] = AchievementCatalog.standard, rules: ExplorerRules = .standard) {
-        let cappedMeters = progression.dailyBestMeters.values.reduce(0) { $0 + min(max(0, $1), rules.dailyXPCapMeters) }
-        walking = cappedMeters * rules.xpPerKilometre / 1_000
+        let meters = progression.dailyBestMeters.values.reduce(0) { $0 + max(0, $1) }
+        walking = meters * rules.xpPerKilometre / 1_000
         zones = progression.discoveredZoneIDs.count * rules.xpPerZone
         relics = progression.collectedItemIDs.count * rules.xpPerRelic
         achievements = catalog.filter { $0.isUnlocked(by: progression) }.count * rules.xpPerAchievement

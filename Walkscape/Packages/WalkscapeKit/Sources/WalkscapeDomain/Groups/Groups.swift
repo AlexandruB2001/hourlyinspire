@@ -152,12 +152,15 @@ public struct GroupStanding: Identifiable, Hashable, Sendable {
     public let estimated: Bool
     public let updatedAt: Date?
     public let isMe: Bool
+    /// Only ever true on your own row: one of your days looked implausible and
+    /// is held off the board until a later sync of it is plausible.
+    public let underReview: Bool
 
     public var id: UserID { userID }
     public var isSharing: Bool { meters != nil }
 
     public init(userID: UserID, username: String, avatarID: String, rank: Int, steps: Int?, meters: Int?,
-                estimated: Bool, updatedAt: Date?, isMe: Bool) {
+                estimated: Bool, updatedAt: Date?, isMe: Bool, underReview: Bool = false) {
         self.userID = userID
         self.username = username
         self.avatarID = avatarID
@@ -167,6 +170,7 @@ public struct GroupStanding: Identifiable, Hashable, Sendable {
         self.estimated = estimated
         self.updatedAt = updatedAt
         self.isMe = isMe
+        self.underReview = underReview
     }
 }
 

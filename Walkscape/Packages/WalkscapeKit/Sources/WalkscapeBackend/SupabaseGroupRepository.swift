@@ -113,6 +113,8 @@ public struct SupabaseGroupRepository: GroupRepository {
             let updated_at: Date?
             let is_me: Bool
             let total: Int
+            /// Missing before migration 20261109000001.
+            let under_review: Bool?
         }
         let rows: [Row] = try await run {
             try await api.call("group_leaderboard", Params(p_group_id: groupID, p_period: period.rawValue, p_day: day.isoString,
@@ -121,7 +123,7 @@ public struct SupabaseGroupRepository: GroupRepository {
         let standings = rows.map {
             GroupStanding(userID: UserID($0.user_id.lowercased()), username: $0.username, avatarID: $0.avatar_id, rank: $0.rank,
                           steps: $0.steps, meters: $0.distance_meters, estimated: $0.estimated, updatedAt: $0.updated_at,
-                          isMe: $0.is_me)
+                          isMe: $0.is_me, underReview: $0.under_review ?? false)
         }
         return GroupLeaderboardPage(period: period, rows: standings, memberCount: rows.first?.total ?? 0, limit: limit)
     }
