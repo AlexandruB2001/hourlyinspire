@@ -157,7 +157,15 @@ private struct MapStopRow: View {
         let here = x(index)
         let labelOnLeft = here > width / 2
         ZStack(alignment: .topLeading) {
-            regionColor(world).opacity(index % 2 == 0 ? 1 : 0.92)
+            regionColor(world)
+            // Ground texture: a scatter of light and dark speckles.
+            Canvas { context, size in
+                for k in 0..<18 {
+                    let rect = CGRect(x: rand(100 + k) * size.width, y: rand(200 + k) * size.height, width: 3, height: 3)
+                    context.fill(Path(rect), with: .color(k % 2 == 0 ? .white.opacity(0.07) : .black.opacity(0.1)))
+                }
+            }
+            scenery(world: world, pathX: here)
             // The trail: half a segment up to the stop above, half down to the one below.
             Canvas { context, _ in
                 var path = Path()
@@ -167,11 +175,20 @@ private struct MapStopRow: View {
                 path.addLine(to: CGPoint(x: here, y: height / 2))
                 if index > 0 { path.addLine(to: CGPoint(x: (here + x(index - 1)) / 2, y: height)) }
                 let done = index <= reached
-                context.stroke(path, with: .color(done ? Theme.Palette.gold : Theme.Palette.cream.opacity(0.35)),
-                               style: StrokeStyle(lineWidth: 6, lineCap: .round, lineJoin: .round, dash: done ? [] : [6, 8]))
+                let round = StrokeStyle(lineWidth: 18, lineCap: .round, lineJoin: .round)
+                context.stroke(path, with: .color(Theme.Palette.ink.opacity(0.85)), style: round)
+                context.stroke(path, with: .color(done ? Color(hex: 0xD9B77A) : Color(hex: 0x8C7A62)),
+                               style: StrokeStyle(lineWidth: 12, lineCap: .round, lineJoin: .round))
+                // Footsteps along the walked trail, faint marks ahead.
+                context.stroke(path, with: .color(done ? Theme.Palette.gold : Theme.Palette.cream.opacity(0.3)),
+                               style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 9]))
             }
             stop(isLandmark: !landmarks.isEmpty, landmark: landmarks.first)
                 .position(x: here, y: height / 2)
+            if index >= 1 && model.ledger.hasClaimed("waypoint-\(index)") {
+                ItemIcon(spriteID: "star", pixel: 1.6)
+                    .position(x: here, y: height / 2 + (landmarks.isEmpty ? 19 : 25))
+            }
             if let first = landmarks.first {
                 Text(first.title)
                     .font(Theme.Typography.micro)
@@ -204,17 +221,26 @@ private struct MapStopRow: View {
 
     private func stop(isLandmark: Bool, landmark: TeamMap.Landmark?) -> some View {
         let done = index <= reached
-        let size: CGFloat = isLandmark ? 40 : (index == reached ? 30 : 22)
+        let size: CGFloat = isLandmark ? 42 : (index == reached ? 34 : 28)
+        let face = done ? Theme.Palette.gold : Color(hex: 0x5B6B62)
         return ZStack {
-            Circle().fill(done ? Theme.Palette.gold : Theme.Palette.forestRaised)
+            // A raised button: dark base below, a lit face, a shine on top.
+            Circle().fill(Theme.Palette.ink).offset(y: 3)
+            Circle().fill(face)
+            Circle().fill(Color.white.opacity(done ? 0.35 : 0.15))
+                .frame(width: size * 0.42, height: size * 0.3)
+                .offset(x: -size * 0.14, y: -size * 0.2)
             Circle().strokeBorder(Theme.Palette.ink, lineWidth: 3)
             if let landmark {
                 ItemIcon(spriteID: landmark.spriteID, pixel: 2.2)
-                    .opacity(done ? 1 : 0.5)
+                    .opacity(done ? 1 : 0.55)
             } else if index == reached {
                 ItemIcon(spriteID: "flag", pixel: 1.8)
-            } else if !done {
-                Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(Theme.Palette.creamDim)
+            } else {
+                Text("\(index)")
+                    .font(.system(size: index >= 100 ? 9 : 11, weight: .black, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(done ? Theme.Palette.ink : Theme.Palette.cream.opacity(0.75))
             }
         }
         .frame(width: size, height: size)
@@ -247,14 +273,46 @@ private struct MapStopRow: View {
         .background(RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.ink.opacity(0.55)))
     }
 
+    /// A number in 0..<1 fixed by this stop and `k`, so scenery stays put.
+    private func rand(_ k: Int) -> Double {
+        var x = UInt64(truncatingIfNeeded: index &* 7_919 &+ k &* 104_729 &+ 12_345)
+        x ^= x >> 33
+        x &*= 0xFF51_AFD7_ED55_8CCD
+        x ^= x >> 33
+        return Double(x % 10_000) / 10_000
+    }
+
+    /// A few props from the region's set, kept clear of the trail.
+    private func scenery(world: TeamWorld?, pathX: CGFloat) -> some View {
+        let props: [String]
+        switch world?.tint {
+        case .enchanted: props = ["mushroom", "map-pine", "map-flowers", "map-bush"]
+        case .crystal: props = ["crystal", "map-rock", "map-pine"]
+        case .desert: props = ["map-cactus", "map-rock", "map-ruin"]
+        case .skyward: props = ["map-cloud", "map-flowers", "map-bush"]
+        case .ancient: props = ["map-ruin", "map-rock", "map-tree"]
+        case nil: props = ["map-tree", "map-pine", "map-bush", "map-flowers", "map-rock"]
+        }
+        return ZStack {
+            ForEach(0..<4, id: \.self) { k in
+                let px = width * (0.05 + rand(k * 3) * 0.9)
+                if abs(px - pathX) > 52 {
+                    ItemIcon(spriteID: props[Int(rand(k * 3 + 1) * Double(props.count)) % props.count],
+                             pixel: 2.2 + rand(k * 3 + 2) * 1.2)
+                        .position(x: px, y: 16 + rand(k * 3 + 2) * (height - 32))
+                }
+            }
+        }
+    }
+
     private func regionColor(_ world: TeamWorld?) -> Color {
         switch world?.tint {
-        case .enchanted: return Color(hex: 0x2E2A52)
-        case .crystal: return Color(hex: 0x3D5A7A)
-        case .desert: return Color(hex: 0x7A5A34)
-        case .skyward: return Color(hex: 0x4A78A8)
-        case .ancient: return Color(hex: 0x5A5048)
-        case nil: return Color(hex: 0x2F4A36)
+        case .enchanted: return Color(hex: 0x3B3466)
+        case .crystal: return Color(hex: 0x3F6A8C)
+        case .desert: return Color(hex: 0x9A7442)
+        case .skyward: return Color(hex: 0x5A8FC0)
+        case .ancient: return Color(hex: 0x6B5E52)
+        case nil: return Color(hex: 0x3E6B45)
         }
     }
 

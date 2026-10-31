@@ -401,6 +401,103 @@ public enum ItemSprites {
             obbbbbbbBo
             .oooooooo.
             """,
+        // Team map scenery.
+        "map-tree": """
+            ...oooo...
+            ..oLLggo..
+            .oLgggggo.
+            .oggggGgo.
+            .ogGgggGo.
+            ..oGgGGo..
+            ...oobo...
+            ....bo....
+            ....bo....
+            ...oooo...
+            """,
+        "map-pine": """
+            ....oo....
+            ...oLgo...
+            ...oggo...
+            ..oLgggo..
+            ..oggGgo..
+            .oLggggGo.
+            .ogggGGGo.
+            .oooobooo.
+            ....bo....
+            ....oo....
+            """,
+        "map-bush": """
+            ..........
+            ..........
+            ...ooo....
+            ..oLgoooo.
+            .oLggoLgo.
+            .ogggggGo.
+            oLgggGggGo
+            oggGgggGGo
+            .oooooooo.
+            ..........
+            """,
+        "map-flowers": """
+            ..........
+            .oo....oo.
+            omyo..oyho
+            .oo.oo.oo.
+            .go.oho.g.
+            ..g.ooG.g.
+            .LgG.g.Gg.
+            ..gg.gGg..
+            .gLgggggL.
+            ..........
+            """,
+        "map-rock": """
+            ..........
+            ..........
+            ..........
+            ...oooo...
+            ..oWsssoo.
+            .oWssssSo.
+            .osssssSSo
+            oSssssSSSo
+            .oooooooo.
+            ..........
+            """,
+        "map-cactus": """
+            ....oo....
+            ...oLgo...
+            .o.oggo...
+            oLooggo.o.
+            oggoggooLo
+            .oggggoogo
+            ...oggggo.
+            ...oggGo..
+            ...oggGo..
+            ..onnnnno.
+            """,
+        "map-cloud": """
+            ..........
+            ..........
+            ....ooo...
+            ...owwwo..
+            .oowwwwwo.
+            owwwwwwwWo
+            owwwwwwWWo
+            .ooooooooo
+            ..........
+            ..........
+            """,
+        "map-ruin": """
+            .oooooooo.
+            .oWWWsssSo
+            .oooooooo.
+            ..oWssSo..
+            ..oWssSo..
+            ..oWssSo..
+            ..oWssSo..
+            ..oWssSo..
+            .oooooooo.
+            oWsssssSSo
+            """,
     ]
 
     public static let allIDs: [String] = (Array(art.keys) + Array(CreatureSprites.art.keys)).sorted()
