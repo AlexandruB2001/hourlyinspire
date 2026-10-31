@@ -147,6 +147,15 @@ public enum MysteryBoxPrize: Identifiable, Hashable, Sendable {
 public enum MysteryBox {
     /// Everything the box can give on `day`. Festival accessories join once
     /// their festival is over; level gifts and Plus gifts never do.
+    /// Any prize by id, whatever the day (the server picks which).
+    public static func prize(withID id: String) -> MysteryBoxPrize? {
+        if let item = ShopCatalog.items.first(where: { $0.id == id }) { return .outfit(item) }
+        if let accessory = CompanionAccessoryCatalog.all.first(where: { $0.id == id }), let rarity = accessory.rarity {
+            return .accessory(accessory, rarity: rarity)
+        }
+        return nil
+    }
+
     public static func prizes(on day: LocalDay) -> [MysteryBoxPrize] {
         ShopCatalog.items.map(MysteryBoxPrize.outfit)
             + CompanionAccessoryCatalog.all.compactMap { accessory in

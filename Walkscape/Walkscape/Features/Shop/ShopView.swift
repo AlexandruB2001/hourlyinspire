@@ -75,6 +75,8 @@ private struct WardrobeHeader: View {
 private struct MysteryBoxCard: View {
     @Environment(AppModel.self) private var model
     let onReveal: (MysteryBoxPrize) -> Void
+    @State private var opening = false
+    @State private var problem: String?
 
     var body: some View {
         let price = ShopCatalog.mysteryBoxPrice
@@ -94,14 +96,34 @@ private struct MysteryBoxCard: View {
                     .font(Theme.Typography.micro)
                     .foregroundStyle(Theme.Palette.creamDim.opacity(0.8))
                 Button {
-                    if case .won(let prize) = model.openMysteryBox() { onReveal(prize) }
+                    opening = true
+                    problem = nil
+                    Task {
+                        let result = await model.openMysteryBox()
+                        opening = false
+                        switch result {
+                        case .won(let prize): onReveal(prize)
+                        case .notEnoughCoins(let needed): problem = "You need \(needed) more coins."
+                        case .soldOut: problem = "You own everything. Amazing!"
+                        case .unavailable(let message): problem = message
+                        }
+                    }
                 } label: {
-                    PriceLabel(text: "Open for", price: price)
+                    if opening {
+                        ProgressView().tint(Theme.Palette.ink)
+                    } else {
+                        PriceLabel(text: "Open for", price: price)
+                    }
                 }
                 .buttonStyle(.pixel)
-                .disabled(soldOut || model.wallet.coins < price)
+                .disabled(opening || soldOut || model.wallet.coins < price)
                 .opacity(soldOut || model.wallet.coins < price ? 0.5 : 1)
                 .padding(.top, Theme.Spacing.xs)
+                if let problem {
+                    Text(problem)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.ember)
+                }
             }
             Spacer(minLength: 0)
         }

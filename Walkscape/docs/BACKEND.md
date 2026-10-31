@@ -334,12 +334,38 @@ is exposed. Seasonal festivals compare it with their community goal.
 
 ## Wallet
 
-The wallet is **not yet server-authoritative**. Coins are earned on the phone
-(walking, chests, quests, achievements, levels, rewarded ads, referral
-chests, mystery boxes) and the cloud save carries the result. The server
-guarantees that fees it charged stay charged, but it can't tell whether an
-`earned` entry or an owned item is genuine, so a modified client can still
-add coins or items to its own save (documented by the "KNOWN GAP" tests in
-`supabase/tests/99_fair_distance_and_wallet.sql`). Making it authoritative
-means moving coin grants and purchases to server functions; see the proposal
-in the launch stabilization report.
+Since migration 20261110000001 (phase A) the server sells and records every
+coin purchase except creation fees, which were already server charges:
+
+- `coin_prices`: Mystery Box 150, companion adoption 1000, rewarded ad 15.
+- `open_mystery_box(request, day)`: rolls the box on the server from
+  `mystery_box_prizes` (the app's pool, weights and festival windows; the
+  `ServerWalletCatalogTests` Swift test keeps them in step), charges 150 via
+  `charge_coins` (key `box-<request>`, idempotent) and records the prize in
+  `owned_items`, the server inventory. The prize is also written into the
+  cloud save.
+- `adopt_companion(species)`: charges 1000 once per species (key
+  `companion-<species>`) and records `companion:<species>`.
+- Rewarded ads: the app sends AdMob server-side verification its account id
+  and the ad's reward id. The `admob-ssv` edge function checks Google's
+  signature and calls `record_ad_reward` (service role only, at most 6 a UTC
+  day, 15 coins each) into `ad_rewards`.
+- `put_player_save` always adds the server inventory to the saved wallet.
+
+Two switches in `wallet_settings` stay **off** until every tester runs a build
+that buys through the server (build 20 or later). Builds 19 and older still
+open boxes and adopt on the phone, and they'd lose those items:
+
+1. `select public.start_wallet_enforcement();` copies what saves hold today
+   (Mystery Box items, `companion-*` adoptions) into `owned_items`, then turns
+   on `enforce_inventory`. From then on, a save can't hold a Mystery-Box-only
+   item the server didn't grant (it's removed and taken off), or more
+   companions than the first pick plus server adoptions (`invalid_companions`).
+2. After deploying `admob-ssv` (Verify JWT **off**) and setting its URL as the
+   rewarded ad unit's server-side verification callback in AdMob:
+   `update public.wallet_settings set verify_ad_rewards = true;` From then on,
+   ad coins in saves are replaced by the verified ads.
+
+Still the app's word (phase B): coins earned from walking, chests, quests,
+achievements, levels and referrals, and items from festival tiers, level
+gifts and Plus. A modified client can still add those to its own save.

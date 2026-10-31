@@ -509,17 +509,38 @@ final class AppModel {
     /// Adopts another species for `CompanionRoster.adoptionCost` coins. It
     /// starts as a hatchling; the current companion rests and keeps its growth.
     /// Returns an error message, or nil on success.
-    func adoptCompanion(_ species: CompanionSpecies) -> String? {
-        guard let current = companion else { return "Choose your first companion first." }
-        guard companionRoster.adoptable(active: current).contains(species) else { return "You already have \(species.name)." }
-        guard wallet.spend(key: CompanionRoster.adoptionChargeKey(species.id), amount: CompanionRoster.adoptionCost) else {
-            return "You need \(CompanionRoster.adoptionCost) coins to adopt \(species.name)."
+    func adoptCompanion(_ species: CompanionSpecies) async -> String? {
+        guard let first = companion else { return "Choose your first companion first." }
+        guard companionRoster.adoptable(active: first).contains(species) else { return "You already have \(species.name)." }
+        let cost = CompanionRoster.adoptionCost
+        guard wallet.coins >= cost else { return "You need \(cost) coins to adopt \(species.name)." }
+        if dataSource == .appleHealth {
+            // The server charges it, from the cloud save.
+            guard let backend, isSignedIn else { return "Sign in to adopt companions." }
+            await syncCloudSave(force: true)
+            do {
+                let purchase = try await backend.wallet.adoptCompanion(speciesID: species.id)
+                wallet.receiveServerPurchase(chargeKey: purchase.chargeKey, coins: purchase.coins, itemID: nil)
+            } catch WalletService.PurchaseError.insufficientCoins, WalletService.PurchaseError.needsCloudSave {
+                return "Your latest coins haven't reached the cloud yet. Try again in a moment."
+            } catch WalletService.PurchaseError.notSignedIn {
+                handleSessionExpired()
+                return "Sign in again to adopt companions."
+            } catch {
+                return "Couldn't reach the server. Check your connection and try again."
+            }
+        } else {
+            guard wallet.spend(key: CompanionRoster.adoptionChargeKey(species.id), amount: cost) else {
+                return "You need \(cost) coins to adopt \(species.name)."
+            }
         }
         store.save(wallet, for: dataSource)
+        guard let current = companion else { return nil }
         let adopted = companionRoster.adopt(species.id, replacing: current, lifetimeMeters: progression.lifetimeMeters,
                                             on: today, at: Date())
         setActiveCompanion(adopted)
         recordInJournal([JournalEvents.adoption(of: adopted)])
+        if dataSource == .appleHealth { await syncCloudSave(force: true) }
         return nil
     }
 
@@ -927,9 +948,37 @@ final class AppModel {
     }
 
     /// Opens a Mystery Box: the only way to get outfits and companion accessories.
+    /// With Apple Health data the server sells and rolls it (paid from the
+    /// cloud save, so that's synced first); demo walking rolls on the phone.
+    func openMysteryBox() async -> MysteryBoxResult {
+        guard dataSource == .appleHealth else { return revealBoxPrize(wallet.openMysteryBox(on: today)) }
+        let price = ShopCatalog.mysteryBoxPrice
+        guard wallet.coins >= price else { return .notEnoughCoins(needed: price - wallet.coins) }
+        guard let backend, isSignedIn else { return .unavailable("Sign in to open Mystery Boxes.") }
+        await syncCloudSave(force: true)
+        do {
+            let purchase = try await backend.wallet.openMysteryBox(requestID: UUID(), day: today)
+            wallet.receiveServerPurchase(chargeKey: purchase.chargeKey, coins: purchase.coins, itemID: purchase.itemID)
+            store.save(wallet, for: .appleHealth)
+            await syncCloudSave(force: true)
+            guard let prize = purchase.itemID.flatMap(MysteryBox.prize(withID:)) else {
+                return .unavailable("Your prize is in your collection. Update the app to see it.")
+            }
+            return revealBoxPrize(.won(prize))
+        } catch WalletService.PurchaseError.soldOut {
+            return .soldOut
+        } catch WalletService.PurchaseError.insufficientCoins, WalletService.PurchaseError.needsCloudSave {
+            return .unavailable("Your latest coins haven't reached the cloud yet. Try again in a moment.")
+        } catch WalletService.PurchaseError.notSignedIn {
+            handleSessionExpired()
+            return .unavailable("Sign in again to open Mystery Boxes.")
+        } catch {
+            return .unavailable("Couldn't reach the Mystery Box. Check your connection and try again.")
+        }
+    }
+
     /// A new accessory goes straight on if that slot is free.
-    func openMysteryBox() -> MysteryBoxResult {
-        let result = wallet.openMysteryBox(on: today)
+    private func revealBoxPrize(_ result: MysteryBoxResult) -> MysteryBoxResult {
         store.save(wallet, for: dataSource)
         if case .won(.accessory(let accessory, _)) = result, var current = companion,
            !current.wornAccessories.contains(where: { CompanionAccessoryCatalog.accessory(withID: $0)?.slot == accessory.slot }) {
@@ -1627,9 +1676,15 @@ final class AppModel {
         guard rewardedAdsLeft > 0, !isWatchingAd else { return nil }
         isWatchingAd = true
         defer { isWatchingAd = false }
-        guard await ads.presentRewardedAd(), let coins = adState.recordRewardedAd(on: today) else { return nil }
+        // AdMob tells our server about the ad too (server-side verification),
+        // under the same reward id the coins are stored under.
+        let rewardID = UUID().uuidString.lowercased()
+        var accountID: String?
+        if isSignedIn { accountID = await backend?.auth.currentSession?.userID.rawValue }
+        guard await ads.presentRewardedAd(accountID: accountID, rewardID: rewardID),
+              let coins = adState.recordRewardedAd(on: today) else { return nil }
         store.save(adState)
-        updateHealthWallet { $0.earnAdReward(coins, id: UUID().uuidString) }
+        updateHealthWallet { $0.earnAdReward(coins, id: rewardID) }
         return coins
     }
 

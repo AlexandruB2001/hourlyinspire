@@ -47,6 +47,8 @@ public enum MysteryBoxResult: Hashable, Sendable {
     case notEnoughCoins(needed: Int)
     /// Nothing left to give.
     case soldOut
+    /// The server couldn't sell one right now (offline, signed out...).
+    case unavailable(String)
 }
 
 /// Coins, owned items and the current outfit. Like `ProgressionState`,
@@ -285,6 +287,13 @@ public struct WalletState: Codable, Hashable, Sendable {
     /// however the two meet, the charge counts once.
     public mutating func recordServerCharge(key: String, amount: Int) {
         spent[key] = max(spent[key] ?? 0, amount)
+    }
+
+    /// Records a purchase the server made and charged (a Mystery Box or a
+    /// companion adoption) under the key it charged, with the item it gave.
+    public mutating func receiveServerPurchase(chargeKey: String, coins: Int, itemID: String?) {
+        recordServerCharge(key: chargeKey, amount: coins)
+        if let itemID { ownedItemIDs.insert(itemID) }
     }
 
     /// Takes away items (a refunded purchase), taking them off if worn.

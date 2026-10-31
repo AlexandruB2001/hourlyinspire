@@ -218,7 +218,7 @@ select tests.ok(tests.coins() = 5075, 'KNOWN GAP: a modified client can still ad
 select save as purse_save, version as purse_version from public.get_player_save() \gset
 select public.put_player_save(jsonb_set((:'purse_save')::jsonb, '{wallet,ownedItemIDs}', '["golden-crown"]'), :purse_version);
 select tests.ok((select save #> '{wallet,ownedItemIDs}' ? 'golden-crown' from public.get_player_save()),
-                'KNOWN GAP: a modified client can still add items to its inventory');
+                'KNOWN GAP (until start_wallet_enforcement): a modified client can still add items to its inventory');
 reset role;
 
 select tests.ok(not has_table_privilege('authenticated', 'public.coin_charges', 'select')

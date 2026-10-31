@@ -125,9 +125,17 @@ final class AdService: NSObject {
 
     /// Plays the rewarded ad and waits until it's closed. Returns true only
     /// if it was watched far enough to earn the reward.
-    func presentRewardedAd() async -> Bool {
+    /// With `accountID`, AdMob also reports the ad to our server (server-side
+    /// verification) with `rewardID`, the key the coins are stored under.
+    func presentRewardedAd(accountID: String?, rewardID: String) async -> Bool {
         if rewardedAd == nil { await loadRewardedAd() }
         guard !isShowingAd, let ad = rewardedAd, let root = Self.topViewController else { return false }
+        if let accountID {
+            let options = GADServerSideVerificationOptions()
+            options.userIdentifier = accountID
+            options.customRewardString = rewardID
+            ad.serverSideVerificationOptions = options
+        }
         rewardedAd = nil
         isRewardedReady = false
         isShowingAd = true

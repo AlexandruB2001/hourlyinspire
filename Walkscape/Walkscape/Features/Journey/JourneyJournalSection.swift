@@ -89,7 +89,7 @@ struct CompanionSheet: View {
                 get: { adopting != nil }, set: { if !$0 { adopting = nil } }), titleVisibility: .visible) {
                 Button("Adopt for \(CompanionRoster.adoptionCost) coins") {
                     guard let species = adopting else { return }
-                    message = model.adoptCompanion(species)
+                    Task { message = await model.adoptCompanion(species) }
                 }
             } message: {
                 Text("\(CompanionRoster.adoptionCost) coins from your \(model.wallet.coins). It starts as a hatchling and walks with you; your current companion rests and keeps its growth.")
