@@ -19,7 +19,7 @@ public struct RestingCompanion: Codable, Hashable, Sendable {
 /// only grows while it's the active one.
 public struct CompanionRoster: Codable, Hashable, Sendable {
     /// Coins to adopt another species.
-    public static let adoptionCost = 400
+    public static let adoptionCost = 1_000
 
     public private(set) var resting: [RestingCompanion]
 

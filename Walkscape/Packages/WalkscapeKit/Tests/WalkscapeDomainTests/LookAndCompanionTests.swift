@@ -46,12 +46,12 @@ final class LookAndCompanionTests: XCTestCase {
     }
 
     func testAdoptionIsPaidOncePerSpecies() {
-        var wallet = WalletState(rules: CoinRules(starterCoins: 900))
+        var wallet = WalletState(rules: CoinRules(starterCoins: 1_500))
         XCTAssertTrue(wallet.spend(key: CompanionRoster.adoptionChargeKey("emberfox"), amount: CompanionRoster.adoptionCost))
         XCTAssertFalse(wallet.spend(key: CompanionRoster.adoptionChargeKey("emberfox"), amount: CompanionRoster.adoptionCost))
         XCTAssertEqual(wallet.coins, 500)
-        XCTAssertFalse(WalletState(rules: CoinRules(starterCoins: 399))
-            .with { $0.spend(key: "companion-moonmoth", amount: CompanionRoster.adoptionCost) }, "needs 400 coins")
+        XCTAssertFalse(WalletState(rules: CoinRules(starterCoins: 999))
+            .with { $0.spend(key: "companion-moonmoth", amount: CompanionRoster.adoptionCost) }, "needs 1000 coins")
     }
 
     func testTheLatestChoiceWinsAcrossPhonesAndNoCompanionIsLost() {
