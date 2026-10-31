@@ -25,14 +25,41 @@
 
 -- Distance -------------------------------------------------------------------
 
+-- Old limits are found by what they check, in case their names differ on the
+-- live project (as the team ledger's did).
+do $$
+declare
+    old_check text;
+begin
+    for old_check in
+        select c.conname from pg_constraint c
+        where c.conrelid = 'public.daily_progress'::regclass and c.contype = 'c'
+          and (pg_get_constraintdef(c.oid) like '%steps%' or pg_get_constraintdef(c.oid) like '%distance_meters%')
+    loop
+        execute format('alter table public.daily_progress drop constraint %I', old_check);
+    end loop;
+end $$;
+
 alter table public.daily_progress
-    drop constraint daily_progress_steps_range,
-    drop constraint daily_progress_distance_range,
     add constraint daily_progress_steps_range check (steps between 0 and 300000),
     add constraint daily_progress_distance_range check (distance_meters between 0 and 350000);
 
+-- The old 25 km check is found by what it checks: its name differs between
+-- the live project and a fresh database.
+do $$
+declare
+    old_check text;
+begin
+    for old_check in
+        select c.conname from pg_constraint c
+        where c.conrelid = 'public.team_contributions'::regclass and c.contype = 'c'
+          and pg_get_constraintdef(c.oid) like '%meters%'
+    loop
+        execute format('alter table public.team_contributions drop constraint %I', old_check);
+    end loop;
+end $$;
+
 alter table public.team_contributions
-    drop constraint team_contributions_meters_check,
     add constraint team_contributions_meters_range check (meters between 0 and 350000);
 
 -- Why a day can't count towards competitive totals yet, or null when it can.
