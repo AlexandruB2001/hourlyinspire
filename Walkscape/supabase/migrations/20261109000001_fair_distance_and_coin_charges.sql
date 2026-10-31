@@ -92,14 +92,14 @@ security definer
 set search_path = ''
 as $$
 declare
-    reason text := public.progress_review_reason(new.local_date, new.time_zone, new.steps, new.distance_meters, new.updated_at);
+    why text := public.progress_review_reason(new.local_date, new.time_zone, new.steps, new.distance_meters, new.updated_at);
 begin
-    if reason is null and new.distance_meters >= 100000 then
-        reason := 'very_long'; -- legitimate, counted in full, but worth a look
+    if why is null and new.distance_meters >= 100000 then
+        why := 'very_long'; -- legitimate, counted in full, but worth a look
     end if;
-    if reason is not null then
+    if why is not null then
         insert into public.progress_flags (user_id, local_date, reason, steps, distance_meters)
-        values (new.user_id, new.local_date, reason, new.steps, new.distance_meters)
+        values (new.user_id, new.local_date, why, new.steps, new.distance_meters)
         on conflict (user_id, local_date, reason) do update
             set steps = excluded.steps, distance_meters = excluded.distance_meters, flagged_at = now();
     end if;
