@@ -162,8 +162,10 @@ struct JourneyWidgetView: View {
         let growth = CompanionGrowth(kilometres: snapshot.companionKilometres)
         let species = snapshot.companionSpeciesID.flatMap(CompanionCatalog.species(withID:))
         return VStack(spacing: 0) {
-            PixelScene(snapshot: snapshot, width: 136, height: 72, walkerPosition: 0.45)
+            // An overlay, so the filled scene can't widen the widget's layout.
+            Color.clear
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .overlay { PixelScene(snapshot: snapshot, width: 136, height: 72, walkerPosition: 0.45) }
                 .clipped()
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
