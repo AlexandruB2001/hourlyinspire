@@ -131,10 +131,10 @@ select tests.ok(exists (select 1 from public.owned_items where user_id = tests.i
 select tests.as_user('forger');
 select save as forger_save, version as forger_version from public.get_player_save() \gset
 select public.put_player_save(jsonb_set(jsonb_set((:'forger_save')::jsonb, '{wallet,ownedItemIDs}',
-                                                  '["golden-crown", "crown-jewel", "pet-snow-hat", "pet-bow"]'),
-                                        '{wallet,equipped}', '{"head": "crown-jewel", "neck": "golden-crown"}'),
+                                                  '["golden-crown", "wizard-hat", "pet-snow-hat", "pet-bow"]'),
+                                        '{wallet,equipped}', '{"head": "wizard-hat", "neck": "golden-crown"}'),
                               :forger_version);
-select tests.ok((select not (save -> 'wallet' -> 'ownedItemIDs' ? 'crown-jewel') from public.get_player_save()),
+select tests.ok((select not (save -> 'wallet' -> 'ownedItemIDs' ? 'wizard-hat') from public.get_player_save()),
                 'a Mystery Box item the server never gave is removed');
 select tests.ok((select save -> 'wallet' -> 'equipped' = '{"neck": "golden-crown"}'::jsonb from public.get_player_save()),
                 'and taken off if worn');
