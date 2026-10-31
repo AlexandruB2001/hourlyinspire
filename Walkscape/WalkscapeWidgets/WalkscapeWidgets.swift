@@ -11,7 +11,7 @@ struct WalkscapeWidgetBundle: WidgetBundle {
 }
 
 /// Your walker and companion on today's trail. Small: total kilometres.
-/// Medium: today's distance and the next zone.
+/// Medium: today's distance and the next zone. Large: the whole picture.
 struct WalkscapeJourneyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "WalkscapeJourney", provider: JourneyProvider()) { entry in
@@ -19,7 +19,7 @@ struct WalkscapeJourneyWidget: Widget {
         }
         .configurationDisplayName("Walkscape")
         .description("Your walker and companion, with how far you've walked.")
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
 }
@@ -75,6 +75,7 @@ struct JourneyWidgetView: View {
     var body: some View {
         switch family {
         case .systemMedium: medium
+        case .systemLarge: large
         default: small
         }
     }
@@ -155,6 +156,89 @@ struct JourneyWidgetView: View {
         .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, in \(snapshot.zoneName). \(Self.kilometres(snapshot.metersToNextZone)) to \(snapshot.nextZoneName).")
     }
 
+    /// The scene with the walker and companion on top, and a panel underneath with
+    /// today, the total, the next zone and the companion's growth.
+    private var large: some View {
+        let growth = CompanionGrowth(kilometres: snapshot.companionKilometres)
+        let species = snapshot.companionSpeciesID.flatMap(CompanionCatalog.species(withID:))
+        return VStack(spacing: 0) {
+            PixelScene(snapshot: snapshot, width: 136, height: 72, walkerPosition: 0.45)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("TODAY")
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Palette.gold)
+                        Text(Self.kilometres(snapshot.todayMeters))
+                            .font(.system(size: 30, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.cream)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                        if let steps = snapshot.todaySteps {
+                            Text("\(steps.formatted()) steps")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(Palette.cream.opacity(0.85))
+                        }
+                    }
+                    Spacer(minLength: 8)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("IN TOTAL")
+                            .font(.system(size: 10, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Palette.gold)
+                        Text(Self.kilometres(snapshot.totalMeters))
+                            .font(.system(size: 20, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(Palette.cream)
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(snapshot.zoneName)
+                            .font(.system(size: 12, weight: .heavy, design: .rounded))
+                            .foregroundStyle(Palette.cream)
+                        Spacer(minLength: 4)
+                        Text("\(Self.kilometres(snapshot.metersToNextZone)) to \(snapshot.nextZoneName)")
+                            .font(.system(size: 10, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Palette.cream.opacity(0.85))
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    ProgressCapsule(fraction: 1 - Double(snapshot.metersToNextZone) / 1_000)
+                        .frame(height: 7)
+                }
+                if let species {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text("\(species.name) · \(growth.stage.name)")
+                                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                                .foregroundStyle(Palette.cream)
+                            Spacer(minLength: 4)
+                            Text(growth.kilometresToNextStage.map { "\($0) km to grow" } ?? "Fully grown")
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundStyle(Palette.cream.opacity(0.85))
+                        }
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        ProgressCapsule(fraction: growth.fractionToNextStage, fill: Palette.leaf)
+                            .frame(height: 7)
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .containerBackground(for: .widget) { Palette.ink }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, \(Self.kilometres(snapshot.totalMeters)) in total, in \(snapshot.zoneName).")
+    }
+
     static func kilometres(_ meters: Int) -> String {
         let km = Double(max(0, meters)) / 1_000
         return km >= 100 ? "\(Int(km).formatted()) km" : String(format: "%.1f km", km)
@@ -163,12 +247,13 @@ struct JourneyWidgetView: View {
 
 private struct ProgressCapsule: View {
     let fraction: Double
+    var fill: Color = Palette.gold
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule().fill(Palette.cream.opacity(0.2))
-                Capsule().fill(Palette.gold).frame(width: proxy.size.width * min(1, max(0.04, fraction)))
+                Capsule().fill(fill).frame(width: proxy.size.width * min(1, max(0.04, fraction)))
             }
         }
         .overlay(Capsule().strokeBorder(Palette.ink, lineWidth: 1))
@@ -231,6 +316,12 @@ private extension PixelCanvas {
 }
 
 #Preview(as: .systemMedium) {
+    WalkscapeJourneyWidget()
+} timeline: {
+    JourneyEntry(date: .now, snapshot: .preview)
+}
+
+#Preview(as: .systemLarge) {
     WalkscapeJourneyWidget()
 } timeline: {
     JourneyEntry(date: .now, snapshot: .preview)
