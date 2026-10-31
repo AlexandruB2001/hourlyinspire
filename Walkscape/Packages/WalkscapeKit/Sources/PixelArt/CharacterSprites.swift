@@ -150,6 +150,17 @@ public enum CharacterSprites {
         return canvas
     }
 
+    /// The portrait with worn items (hats, glasses, scarves): the head and
+    /// shoulders of the dressed walker, with headroom for a hat (16x16).
+    public static func portrait(avatarID: String, outfit: [String]) -> PixelCanvas {
+        guard outfit.contains(where: { EquipmentArt.art(for: $0) != nil }) else { return portrait(avatarID: avatarID) }
+        let dressed = idleFrame(avatarID: avatarID, outfit: outfit)
+        let bodyY = outfittedHeight - idleLegs.count - upperBody.count + 1
+        var canvas = PixelCanvas(width: width, height: 12 + outfitHeadroom)
+        canvas.draw(dressed, x: 0, y: outfitHeadroom - bodyY)
+        return canvas
+    }
+
     // MARK: Looks
 
     /// Hairstyles drawn over the body in body coordinates (the body palette's

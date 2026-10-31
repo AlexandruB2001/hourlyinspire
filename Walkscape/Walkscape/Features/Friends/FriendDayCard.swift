@@ -18,7 +18,7 @@ struct FriendDayCard: View {
             HStack(spacing: Theme.Spacing.m) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                    WalkingCharacter(avatarID: current.avatarID, outfit: current.isCurrentUser ? model.outfit : nil,
+                    WalkingCharacter(avatarID: current.avatarID, outfit: model.outfit(for: current.id),
                                      walking: (current.distanceMeters ?? 0) > 0, pixel: 4)
                 }
                 .frame(width: 84, height: 100)

@@ -196,7 +196,7 @@ private struct FocusCard: View {
                 let zone = model.engine.catalog.zone(forMeters: meters)
                 VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                     HStack(spacing: Theme.Spacing.m) {
-                        AvatarPortrait(avatarID: friend.avatarID, size: 48, ring: Theme.Palette.gold)
+                        AvatarPortrait(avatarID: friend.avatarID, outfit: model.outfit(for: friend.id), size: 48, ring: Theme.Palette.gold)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(friend.name).font(Theme.Typography.title).foregroundStyle(Theme.Palette.cream)
                             Text("\((friend.isDistanceEstimated ? "≈" : "") + DistanceFormatting.kilometres(meters)) today · \(zone.name)")

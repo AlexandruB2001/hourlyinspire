@@ -242,4 +242,11 @@ final class PixelArtTests: XCTestCase {
         let looks = ShopCatalog.items.map { CharacterSprites.walkFrame(0, avatarID: "fern", outfit: [$0.id]) }
         XCTAssertEqual(Set(looks).count, ShopCatalog.items.count)
     }
+
+    func testPortraitsShowWornItems() {
+        let plain = CharacterSprites.portrait(avatarID: "fern")
+        XCTAssertEqual(CharacterSprites.portrait(avatarID: "fern", outfit: []), plain)
+        XCTAssertEqual(CharacterSprites.portrait(avatarID: "fern", outfit: ["not-an-item"]), plain)
+        XCTAssertNotEqual(CharacterSprites.portrait(avatarID: "fern", outfit: ["golden-crown"]), plain)
+    }
 }

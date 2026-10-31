@@ -98,8 +98,10 @@ final class PixelArtCache {
         }
     }
 
-    func portrait(avatarID: String) -> CGImage? {
-        image("portrait_\(avatarID)") { CharacterSprites.portrait(avatarID: avatarID) }
+    func portrait(avatarID: String, outfit: [String] = []) -> CGImage? {
+        image("portrait_\(avatarID)_\(outfit.joined(separator: "+"))") {
+            CharacterSprites.portrait(avatarID: avatarID, outfit: outfit)
+        }
     }
 
     func item(_ spriteID: String) -> CGImage? {
@@ -132,11 +134,13 @@ struct PixelImageView: View {
 /// A character portrait in a small framed tile.
 struct AvatarPortrait: View {
     let avatarID: String
+    /// Worn items to draw (a friend's comes from `AppModel.outfit(for:)`).
+    var outfit: [String] = []
     var size: CGFloat = 36
     var ring: Color = Theme.Palette.ink
 
     var body: some View {
-        let image = PixelArtCache.shared.portrait(avatarID: avatarID)
+        let image = PixelArtCache.shared.portrait(avatarID: avatarID, outfit: outfit)
         ZStack {
             RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
             if let image {

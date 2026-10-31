@@ -228,7 +228,7 @@ private struct TeamDashboardView: View {
             SectionHeader(title: "Today's walkers")
             ForEach(dashboard.membersByToday) { member in
                 HStack(spacing: Theme.Spacing.m) {
-                    AvatarPortrait(avatarID: member.avatarID, size: 36,
+                    AvatarPortrait(avatarID: member.avatarID, outfit: model.outfit(for: member.id), size: 36,
                                    ring: member.isCurrentUser ? Theme.Palette.gold : Theme.Palette.ink)
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: Theme.Spacing.xs) {

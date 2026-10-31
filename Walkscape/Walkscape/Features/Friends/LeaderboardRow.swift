@@ -10,7 +10,7 @@ struct LeaderboardRow: View {
         let participant = entry.participant
         HStack(spacing: Theme.Spacing.m) {
             rankBadge
-            AvatarPortrait(avatarID: participant.avatarID, size: compact ? 28 : 36,
+            AvatarPortrait(avatarID: participant.avatarID, outfit: model.outfit(for: participant.id), size: compact ? 28 : 36,
                            ring: participant.isCurrentUser ? Theme.Palette.gold : Theme.Palette.ink)
             VStack(alignment: .leading, spacing: 1) {
                 Text(participant.name)

@@ -52,7 +52,7 @@ struct CampfireCard: View {
                     Eyebrow("Built by")
                     ForEach(model.teamContributions.prefix(5)) { person in
                         HStack(spacing: Theme.Spacing.s) {
-                            AvatarPortrait(avatarID: person.avatarID, size: 22)
+                            AvatarPortrait(avatarID: person.avatarID, outfit: model.outfit(for: person.userID), size: 22)
                             Text("@\(person.username)")
                                 .font(Theme.Typography.caption)
                                 .foregroundStyle(person.isMember ? Theme.Palette.cream : Theme.Palette.creamDim)
