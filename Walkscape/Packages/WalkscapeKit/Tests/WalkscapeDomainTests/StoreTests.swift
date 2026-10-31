@@ -23,7 +23,7 @@ final class StoreTests: XCTestCase {
         }
         // Premium outfits never appear in the coin shop or the Mystery Box.
         XCTAssertTrue(Set(ShopCatalog.items.map(\.id)).isDisjoint(with: PremiumOutfits.items.map(\.id)))
-        XCTAssertEqual(ShopCatalog.items.count, 30)
+        XCTAssertEqual(ShopCatalog.items.count, 45)
         XCTAssertEqual(ShopCatalog.item(withID: "harvest-crown")?.slot, .head, "premium pieces can still be worn")
     }
 

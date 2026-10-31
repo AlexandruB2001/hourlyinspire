@@ -102,6 +102,8 @@ final class AppModel {
     private(set) var isWatchingAd = false
     /// Nil until the player picks a companion.
     private(set) var companion: CompanionState?
+    /// Companions resting at camp (you can own one of each species).
+    private(set) var companionRoster = CompanionRoster()
     /// Nil when not in a team (or not loaded yet; see `hasLoadedTeam`).
     private(set) var team: TeamDashboard?
     private(set) var teamInvites: [TeamInvite] = []
@@ -159,6 +161,7 @@ final class AppModel {
         notificationLedger = store.loadNotificationLedger()
         companion = Self.companion(for: source, store: store, progression: progression,
                                    today: LocalDay(date: Date(), timeZone: .current))
+        companionRoster = store.loadCompanionRoster(source)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
     }
 
@@ -412,6 +415,7 @@ final class AppModel {
         collections = store.loadCollections(source)
         discovery = nil
         companion = Self.companion(for: source, store: store, progression: progression, today: today)
+        companionRoster = store.loadCompanionRoster(source)
         if let saved = store.loadLastProgress(source) { sync.restore(saved) }
         celebration = nil
         levelUp = nil
@@ -448,6 +452,8 @@ final class AppModel {
         collections = CollectionState()
         store.save(collections, for: .demo)
         store.save(nil, for: .demo)
+        store.save(CompanionRoster(), for: .demo)
+        companionRoster = CompanionRoster()
         companion = Self.companion(for: .demo, store: store, progression: progression, today: today)
         sync = WalkingSyncStatus()
         Task { await refreshWalking() }
@@ -490,6 +496,40 @@ final class AppModel {
         store.save(adopted, for: dataSource)
         recordInJournal([JournalEvents.adoption(of: adopted)])
         startAdsIfReady()
+    }
+
+    /// Wakes a resting companion; the one walking now goes to rest, keeping its growth.
+    func swapCompanion(to speciesID: String) {
+        guard let current = companion, current.speciesID != speciesID,
+              let woken = companionRoster.swap(active: current, to: speciesID, lifetimeMeters: progression.lifetimeMeters,
+                                               at: Date()) else { return }
+        setActiveCompanion(woken)
+    }
+
+    /// Adopts another species for `CompanionRoster.adoptionCost` coins. It
+    /// starts as a hatchling; the current companion rests and keeps its growth.
+    /// Returns an error message, or nil on success.
+    func adoptCompanion(_ species: CompanionSpecies) -> String? {
+        guard let current = companion else { return "Choose your first companion first." }
+        guard companionRoster.adoptable(active: current).contains(species) else { return "You already have \(species.name)." }
+        guard wallet.spend(key: CompanionRoster.adoptionChargeKey(species.id), amount: CompanionRoster.adoptionCost) else {
+            return "You need \(CompanionRoster.adoptionCost) coins to adopt \(species.name)."
+        }
+        store.save(wallet, for: dataSource)
+        let adopted = companionRoster.adopt(species.id, replacing: current, lifetimeMeters: progression.lifetimeMeters,
+                                            on: today, at: Date())
+        setActiveCompanion(adopted)
+        recordInJournal([JournalEvents.adoption(of: adopted)])
+        return nil
+    }
+
+    private func setActiveCompanion(_ next: CompanionState) {
+        store.companionSpeciesID = next.speciesID
+        companion = next
+        store.save(next, for: dataSource)
+        store.save(companionRoster, for: dataSource)
+        updateWidget()
+        Task { await syncCloudSave(force: true) }
     }
 
     /// Records any new milestones. Safe to call repeatedly: entries are keyed by event.
@@ -903,6 +943,9 @@ final class AppModel {
     func toggleEquipped(_ item: ShopItem) {
         if wallet.isEquipped(item) { wallet.unequip(item.slot) } else { wallet.equip(item) }
         store.save(wallet, for: dataSource)
+        // Friends see what you wear.
+        if dataSource == .appleHealth { Task { await publishShowcase() } }
+        updateWidget()
     }
 
     // MARK: Explorer level
@@ -1352,9 +1395,17 @@ final class AppModel {
         return FrameCatalog.frame(withID: friendShowcases[id]?.frameID)
     }
 
+    /// What someone on the friend track is wearing: your own outfit, or what a
+    /// friend or teammate shared.
+    func outfit(for id: UserID) -> [String] {
+        if id == currentUserID { return outfit }
+        return friendShowcases[id]?.outfit ?? []
+    }
+
     private func publishShowcase() async {
         guard let backend, isSignedIn else { return }
         try? await backend.showcases.publish(currentShowcase)
+        try? await backend.showcases.publish(outfit: outfit)
     }
 
     // MARK: Quests
@@ -1440,6 +1491,7 @@ final class AppModel {
                          companion: isHealth ? companion : store.loadCompanion(.appleHealth),
                          showcase: showcase,
                          collections: isHealth ? collections : store.loadCollections(.appleHealth),
+                         companionRoster: isHealth ? companionRoster : store.loadCompanionRoster(.appleHealth),
                          savedAt: Date())
     }
 
@@ -1457,12 +1509,14 @@ final class AppModel {
             store.save(companion, for: .appleHealth)
             store.companionSpeciesID = companion.speciesID
         }
+        store.save(save.companionRoster ?? CompanionRoster(), for: .appleHealth)
         guard dataSource == .appleHealth else { return }
         progression = save.progression
         wallet = save.wallet
         journal = save.journal
         ledger = save.ledger
         if let restored = save.companion { companion = restored }
+        companionRoster = save.companionRoster ?? CompanionRoster()
         if let restored = save.showcase, restored != showcase { showcase = restored }
         if let restored = save.collections {
             store.save(restored, for: .appleHealth)

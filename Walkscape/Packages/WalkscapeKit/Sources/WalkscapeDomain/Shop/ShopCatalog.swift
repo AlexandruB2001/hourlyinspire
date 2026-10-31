@@ -57,7 +57,7 @@ public enum ShopCatalog {
     /// Outfits and companion accessories only come out of the Mystery Box.
     public static let mysteryBoxPrice = 150
 
-    /// 30 items: 12 common, 9 rare, 6 epic, 3 legendary.
+    /// 45 items: 18 common, 14 rare, 9 epic, 4 legendary.
     public static let items: [ShopItem] = [
         // Hats
         ShopItem(id: "straw-hat", name: "Straw Hat", detail: "Keeps the sun off on long meadow walks.", slot: .head, rarity: .common),
@@ -70,7 +70,14 @@ public enum ShopCatalog {
         ShopItem(id: "wizard-hat", name: "Wizard Hat", detail: "Starry, pointy and slightly magical.", slot: .head, rarity: .epic),
         ShopItem(id: "viking-helmet", name: "Viking Helmet", detail: "Horns included. Longships not.", slot: .head, rarity: .epic),
         ShopItem(id: "golden-crown", name: "Golden Crown", detail: "Ruler of the trail.", slot: .head, rarity: .legendary),
+        ShopItem(id: "beret", name: "Painter's Beret", detail: "For walkers who stop to admire the view.", slot: .head, rarity: .common),
+        ShopItem(id: "cat-beanie", name: "Cat-Ear Beanie", detail: "Two little ears that perk up on hills.", slot: .head, rarity: .rare),
+        ShopItem(id: "frog-hat", name: "Frog Hat", detail: "Ribbit. Very waterproof.", slot: .head, rarity: .rare),
+        ShopItem(id: "halo", name: "Trail Halo", detail: "A soft glow that follows the kindest walkers.", slot: .head, rarity: .legendary),
         // Glasses
+        ShopItem(id: "ski-goggles", name: "Ski Goggles", detail: "Ready for the Snowy Ridge.", slot: .face, rarity: .common),
+        ShopItem(id: "monocle", name: "Monocle", detail: "Most distinguished, old sport.", slot: .face, rarity: .rare),
+        ShopItem(id: "star-glasses", name: "Star Glasses", detail: "Every walk is a red carpet.", slot: .face, rarity: .epic),
         ShopItem(id: "round-glasses", name: "Round Glasses", detail: "See every wildflower clearly.", slot: .face, rarity: .common),
         ShopItem(id: "sunglasses", name: "Sunglasses", detail: "Too cool for the Summit.", slot: .face, rarity: .common),
         ShopItem(id: "heart-glasses", name: "Heart Glasses", detail: "Everything looks lovely through these.", slot: .face, rarity: .rare),
@@ -81,6 +88,9 @@ public enum ShopCatalog {
         ShopItem(id: "candy-scarf", name: "Candy Stripe Scarf", detail: "Red and white, like a sweet shop.", slot: .neck, rarity: .rare),
         ShopItem(id: "sunset-scarf", name: "Sunset Scarf", detail: "Dyed the orange of a canyon evening.", slot: .neck, rarity: .rare),
         ShopItem(id: "rainbow-scarf", name: "Rainbow Scarf", detail: "Every colour of the journey.", slot: .neck, rarity: .epic),
+        ShopItem(id: "bandana", name: "Trail Bandana", detail: "A red bandana for dusty canyon paths.", slot: .neck, rarity: .common),
+        ShopItem(id: "bow-tie", name: "Blue Bow Tie", detail: "Smart enough for the Hearth Village.", slot: .neck, rarity: .common),
+        ShopItem(id: "flower-lei", name: "Flower Lei", detail: "Picked fresh in the Blossom Orchard.", slot: .neck, rarity: .rare),
         ShopItem(id: "aurora-scarf", name: "Aurora Scarf", detail: "Spun from the lights over Starlight Pass.", slot: .neck, rarity: .legendary),
         // Shoes
         ShopItem(id: "red-sneakers", name: "Red Sneakers", detail: "Speedy-looking, at least.", slot: .feet, rarity: .common),
@@ -88,9 +98,14 @@ public enum ShopCatalog {
         ShopItem(id: "white-sneakers", name: "White Sneakers", detail: "Fresh out of the box.", slot: .feet, rarity: .common),
         ShopItem(id: "moss-hikers", name: "Moss Hikers", detail: "Grippy boots for forest trails.", slot: .feet, rarity: .rare),
         ShopItem(id: "cloud-walkers", name: "Cloud Walkers", detail: "Like walking on the Cloud Forest mist.", slot: .feet, rarity: .rare),
+        ShopItem(id: "yellow-wellies", name: "Yellow Wellies", detail: "Made for jumping in puddles.", slot: .feet, rarity: .common),
+        ShopItem(id: "roller-skates", name: "Roller Skates", detail: "Strictly for the flat bits.", slot: .feet, rarity: .epic),
         ShopItem(id: "golden-boots", name: "Golden Boots", detail: "Every step shines.", slot: .feet, rarity: .epic),
         // Backs
         ShopItem(id: "explorer-pack", name: "Explorer Pack", detail: "A blue pack with a golden bedroll.", slot: .back, rarity: .rare),
+        ShopItem(id: "bindle", name: "Bindle", detail: "Everything you need, tied up in a cloth.", slot: .back, rarity: .common),
+        ShopItem(id: "turtle-shell", name: "Turtle Shell", detail: "Slow and steady wins the walk.", slot: .back, rarity: .rare),
+        ShopItem(id: "guitar", name: "Trail Guitar", detail: "For campfire songs at the end of the day.", slot: .back, rarity: .epic),
         ShopItem(id: "hero-cape", name: "Hero Cape", detail: "Flaps dramatically in the wind.", slot: .back, rarity: .epic),
         ShopItem(id: "fairy-wings", name: "Fairy Wings", detail: "Glassy wings that catch the light.", slot: .back, rarity: .epic),
         ShopItem(id: "phoenix-wings", name: "Phoenix Wings", detail: "Fiery wings for the most dedicated walkers.", slot: .back, rarity: .legendary),

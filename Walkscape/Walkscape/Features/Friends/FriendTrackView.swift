@@ -203,6 +203,7 @@ private struct TrackRuler: View {
 
 /// One walker on the track with their name and distance.
 private struct TrackCharacter: View {
+    @Environment(AppModel.self) private var model
     let position: CharacterPosition
     let metrics: TrackMetrics
     let now: Date
@@ -211,7 +212,8 @@ private struct TrackCharacter: View {
         let participant = position.participant
         let isStale = participant.availability == .stale
         VStack(spacing: 0) {
-            WalkingCharacter(avatarID: participant.avatarID, walking: !isStale && (participant.distanceMeters ?? 0) > 0,
+            WalkingCharacter(avatarID: participant.avatarID, outfit: model.outfit(for: participant.id),
+                             walking: !isStale && (participant.distanceMeters ?? 0) > 0,
                              pixel: metrics.pixel, phase: walkPhase(participant.id))
                 .opacity(isStale ? 0.6 : 1)
                 .overlay(alignment: .bottom) {

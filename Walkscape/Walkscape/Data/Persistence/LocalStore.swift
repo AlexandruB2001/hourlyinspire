@@ -41,6 +41,7 @@ struct LocalStore {
         static let notificationPreferences = "walkscape.notificationPreferences.v1"
         static let notificationLedger = "walkscape.notificationLedger.v1"
         static let seenTips = "walkscape.seenTips.v1"
+        static func companionRoster(_ source: WalkingDataSourceKind) -> String { "walkscape.companionRoster.v1.\(source.rawValue)" }
     }
 
     func loadSettings() -> AppSettings { load(AppSettings.self, Key.settings) ?? AppSettings() }
@@ -78,6 +79,14 @@ struct LocalStore {
     var companionSpeciesID: String? {
         get { defaults.string(forKey: Key.companionSpecies) }
         nonmutating set { defaults.set(newValue, forKey: Key.companionSpecies) }
+    }
+
+    func loadCompanionRoster(_ source: WalkingDataSourceKind) -> CompanionRoster {
+        load(CompanionRoster.self, Key.companionRoster(source)) ?? CompanionRoster()
+    }
+
+    func save(_ roster: CompanionRoster, for source: WalkingDataSourceKind) {
+        save(roster, Key.companionRoster(source))
     }
 
     func loadCompanion(_ source: WalkingDataSourceKind) -> CompanionState? {

@@ -208,4 +208,38 @@ final class PixelArtTests: XCTestCase {
             XCTAssertEqual(Set(skins).count, skins.count, species)
         }
     }
+
+    func testEveryLookChangesTheWalker() {
+        let plain = CharacterSprites.idleFrame(avatarID: "fern")
+        for hair in HairStyle.allCases where hair != .short {
+            XCTAssertNotEqual(CharacterSprites.idleFrame(avatarID: CharacterLook(hair: hair).avatarID), plain, hair.rawValue)
+            XCTAssertNotEqual(CharacterSprites.portrait(avatarID: CharacterLook(hair: hair).avatarID),
+                              CharacterSprites.portrait(avatarID: "fern"), "\(hair.rawValue) shows on the portrait")
+        }
+        for body in BodyStyle.allCases where body != .trousers {
+            for frame in 0..<CharacterSprites.walkFrameCount {
+                XCTAssertNotEqual(CharacterSprites.walkFrame(frame, avatarID: CharacterLook(body: body).avatarID),
+                                  CharacterSprites.walkFrame(frame, avatarID: "fern"), "\(body.rawValue) frame \(frame)")
+            }
+        }
+        let tones = Set(SkinTone.allCases.map { CharacterSprites.portrait(avatarID: CharacterLook(skin: $0).avatarID) })
+        XCTAssertEqual(tones.count, SkinTone.allCases.count)
+    }
+
+    func testShoesShowOnEveryFrame() {
+        for id in ["red-sneakers", "blue-wellies", "roller-skates", "golden-boots"] {
+            for frame in 0..<CharacterSprites.walkFrameCount {
+                XCTAssertNotEqual(CharacterSprites.walkFrame(frame, avatarID: "fern", outfit: [id]),
+                                  CharacterSprites.walkFrame(frame, avatarID: "fern", outfit: []), "\(id) frame \(frame)")
+            }
+        }
+        // Wellies reach up the leg; sneakers don't.
+        XCTAssertNotEqual(CharacterSprites.idleFrame(avatarID: "fern", outfit: ["blue-wellies"]),
+                          CharacterSprites.idleFrame(avatarID: "fern", outfit: ["red-sneakers"]))
+    }
+
+    func testNoTwoShopItemsLookTheSame() {
+        let looks = ShopCatalog.items.map { CharacterSprites.walkFrame(0, avatarID: "fern", outfit: [$0.id]) }
+        XCTAssertEqual(Set(looks).count, ShopCatalog.items.count)
+    }
 }

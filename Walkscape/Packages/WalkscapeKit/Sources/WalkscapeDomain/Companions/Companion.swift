@@ -98,22 +98,26 @@ public struct CompanionGrowth: Hashable, Sendable {
 public struct CompanionState: Codable, Hashable, Sendable {
     public let speciesID: String
     public let adoptedOn: LocalDay
-    /// Lifetime metres already walked when adopted.
-    public let baselineMeters: Int
+    /// Lifetime metres not walked together (before adoption, or while resting).
+    public private(set) var baselineMeters: Int
+    /// When it last became the companion walking with you (nil for older saves).
+    /// The most recent choice wins when two phones meet.
+    public private(set) var activeSince: Date?
     /// Highest stage already celebrated (so evolutions are recorded once).
     public private(set) var celebratedStage: Int
     /// Worn accessory id per `CompanionAccessory.Slot`.
     public private(set) var accessories: [String: String]
 
-    public init(speciesID: String, adoptedOn: LocalDay, lifetimeMeters: Int) {
+    public init(speciesID: String, adoptedOn: LocalDay, lifetimeMeters: Int, activeSince: Date? = nil) {
         self.speciesID = speciesID
         self.adoptedOn = adoptedOn
         baselineMeters = max(0, lifetimeMeters)
+        self.activeSince = activeSince
         celebratedStage = CompanionGrowth.Stage.hatchling.rawValue
         accessories = [:]
     }
 
-    enum CodingKeys: String, CodingKey { case speciesID, adoptedOn, baselineMeters, celebratedStage, accessories }
+    enum CodingKeys: String, CodingKey { case speciesID, adoptedOn, baselineMeters, celebratedStage, accessories, activeSince }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -122,6 +126,18 @@ public struct CompanionState: Codable, Hashable, Sendable {
         baselineMeters = try container.decode(Int.self, forKey: .baselineMeters)
         celebratedStage = try container.decode(Int.self, forKey: .celebratedStage)
         accessories = try container.decodeIfPresent([String: String].self, forKey: .accessories) ?? [:]
+        activeSince = try container.decodeIfPresent(Date.self, forKey: .activeSince)
+    }
+
+    /// Metres walked together so far.
+    public func walkedMeters(lifetimeMeters: Int) -> Int { max(0, lifetimeMeters - baselineMeters) }
+
+    /// This companion walking with you again, having already walked `walkedMeters`.
+    public func walkingAgain(walkedMeters: Int, lifetimeMeters: Int, at date: Date?) -> CompanionState {
+        var state = self
+        state.baselineMeters = max(0, lifetimeMeters - max(0, walkedMeters))
+        state.activeSince = date
+        return state
     }
 
     /// Accessory ids in draw order (back, neck, head).

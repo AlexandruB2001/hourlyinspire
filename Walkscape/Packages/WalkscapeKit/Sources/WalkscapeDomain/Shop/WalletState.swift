@@ -271,6 +271,15 @@ public struct WalletState: Codable, Hashable, Sendable {
         ownedItemIDs.formUnion(itemIDs)
     }
 
+    /// Spends coins on something bought once, under `key` (e.g. adopting a
+    /// companion). Returns false if it's already paid for or unaffordable.
+    @discardableResult
+    public mutating func spend(key: String, amount: Int) -> Bool {
+        guard spent[key] == nil, coins >= amount else { return false }
+        spent[key] = amount
+        return true
+    }
+
     /// Records coins the server charged (creating a group or team) under the
     /// key it used. The server wrote the same key into the cloud save, so
     /// however the two meet, the charge counts once.

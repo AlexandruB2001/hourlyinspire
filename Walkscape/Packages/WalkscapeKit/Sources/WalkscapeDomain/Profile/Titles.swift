@@ -262,12 +262,15 @@ public struct PublicShowcase: Hashable, Sendable {
     public let titleID: String?
     public let frameID: String?
     public let favoriteZoneID: String?
+    /// Worn shop items, in draw order (unknown ids are skipped when drawing).
+    public let outfit: [String]
 
-    public init(userID: UserID, titleID: String?, frameID: String?, favoriteZoneID: String?) {
+    public init(userID: UserID, titleID: String?, frameID: String?, favoriteZoneID: String?, outfit: [String] = []) {
         self.userID = userID
         self.titleID = titleID
         self.frameID = frameID
         self.favoriteZoneID = favoriteZoneID
+        self.outfit = outfit
     }
 
     /// The title's display name, or nil for unknown ids (e.g. from a newer app).

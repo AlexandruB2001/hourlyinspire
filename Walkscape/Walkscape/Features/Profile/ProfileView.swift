@@ -63,19 +63,7 @@ private struct ProfileHeader: View {
                 Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-                Eyebrow("Choose your walker")
-                HStack(spacing: Theme.Spacing.s) {
-                    ForEach(AvatarCatalog.starters) { avatar in
-                        Button { model.setAvatar(avatar.id) } label: {
-                            AvatarPortrait(avatarID: avatar.id, size: 44,
-                                           ring: model.settings.avatarID == avatar.id ? Theme.Palette.gold : Theme.Palette.ink)
-                        }
-                        .accessibilityLabel(avatar.name)
-                        .accessibilityAddTraits(model.settings.avatarID == avatar.id ? .isSelected : [])
-                    }
-                }
-            }
+            WalkerCustomizer()
         }
         .pixelPanel()
         .alert("Username", isPresented: $editingName) {
@@ -346,5 +334,98 @@ private struct AccountSection: View {
         } message: {
             Text(deleteError ?? "")
         }
+    }
+}
+
+/// Colours, hairstyle, outfit shape and skin tone for the walker. Saved as the
+/// avatar id (see `CharacterLook`), so friends see the same walker.
+private struct WalkerCustomizer: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let look = CharacterLook(avatarID: model.settings.avatarID)
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            HStack(alignment: .bottom, spacing: Theme.Spacing.m) {
+                WalkingCharacter(avatarID: look.avatarID, outfit: model.outfit, walking: true, pixel: 4)
+                    .frame(width: 72, height: 100)
+                    .background(RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(Theme.Palette.ink, lineWidth: 2))
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Eyebrow("Your walker")
+                    Text("Pick colours, hair, outfit shape and skin. Friends see your walker as you made it.")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.creamDim)
+                }
+            }
+            Eyebrow("Colours")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.s) {
+                    ForEach(AvatarCatalog.starters) { avatar in
+                        let option = look.with(colors: avatar.id)
+                        Button { model.setAvatar(option.avatarID) } label: {
+                            AvatarPortrait(avatarID: option.avatarID, size: 44,
+                                           ring: look.colors == avatar.id ? Theme.Palette.gold : Theme.Palette.ink)
+                        }
+                        .accessibilityLabel(avatar.name)
+                        .accessibilityAddTraits(look.colors == avatar.id ? .isSelected : [])
+                    }
+                }
+            }
+            Eyebrow("Hair")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Spacing.s) {
+                    ForEach(HairStyle.allCases) { style in
+                        let option = look.with(hair: style)
+                        choice(option, label: style.name, selected: look.hair == style)
+                    }
+                }
+            }
+            Eyebrow("Outfit shape")
+            HStack(spacing: Theme.Spacing.s) {
+                ForEach(BodyStyle.allCases) { style in
+                    let option = look.with(body: style)
+                    choice(option, label: style.name, selected: look.body == style, full: true)
+                }
+            }
+            Eyebrow("Skin")
+            HStack(spacing: Theme.Spacing.s) {
+                ForEach(SkinTone.allCases) { tone in
+                    let option = look.with(skin: tone)
+                    Button { model.setAvatar(option.avatarID) } label: {
+                        AvatarPortrait(avatarID: option.avatarID, size: 40,
+                                       ring: look.skin == tone ? Theme.Palette.gold : Theme.Palette.ink)
+                    }
+                    .accessibilityLabel("Skin tone \(tone.rawValue) of \(SkinTone.allCases.count)")
+                    .accessibilityAddTraits(look.skin == tone ? .isSelected : [])
+                }
+                if look.skin != nil {
+                    Button("Reset") { model.setAvatar(look.with(skin: nil).avatarID) }
+                    .buttonStyle(.pixelQuiet)
+                }
+            }
+        }
+    }
+
+    /// A small preview of `option` with its name.
+    private func choice(_ option: CharacterLook, label: String, selected: Bool, full: Bool = false) -> some View {
+        Button { model.setAvatar(option.avatarID) } label: {
+            VStack(spacing: 2) {
+                if full {
+                    WalkingCharacter(avatarID: option.avatarID, walking: false, pixel: 2)
+                        .frame(width: 40, height: 48)
+                } else {
+                    AvatarPortrait(avatarID: option.avatarID, size: 40, ring: selected ? Theme.Palette.gold : Theme.Palette.ink)
+                }
+                Text(label)
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(selected ? Theme.Palette.gold : Theme.Palette.creamDim)
+            }
+            .padding(full ? Theme.Spacing.xs : 0)
+            .background(RoundedRectangle(cornerRadius: Theme.Radius.s)
+                .strokeBorder(full && selected ? Theme.Palette.gold : .clear, lineWidth: 2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import WalkscapeDomain
 
 /// The little adventurer. One base drawing, recoloured per avatar.
 ///
@@ -34,8 +35,25 @@ public enum CharacterSprites {
         "w": PixelColor(0xFFF6E0),   // eye shine / highlight
     ])
 
-    /// Colour variants for the starter avatars.
+    /// Colours for an avatar id, including its look's skin tone (see `CharacterLook`).
     public static func palette(for avatarID: String) -> SpritePalette {
+        let look = CharacterLook(avatarID: avatarID)
+        let colors = colorPalette(for: look.colors)
+        guard let skin = look.skin else { return colors }
+        return colors.overriding(skinTones[skin.rawValue - 1])
+    }
+
+    /// Skin (`s`), skin shade (`S`) and blush (`c`) for each tone, lightest first.
+    static let skinTones: [[Character: PixelColor]] = [
+        ["s": PixelColor(0xF7D9BC), "S": PixelColor(0xE0B793), "c": PixelColor(0xEC9A86)],
+        ["s": PixelColor(0xF2C9A0), "S": PixelColor(0xD9A57E), "c": PixelColor(0xE8907A)],
+        ["s": PixelColor(0xD6A27A), "S": PixelColor(0xB8835C), "c": PixelColor(0xD07A62)],
+        ["s": PixelColor(0xA8714E), "S": PixelColor(0x8A5A3C), "c": PixelColor(0xB5604E)],
+        ["s": PixelColor(0x6E4A34), "S": PixelColor(0x553826), "c": PixelColor(0x8A4A3A)],
+    ]
+
+    /// Colour variants for the starter avatars.
+    static func colorPalette(for avatarID: String) -> SpritePalette {
         let variants: [String: [Character: PixelColor]] = [
             "fern": [:],
             "sky": ["t": PixelColor(0x4D7FB0), "T": PixelColor(0x37608A), "f": PixelColor(0xF4EBD0), "F": PixelColor(0xC9BC98),
@@ -114,18 +132,61 @@ public enum CharacterSprites {
     public static func walkFrame(_ index: Int, avatarID: String) -> PixelCanvas {
         let frame = ((index % walkFrameCount) + walkFrameCount) % walkFrameCount
         let bob = frame % 2 == 1 ? -1 : 0
-        return compose(legs: legs[frame], bob: bob, palette: palette(for: avatarID))
+        return compose(legs: legs[frame], bob: bob, palette: palette(for: avatarID), look: CharacterLook(avatarID: avatarID))
     }
 
     public static func idleFrame(avatarID: String) -> PixelCanvas {
-        compose(legs: idleLegs, bob: 0, palette: palette(for: avatarID))
+        compose(legs: idleLegs, bob: 0, palette: palette(for: avatarID), look: CharacterLook(avatarID: avatarID))
     }
 
     /// Head and shoulders for indicators and avatars (16x12).
     public static func portrait(avatarID: String) -> PixelCanvas {
-        let sprite = Sprite(name: "portrait", palette: palette(for: avatarID), rows: Array(upperBody.prefix(12)))
-        return sprite.render()
+        let palette = palette(for: avatarID)
+        let sprite = Sprite(name: "portrait", palette: palette, rows: Array(upperBody.prefix(12)))
+        var canvas = sprite.render()
+        if let hair = hairOverlays[CharacterLook(avatarID: avatarID).hair] {
+            canvas.draw(Sprite(name: "hair", palette: palette, rows: hair.rows), x: hair.x, y: hair.y)
+        }
+        return canvas
     }
+
+    // MARK: Looks
+
+    /// Hairstyles drawn over the body in body coordinates (the body palette's
+    /// hair colours, so every colour set and dye works).
+    static let hairOverlays: [HairStyle: (x: Int, y: Int, rows: [String])] = [
+        .pigtails: (0, 4, [
+            "..o",
+            ".oc",
+            "ohh",
+            "ohH",
+            "ohh",
+            "odh",
+            ".oo",
+        ]),
+        .long: (2, 6, [
+            "ohh",
+            "ohH",
+            "ohh",
+            "odh",
+            "ohd",
+            ".oo",
+        ]),
+        .bun: (5, -1, [
+            "..oo..",
+            ".ohHo.",
+        ]),
+        .spiky: (4, -1, [
+            "..o.o.o.",
+            ".ohohoho",
+        ]),
+    ]
+
+    /// A short dress over the top of the legs, in tunic colours.
+    static let dressOverlay: (x: Int, y: Int, rows: [String]) = (2, 15, [
+        "..ottttttTo.",
+        ".otttttttTTo",
+    ])
 
     // MARK: Outfits
 
@@ -138,15 +199,17 @@ public enum CharacterSprites {
     public static func walkFrame(_ index: Int, avatarID: String, outfit: [String]) -> PixelCanvas {
         let frame = ((index % walkFrameCount) + walkFrameCount) % walkFrameCount
         let bob = frame % 2 == 1 ? -1 : 0
-        return compose(legs: legs[frame], bob: bob, palette: palette(for: avatarID), outfit: outfit, canvasHeight: outfittedHeight)
+        return compose(legs: legs[frame], bob: bob, palette: palette(for: avatarID), look: CharacterLook(avatarID: avatarID), outfit: outfit,
+                       canvasHeight: outfittedHeight)
     }
 
     public static func idleFrame(avatarID: String, outfit: [String]) -> PixelCanvas {
-        compose(legs: idleLegs, bob: 0, palette: palette(for: avatarID), outfit: outfit, canvasHeight: outfittedHeight)
+        compose(legs: idleLegs, bob: 0, palette: palette(for: avatarID), look: CharacterLook(avatarID: avatarID), outfit: outfit,
+                       canvasHeight: outfittedHeight)
     }
 
-    private static func compose(legs: [String], bob: Int, palette: SpritePalette, outfit: [String] = [],
-                                canvasHeight: Int = height) -> PixelCanvas {
+    private static func compose(legs: [String], bob: Int, palette: SpritePalette, look: CharacterLook = CharacterLook(),
+                                outfit: [String] = [], canvasHeight: Int = height) -> PixelCanvas {
         let pieces = outfit.compactMap(EquipmentArt.art(for:))
         var palette = palette
         for piece in pieces where !piece.recolor.isEmpty { palette = palette.overriding(piece.recolor) }
@@ -156,11 +219,50 @@ public enum CharacterSprites {
         let legSprite = Sprite(name: "legs", palette: palette, rows: legs)
         let bodyY = canvasHeight - legs.count - upperBody.count + 1 + bob
         canvas.draw(legSprite, x: 0, y: canvasHeight - legs.count)
+        if look.body == .shorts {
+            // Bare lower legs: trouser pixels below the top row become skin.
+            for (y, row) in legs.enumerated() where y >= 1 {
+                for (x, c) in row.enumerated() where c == "p" || c == "P" {
+                    if let skin = palette[c == "p" ? "s" : "S"] { canvas.plot(x, canvasHeight - legs.count + y, skin) }
+                }
+            }
+        }
         canvas.draw(body, x: 0, y: bodyY)
+        if let hair = hairOverlays[look.hair] {
+            canvas.draw(Sprite(name: "hair", palette: palette, rows: hair.rows), x: hair.x, y: bodyY + hair.y)
+        }
+        if look.body == .dress {
+            canvas.draw(Sprite(name: "dress", palette: palette, rows: dressOverlay.rows), x: dressOverlay.x, y: bodyY + dressOverlay.y)
+        }
         for piece in pieces where !piece.overlay.isEmpty {
             let sprite = Sprite(name: "equipment", palette: EquipmentArt.palette, rows: piece.overlay)
             canvas.draw(sprite, x: piece.x, y: bodyY + piece.y)
         }
+        if let shoe = pieces.compactMap(\.shoe).last {
+            drawShoes(shoe, legs: legs, top: canvasHeight - legs.count, on: &canvas)
+        }
         return canvas
+    }
+
+    /// Colours the foot pixels (`b` near, `B` far), the outline under them as
+    /// the sole, and the trouser pixels just above them as a boot cuff.
+    private static func drawShoes(_ shoe: EquipmentArt.Shoe, legs: [String], top: Int, on canvas: inout PixelCanvas) {
+        let rows = legs.map(Array.init)
+        func char(_ x: Int, _ y: Int) -> Character? {
+            guard y >= 0, y < rows.count, x >= 0, x < rows[y].count else { return nil }
+            return rows[y][x]
+        }
+        for (y, row) in rows.enumerated() {
+            for (x, c) in row.enumerated() where c == "b" || c == "B" {
+                canvas.plot(x, top + y, c == "b" ? shoe.upper : shoe.upperFar)
+                if let sole = shoe.sole, char(x, y + 1) == "o" {
+                    let accent = shoe.soleAccent.flatMap { x % 2 == 0 ? $0 : nil }
+                    canvas.plot(x, top + y + 1, accent ?? sole)
+                }
+                if let cuff = shoe.cuff, let above = char(x, y - 1), "pP".contains(above) {
+                    canvas.plot(x, top + y - 1, above == "p" ? cuff : cuff.mixed(with: PixelColor(0x1E2233), 0.25))
+                }
+            }
+        }
     }
 }

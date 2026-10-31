@@ -18,11 +18,13 @@ public struct CloudSave: Codable, Hashable, Sendable {
     public var showcase: ProfileShowcase?
     /// Wildlife and treasures. Nil in saves from before collections existed.
     public var collections: CollectionState?
+    /// Companions resting at camp. Nil in saves from before you could own several.
+    public var companionRoster: CompanionRoster?
     public var savedAt: Date
 
     public init(progression: ProgressionState, wallet: WalletState, journal: JourneyJournal, ledger: RewardLedger,
                 companion: CompanionState?, showcase: ProfileShowcase? = nil, collections: CollectionState? = nil,
-                savedAt: Date) {
+                companionRoster: CompanionRoster? = nil, savedAt: Date) {
         schema = Self.currentSchema
         self.progression = progression
         self.wallet = wallet
@@ -31,25 +33,26 @@ public struct CloudSave: Codable, Hashable, Sendable {
         self.companion = companion
         self.showcase = showcase
         self.collections = collections
+        self.companionRoster = companionRoster
         self.savedAt = savedAt
     }
 
     /// This device's save combined with another one. Nothing earned on either
     /// side is lost; see each type's `merged(with:)` for the rules.
     public func merged(with other: CloudSave) -> CloudSave {
-        let companion: CompanionState?
-        switch (self.companion, other.companion) {
-        case let (mine?, theirs?): companion = mine.merged(with: theirs)
-        case let (mine, theirs): companion = mine ?? theirs
-        }
-        return CloudSave(progression: progression.merged(with: other.progression),
+        let progression = progression.merged(with: other.progression)
+        let companions = CompanionRoster.merge((companion, companionRoster ?? CompanionRoster()),
+                                               (other.companion, other.companionRoster ?? CompanionRoster()),
+                                               lifetimeMeters: progression.lifetimeMeters)
+        return CloudSave(progression: progression,
                          wallet: wallet.merged(with: other.wallet),
                          journal: journal.merged(with: other.journal),
                          ledger: ledger.merged(with: other.ledger),
-                         companion: companion,
+                         companion: companions.active,
                          // A phone still on the default look takes the saved one.
                          showcase: (showcase == nil || showcase == ProfileShowcase()) ? (other.showcase ?? showcase) : showcase,
                          collections: (collections ?? CollectionState()).merged(with: other.collections ?? CollectionState()),
+                         companionRoster: companions.roster.resting.isEmpty ? nil : companions.roster,
                          savedAt: max(savedAt, other.savedAt))
     }
 }

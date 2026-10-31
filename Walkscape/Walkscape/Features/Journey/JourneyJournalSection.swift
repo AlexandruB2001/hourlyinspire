@@ -1,12 +1,22 @@
 import SwiftUI
 import WalkscapeDomain
 
-/// Your companion and how close it is to growing.
+/// Your companion and how close it is to growing. Tap for its evolutions,
+/// your other companions and adoption.
 struct CompanionCard: View {
     @Environment(AppModel.self) private var model
+    @State private var open = false
 
     var body: some View {
         if let companion = model.companion, let species = companion.species, let growth = model.companionGrowth {
+            Button { open = true } label: { card(companion, species: species, growth: growth) }
+                .buttonStyle(.plain)
+                .accessibilityHint("Shows its evolutions and your other companions")
+                .sheet(isPresented: $open) { CompanionSheet() }
+        }
+    }
+
+    private func card(_ companion: CompanionState, species: CompanionSpecies, growth: CompanionGrowth) -> some View {
             HStack(spacing: Theme.Spacing.m) {
                 ZStack {
                     RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
@@ -37,10 +47,190 @@ struct CompanionCard: View {
                         .foregroundStyle(Theme.Palette.cream.opacity(0.9))
                 }
                 Spacer(minLength: 0)
+                Image(systemName: "chevron.right").foregroundStyle(Theme.Palette.creamDim)
             }
             .pixelPanel()
             .accessibilityElement(children: .combine)
+    }
+}
+
+/// Your companion up close: its evolutions, your other companions (swap
+/// freely) and new species to adopt.
+struct CompanionSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var adopting: CompanionSpecies?
+    @State private var message: String?
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                    if let companion = model.companion, let species = companion.species, let growth = model.companionGrowth {
+                        header(companion, species: species, growth: growth)
+                        evolutions(species: species, growth: growth, accessories: companion.wornAccessories)
+                        team(active: companion)
+                        adoption(active: companion)
+                    }
+                    if let message {
+                        Text(message).font(Theme.Typography.caption).foregroundStyle(Theme.Palette.ember)
+                    }
+                }
+                .padding(Theme.Spacing.l)
+            }
+            .background(Theme.Palette.night.ignoresSafeArea())
+            .navigationTitle("Companions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(Theme.Palette.night, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.foregroundStyle(Theme.Palette.gold) }
+            }
+            .confirmationDialog("Adopt \(adopting?.name ?? "")?", isPresented: Binding(
+                get: { adopting != nil }, set: { if !$0 { adopting = nil } }), titleVisibility: .visible) {
+                Button("Adopt for \(CompanionRoster.adoptionCost) coins") {
+                    guard let species = adopting else { return }
+                    message = model.adoptCompanion(species)
+                }
+            } message: {
+                Text("\(CompanionRoster.adoptionCost) coins from your \(model.wallet.coins). It starts as a hatchling and walks with you; your current companion rests and keeps its growth.")
+            }
         }
+    }
+
+    private func header(_ companion: CompanionState, species: CompanionSpecies, growth: CompanionGrowth) -> some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.m) {
+            companionImage(species.id, kilometres: growth.kilometres, accessories: companion.wornAccessories, size: 96, pixel: 4.4)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                Eyebrow(growth.stage.name, color: Theme.Palette.gold)
+                Text(species.name)
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Palette.cream)
+                Text(species.tagline)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                Text(species.personality)
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.cream.opacity(0.9))
+                Text("\(growth.kilometres) km walked together since \(companion.adoptedOn.isoString)")
+                    .font(Theme.Typography.micro)
+                    .foregroundStyle(Theme.Palette.creamDim)
+            }
+        }
+        .pixelPanel(fill: Theme.Palette.forestRaised)
+    }
+
+    /// Every stage, reached ones in colour, the rest as silhouettes.
+    private func evolutions(species: CompanionSpecies, growth: CompanionGrowth, accessories: [String]) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            SectionHeader(title: "Evolutions")
+            Text(species.growthHint)
+                .font(Theme.Typography.caption)
+                .foregroundStyle(Theme.Palette.creamDim)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(alignment: .top, spacing: Theme.Spacing.s) {
+                    ForEach(CompanionGrowth.Stage.allCases, id: \.self) { stage in
+                        let reached = growth.stage >= stage
+                        VStack(spacing: Theme.Spacing.xs) {
+                            companionImage(species.id, kilometres: stage.startKilometres, accessories: [], size: 64, pixel: 2.8)
+                                .colorMultiply(reached ? .white : .black)
+                                .opacity(reached ? 1 : 0.45)
+                                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
+                                    .strokeBorder(stage == growth.stage ? Theme.Palette.gold : .clear, lineWidth: 3))
+                            Text(stage.name)
+                                .font(Theme.Typography.micro)
+                                .foregroundStyle(reached ? Theme.Palette.cream : Theme.Palette.creamDim)
+                            Text(stage.startKilometres == 0 ? "Start" : "\(stage.startKilometres) km")
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(reached ? Theme.Palette.gold : Theme.Palette.creamDim)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(stage.name), \(stage.startKilometres) kilometres, \(reached ? "reached" : "not reached yet")")
+                    }
+                }
+            }
+            if let left = growth.kilometresToNextStage, let next = growth.stage.next {
+                Text("\(left) km more together until it becomes a \(next.name).")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.gold)
+            }
+        }
+        .pixelPanel()
+    }
+
+    /// The companion walking now and any resting at camp.
+    @ViewBuilder private func team(active: CompanionState) -> some View {
+        let resting = model.companionRoster.resting
+        if !resting.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                SectionHeader(title: "Your companions")
+                Text("Swap any time. Resting companions keep their growth and grow again when they walk with you.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                ForEach(resting, id: \.state.speciesID) { entry in
+                    if let species = entry.state.species {
+                        HStack(spacing: Theme.Spacing.m) {
+                            companionImage(species.id, kilometres: entry.growth.kilometres, accessories: entry.state.wornAccessories,
+                                           size: 56, pixel: 2.4)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(species.name)
+                                    .font(Theme.Typography.headline)
+                                    .foregroundStyle(Theme.Palette.cream)
+                                Text("\(entry.growth.stage.name) · \(entry.growth.kilometres) km · resting")
+                                    .font(Theme.Typography.micro)
+                                    .foregroundStyle(Theme.Palette.creamDim)
+                            }
+                            Spacer(minLength: 0)
+                            Button("Walk together") { model.swapCompanion(to: species.id) }
+                                .buttonStyle(.pixelSecondary)
+                        }
+                    }
+                }
+            }
+            .pixelPanel()
+        }
+    }
+
+    /// Species not owned yet.
+    @ViewBuilder private func adoption(active: CompanionState) -> some View {
+        let adoptable = model.companionRoster.adoptable(active: active)
+        if !adoptable.isEmpty {
+            VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+                SectionHeader(title: "Adopt a companion")
+                CreationCostRow(cost: CompanionRoster.adoptionCost, balance: model.wallet.coins)
+                ForEach(adoptable) { species in
+                    HStack(spacing: Theme.Spacing.m) {
+                        companionImage(species.id, kilometres: 0, accessories: [], size: 56, pixel: 2.4)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(species.name)
+                                .font(Theme.Typography.headline)
+                                .foregroundStyle(Theme.Palette.cream)
+                            Text(species.tagline)
+                                .font(Theme.Typography.micro)
+                                .foregroundStyle(Theme.Palette.creamDim)
+                        }
+                        Spacer(minLength: 0)
+                        let affordable = model.wallet.coins >= CompanionRoster.adoptionCost
+                        Button { adopting = species } label: { CoinPriceLabel(text: "Adopt", price: CompanionRoster.adoptionCost) }
+                            .buttonStyle(.pixel)
+                            .disabled(!affordable)
+                            .opacity(affordable ? 1 : 0.5)
+                    }
+                }
+            }
+            .pixelPanel()
+        }
+    }
+
+    private func companionImage(_ speciesID: String, kilometres: Int, accessories: [String], size: CGFloat, pixel: CGFloat)
+        -> some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
+            PixelImageView(image: PixelArtCache.shared.companion(speciesID, kilometres: kilometres, accessories: accessories,
+                                                                skin: speciesID == model.companion?.speciesID ? model.companionSkin : nil),
+                           pixel: pixel)
+        }
+        .frame(width: size, height: size)
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
     }
 }
 

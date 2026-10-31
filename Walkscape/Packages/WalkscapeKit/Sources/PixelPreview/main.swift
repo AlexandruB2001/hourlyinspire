@@ -37,6 +37,21 @@ for biome in Biome.allCases {
     write(frame, "scene-\(biome.rawValue)", scale: 3)
 }
 
+// Looks: every hairstyle in each outfit shape, then the skin tones.
+var looks = PixelCanvas(width: (HairStyle.allCases.count + 1) * 18, height: (BodyStyle.allCases.count + 1) * 26)
+for (row, body) in BodyStyle.allCases.enumerated() {
+    for (column, hair) in HairStyle.allCases.enumerated() {
+        looks.draw(CharacterSprites.walkFrame(0, avatarID: CharacterLook(colors: "plum", hair: hair, body: body).avatarID),
+                   x: column * 18 + 1, y: row * 26 + 1)
+    }
+}
+for (column, tone) in SkinTone.allCases.enumerated() {
+    looks.draw(CharacterSprites.idleFrame(avatarID: CharacterLook(hair: .pigtails, skin: tone).avatarID,
+                                          outfit: ["flower-crown", "yellow-wellies"]),
+               x: column * 18 + 1, y: BodyStyle.allCases.count * 26 + 1)
+}
+write(looks, "looks", scale: 6, background: PixelColor(0x9CC2D8))
+
 // Items.
 var items = PixelCanvas(width: ItemSprites.allIDs.count * 12, height: 12)
 for (i, id) in ItemSprites.allIDs.enumerated() { items.draw(ItemSprites.render(id), x: i * 12 + 1, y: 1) }

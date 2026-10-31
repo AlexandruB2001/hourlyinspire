@@ -15,9 +15,11 @@ public struct ShowcaseService: Sendable {
         let titleID: String?
         let frameID: String?
         let favoriteZoneID: String?
+        /// Missing before migration 20261108000001.
+        let outfit: [String]?
 
         enum CodingKeys: String, CodingKey {
-            case userID = "user_id", titleID = "title_id", frameID = "frame_id", favoriteZoneID = "favorite_zone_id"
+            case userID = "user_id", titleID = "title_id", frameID = "frame_id", favoriteZoneID = "favorite_zone_id", outfit
         }
     }
 
@@ -41,12 +43,19 @@ public struct ShowcaseService: Sendable {
                                                      p_favorite_zone_id: showcase.favoriteZoneID))
     }
 
+    /// Shares the walker's worn items with friends and teammates.
+    public func publish(outfit: [String]) async throws {
+        struct Params: Encodable { let p_outfit: [String] }
+        try await api.call("set_my_outfit", Params(p_outfit: outfit))
+    }
+
     /// Friends' and teammates' showcases, keyed by user id (lowercased, like friend ids).
     public func friends() async throws -> [UserID: PublicShowcase] {
         let rows: [Row] = try await api.call("friend_showcases")
         return Dictionary(rows.map { row in
             let id = UserID(row.userID.lowercased())
-            return (id, PublicShowcase(userID: id, titleID: row.titleID, frameID: row.frameID, favoriteZoneID: row.favoriteZoneID))
+            return (id, PublicShowcase(userID: id, titleID: row.titleID, frameID: row.frameID, favoriteZoneID: row.favoriteZoneID,
+                                       outfit: row.outfit ?? []))
         }, uniquingKeysWith: { first, _ in first })
     }
 }
