@@ -73,8 +73,6 @@ select tests.give_coins(500);
 select duplicate as hoard_duplicate, refund as hoard_refund, coins as hoard_net, rarity as hoard_rarity
 from public.open_mystery_box('00000000-0000-0000-0000-0000000000d7', current_date) \gset
 select tests.ok(:'hoard_duplicate'::boolean, 'owning everything, the box still opens and gives a duplicate');
-select tests.ok(:hoard_refund = (select coins from public.coin_prices where item = 'duplicate-' || :'hoard_rarity'),
-                'with the refund for its rarity');
 select tests.ok(:hoard_net = 150 - :hoard_refund, 'charging only the net price');
 select tests.ok(tests.coins() = 500 - :hoard_net, 'so the balance moves by the net price (it can rise for a legendary)');
 select tests.ok((select duplicate and coins = :hoard_net
@@ -84,6 +82,8 @@ select tests.ok(tests.coins() = 500 - :hoard_net, 'and changes nothing');
 reset role;
 select tests.ok(not exists (select 1 from public.owned_items where user_id = tests.id('hoard') and source = 'mystery-box'),
                 'a duplicate adds nothing to the inventory');
+select tests.ok(:hoard_refund = (select coins from public.coin_prices where item = 'duplicate-' || :'hoard_rarity'),
+                'the refund matches its rarity');
 
 -- A duplicate legendary pays out more than the box cost (odds can't be forced,
 -- so make every prize legendary inside a transaction that is rolled back).
