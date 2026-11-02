@@ -59,7 +59,7 @@ private struct WardrobeHeader: View {
 
             VStack(alignment: .leading, spacing: Theme.Spacing.s) {
                 StatBlock(value: "\(model.wallet.coins)", label: "coins to spend")
-                Text("Earn \(rules.coinsPerKilometre) coins every kilometre. Chests on the trail hold \(rules.coinsPerChest) more.")
+                Text("Earn \(rules.coinsPerKilometre) coins every kilometre. Chests on the trail hold \(WalletState.chestCoinRange.lowerBound)\u{2013}\(WalletState.chestCoinRange.upperBound) more.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
                 Text("\(owned)/\(ShopCatalog.items.count) outfit pieces collected")

@@ -3,6 +3,7 @@ import WalkscapeDomain
 
 struct ProfileView: View {
     @Environment(AppModel.self) private var model
+    @State private var confirmingTesterChest = false
 
     var body: some View {
         NavigationStack {
@@ -23,6 +24,20 @@ struct ProfileView: View {
             .background(Theme.Palette.night.ignoresSafeArea())
             .navigationTitle("Profile")
             .toolbarBackground(Theme.Palette.night, for: .navigationBar)
+            .toolbar {
+                // TEMPORARY tester chest (see AppModel.testerChest).
+                if model.showsTesterChest {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { confirmingTesterChest = true } label: { ItemIcon(spriteID: "chest", pixel: 2.4) }
+                            .accessibilityLabel("Tester chest with 10,000 coins")
+                    }
+                }
+            }
+            .confirmationDialog("Tester chest", isPresented: $confirmingTesterChest, titleVisibility: .visible) {
+                Button("Claim 10,000 coins") { model.claimTesterChest() }
+            } message: {
+                Text("A one-time chest for beta testing. It disappears once claimed.")
+            }
         }
     }
 }

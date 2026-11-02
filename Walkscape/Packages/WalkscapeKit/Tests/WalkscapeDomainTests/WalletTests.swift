@@ -91,8 +91,9 @@ final class WalletTests: XCTestCase {
         XCTAssertEqual(wallet.pendingChests, 3)
 
         let coinsBefore = wallet.coins
-        XCTAssertEqual(wallet.openChest(), 5)
-        XCTAssertEqual(wallet.coins, coinsBefore + 5)
+        let first = WalletState.chestCoins(day: today.isoString, index: 0)
+        XCTAssertEqual(wallet.openChest(), first)
+        XCTAssertEqual(wallet.coins, coinsBefore + first)
         XCTAssertEqual(wallet.pendingChests, 2)
         _ = wallet.openChest()
         _ = wallet.openChest()
@@ -239,11 +240,12 @@ final class WalletTests: XCTestCase {
         _ = phoneA.apply(progress(1_000))
         var phoneB = phoneA
         XCTAssertEqual(phoneA.pendingChests, 2)
-        XCTAssertEqual(phoneA.openChest(), 5)
-        XCTAssertEqual(phoneB.openChest(), 5)
+        let first = WalletState.chestCoins(day: today.isoString, index: 0)
+        XCTAssertEqual(phoneA.openChest(), first)
+        XCTAssertEqual(phoneB.openChest(), first, "both phones agree on what the chest holds")
         let merged = phoneA.merged(with: phoneB)
         XCTAssertEqual(merged.pendingChests, 1, "the same chest opened on both phones")
-        XCTAssertEqual(merged.coins, 10 + 5)
+        XCTAssertEqual(merged.coins, 10 + first)
     }
 
     func testOlderSavesKeepTheirCoinsAndChests() throws {
@@ -319,5 +321,34 @@ final class WalletTests: XCTestCase {
         var wallet = WalletState(rules: CoinRules(starterCoins: 0))
         _ = wallet.apply(progress(1_000, day: LocalDay(year: 2026, month: 11, day: 3)))
         XCTAssertEqual(wallet.apply(progress(9_000, day: old)), .none, "already paid by the older wallet")
+    }
+
+    // MARK: Chest amounts
+
+    func testChestsHoldFiveToTwentyFiveCoinsAndBigAmountsAreRarer() {
+        var counts: [Int: Int] = [:]
+        for day in 1...28 {
+            let key = LocalDay(year: 2026, month: 11, day: day).isoString
+            for index in 0..<100 { counts[WalletState.chestCoins(day: key, index: index), default: 0] += 1 }
+        }
+        XCTAssertEqual(Set(counts.keys), [5, 10, 15, 20, 25], "every amount is a multiple of 5 from 5 to 25")
+        XCTAssertGreaterThan(counts[5]!, counts[10]!)
+        XCTAssertGreaterThan(counts[10]!, counts[15]!)
+        XCTAssertGreaterThan(counts[15]!, counts[20]!)
+        XCTAssertGreaterThan(counts[20]!, counts[25]!)
+        XCTAssertLessThan(Double(counts[25]!) / 2_800, 0.06, "25 coins stays rare")
+        XCTAssertEqual(WalletState.chestCoinOdds.reduce(0) { $0 + $1.weight }, 100)
+        XCTAssertEqual(WalletState.chestCoins(day: "2026-11-05", index: 3), WalletState.chestCoins(day: "2026-11-05", index: 3),
+                       "fixed per chest")
+        XCTAssertEqual(WalletState.chestCoins(day: "legacy", index: 0), 5)
+    }
+
+    func testRandomChestsNeverLowerWhatADayAlreadyPaid() {
+        var wallet = WalletState(rules: CoinRules(starterCoins: 0))
+        _ = wallet.apply(progress(3_000))
+        while wallet.openChest() != nil {}
+        let paid = wallet.coins
+        XCTAssertEqual(wallet.openChest(), nil)
+        XCTAssertEqual(wallet.coins, paid, "opening again pays nothing")
     }
 }

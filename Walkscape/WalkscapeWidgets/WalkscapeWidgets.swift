@@ -137,7 +137,7 @@ struct JourneyWidgetView: View {
                     .lineLimit(1)
                 ProgressCapsule(fraction: 1 - Double(snapshot.metersToNextZone) / 1_000)
                     .frame(width: 110, height: 7)
-                Text("\(Self.kilometres(snapshot.metersToNextZone)) to \(snapshot.nextZoneName)")
+                Text("\(DistanceFormatting.remaining(snapshot.metersToNextZone)) to \(snapshot.nextZoneName)")
                     .font(.system(size: 10, weight: .semibold, design: .rounded))
                     .foregroundStyle(Palette.cream.opacity(0.85))
                     .lineLimit(1)
@@ -153,7 +153,7 @@ struct JourneyWidgetView: View {
             PixelScene(snapshot: snapshot, width: 136, height: 64, walkerPosition: 0.24)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, in \(snapshot.zoneName). \(Self.kilometres(snapshot.metersToNextZone)) to \(snapshot.nextZoneName).")
+        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, in \(snapshot.zoneName). \(DistanceFormatting.remaining(snapshot.metersToNextZone)) to \(snapshot.nextZoneName).")
     }
 
     /// The scene with the walker and companion on top, and a panel underneath with
@@ -204,7 +204,7 @@ struct JourneyWidgetView: View {
                             .font(.system(size: 12, weight: .heavy, design: .rounded))
                             .foregroundStyle(Palette.cream)
                         Spacer(minLength: 4)
-                        Text("\(Self.kilometres(snapshot.metersToNextZone)) to \(snapshot.nextZoneName)")
+                        Text("\(DistanceFormatting.remaining(snapshot.metersToNextZone)) to \(snapshot.nextZoneName)")
                             .font(.system(size: 10, weight: .semibold, design: .rounded))
                             .foregroundStyle(Palette.cream.opacity(0.85))
                     }
@@ -241,9 +241,10 @@ struct JourneyWidgetView: View {
         .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, \(Self.kilometres(snapshot.totalMeters)) in total, in \(snapshot.zoneName).")
     }
 
+    /// Same text as the app (rounded down to 0.1 km), so the widget and the
+    /// Journey never disagree by 0.1 km.
     static func kilometres(_ meters: Int) -> String {
-        let km = Double(max(0, meters)) / 1_000
-        return km >= 100 ? "\(Int(km).formatted()) km" : String(format: "%.1f km", km)
+        DistanceFormatting.kilometres(meters)
     }
 }
 

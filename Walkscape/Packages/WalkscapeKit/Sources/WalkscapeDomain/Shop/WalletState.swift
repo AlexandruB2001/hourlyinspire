@@ -249,6 +249,28 @@ public struct WalletState: Codable, Hashable, Sendable {
         return chest.index < (chestsOpened[chest.day] ?? 0)
     }
 
+    /// What a chest can hold, and how often (weights out of 100): bigger
+    /// amounts are rarer. 5 coins in half of all chests, 25 in 3 out of 100.
+    public static let chestCoinOdds: [(coins: Int, weight: Int)] = [(5, 50), (10, 25), (15, 14), (20, 8), (25, 3)]
+    public static var chestCoinRange: ClosedRange<Int> {
+        chestCoinOdds.map(\.coins).min()!...chestCoinOdds.map(\.coins).max()!
+    }
+
+    /// The coins in chest `index` of `day`: random-looking, but fixed by the
+    /// chest's id, so every phone agrees and opening it again changes nothing.
+    /// Chests waiting in older saves ("legacy") hold the old 5 coins.
+    public static func chestCoins(day key: String, index: Int) -> Int {
+        guard key != "legacy" else { return 5 }
+        var hash: UInt64 = 1469598103934665603
+        for byte in "coins#\(key)#\(index)".utf8 { hash = (hash ^ UInt64(byte)) &* 1099511628211 }
+        var roll = Int(hash % 100)
+        for odds in chestCoinOdds {
+            if roll < odds.weight { return odds.coins }
+            roll -= odds.weight
+        }
+        return chestCoinOdds[0].coins
+    }
+
     /// Opens one waiting chest (the oldest first). Returns the coins it held, or nil if there were none.
     public mutating func openChest(rules: CoinRules = .standard) -> Int? {
         guard let id = pendingChestIDs.first else { return nil }
@@ -262,8 +284,12 @@ public struct WalletState: Codable, Hashable, Sendable {
         guard let chest = Self.parseChestID(id), chest.index == (chestsOpened[chest.day] ?? 0),
               chest.index < (chestsFound[chest.day] ?? 0) else { return nil }
         chestsOpened[chest.day] = chest.index + 1
-        earned[Self.chestKey(chest.day)] = (chest.index + 1) * rules.coinsPerChest
-        return rules.coinsPerChest
+        // The day's chest coins so far (chests open in order). Never lowered:
+        // days opened before chests were randomised keep what they paid.
+        let key = Self.chestKey(chest.day)
+        let total = (0...chest.index).reduce(0) { $0 + Self.chestCoins(day: chest.day, index: $1) }
+        earned[key] = max(earned[key] ?? 0, total)
+        return Self.chestCoins(day: chest.day, index: chest.index)
     }
 
     static func parseChestID(_ id: String) -> (day: String, index: Int)? {

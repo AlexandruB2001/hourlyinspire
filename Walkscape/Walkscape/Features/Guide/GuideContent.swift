@@ -56,7 +56,7 @@ enum GuideContent {
         .init(title: "Coins for walking",
               body: "Every whole kilometre you walk in a day earns \(coins.coinsPerKilometre) coins."),
         .init(title: "Trail chests",
-              body: "\(coins.chestsPerKilometre) chests are hidden along each kilometre of today's walk. When you pass one, it bounces on the Journey scene: tap it to open it for \(coins.coinsPerChest) coins. About \(Int(TreasureCatalog.chestTreasureChance * 100)) in 100 chests also hold a treasure."),
+              body: "\(coins.chestsPerKilometre) chests are hidden along each kilometre of today's walk. When you pass one, it bounces on the Journey scene: tap it to open it for \(WalletState.chestCoinRange.lowerBound) to \(WalletState.chestCoinRange.upperBound) coins (the bigger amounts are rarer). About \(Int(TreasureCatalog.chestTreasureChance * 100)) in 100 chests also hold a treasure."),
         .init(title: "Once per chest",
               body: "Each chest belongs to the day and spot you found it, and can be opened once. Unopened chests wait for you, even after midnight."),
         .init(title: "Other ways to earn",

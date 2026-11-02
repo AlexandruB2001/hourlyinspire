@@ -389,6 +389,24 @@ final class AppModel {
         }
     }
 
+    // MARK: Tester chest (TEMPORARY: remove in the build after it's claimed)
+
+    /// A one-time 10,000-coin chest for testing the economy. Only in TestFlight
+    /// builds (never the App Store), only for Apple Health data, once per player.
+    static let testerChest = Reward(id: "tester-chest-2026-11", coins: 10_000)
+    static let isTestFlightBuild = Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+
+    var showsTesterChest: Bool {
+        Self.isTestFlightBuild && dataSource == .appleHealth && !ledger.hasClaimed(Self.testerChest.id)
+    }
+
+    func claimTesterChest() {
+        guard showsTesterChest, ledger.claim(Self.testerChest, into: &wallet) else { return }
+        store.save(ledger, for: .appleHealth)
+        store.save(wallet, for: .appleHealth)
+        Task { await syncCloudSave(force: true) }
+    }
+
     /// Days re-read after the fact. The server accepts uploads up to 7 UTC days
     /// back; 6 local days stays inside that in every time zone.
     static let catchUpDays = 6

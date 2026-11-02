@@ -93,7 +93,7 @@ public enum GameNotifications {
         guard count > 0 else { return nil }
         let title = count == 1 ? "You found a chest!" : "You found \(count) chests!"
         return GameNotification(id: "chest-\(day.isoString)-\(total)", category: .rewards, title: title,
-                                body: "Claim it now for \(rules.coinsPerChest) coins each.", destination: .journey)
+                                body: "Claim it now: each holds \(WalletState.chestCoinRange.lowerBound) to \(WalletState.chestCoinRange.upperBound) coins.", destination: .journey)
     }
 
     public static func journal(_ entry: JournalEntry) -> GameNotification {

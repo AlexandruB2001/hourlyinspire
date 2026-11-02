@@ -22,7 +22,7 @@ enum GameTip: String, CaseIterable, Identifiable {
         let rules = CoinRules.standard
         switch self {
         case .firstChest:
-            return "Chests are hidden along every kilometre you walk, \(rules.chestsPerKilometre) per kilometre. Tap the bouncing chest on the scene to open it for \(rules.coinsPerChest) coins."
+            return "Chests are hidden along every kilometre you walk, \(rules.chestsPerKilometre) per kilometre. Tap the bouncing chest on the scene to open it for \(WalletState.chestCoinRange.lowerBound)\u{2013}\(WalletState.chestCoinRange.upperBound) coins."
         case .firstZone:
             return "Every kilometre you walk today takes you into the next zone. The first time you reach one, you find its relic."
         case .companionGrowth:

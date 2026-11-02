@@ -29,7 +29,9 @@ final class ChestTests: XCTestCase {
         while wallet.openChest() != nil {}
         for _ in 0..<10 { wallet = try relaunch(wallet, walked: 2_000) }
         XCTAssertTrue(wallet.pendingChestIDs.isEmpty, "opened chests never come back")
-        XCTAssertEqual(wallet.coins, 20 + 4 * 5)
+        XCTAssertEqual(wallet.coins, 20 + ids.compactMap(WalletState.parseChestID).reduce(0) {
+            $0 + WalletState.chestCoins(day: $1.day, index: $1.index)
+        })
     }
 
     func testRepeatedHealthSyncsDontDuplicateChests() {
@@ -59,7 +61,7 @@ final class ChestTests: XCTestCase {
         var wallet = WalletState(rules: CoinRules(starterCoins: 0))
         _ = wallet.apply(progress(1_000))
         let id = wallet.pendingChestIDs[0]
-        XCTAssertEqual(wallet.openChest(id: id), 5)
+        XCTAssertEqual(wallet.openChest(id: id), WalletState.chestCoins(day: today.isoString, index: 0))
         XCTAssertNil(wallet.openChest(id: id))
         XCTAssertNil(wallet.openChest(id: "\(today.isoString)#99"), "a chest that was never found")
         XCTAssertNil(wallet.openChest(id: "nonsense"))

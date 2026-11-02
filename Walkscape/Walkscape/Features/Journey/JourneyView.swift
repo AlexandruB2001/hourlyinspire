@@ -132,7 +132,7 @@ private struct ChestPopUp: View {
                 .buttonStyle(.plain)
                 .transition(.scale.combined(with: .opacity))
                 .accessibilityLabel(pending > 1 ? "\(pending) chests found on your walk" : "A chest found on your walk")
-                .accessibilityHint("Opens a chest for \(CoinRules.standard.coinsPerChest) coins")
+                .accessibilityHint("Opens a chest for \(WalletState.chestCoinRange.lowerBound) to \(WalletState.chestCoinRange.upperBound) coins")
             }
         }
         .animation(.spring(response: 0.4, dampingFraction: 0.6), value: pending)
