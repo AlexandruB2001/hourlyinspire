@@ -36,3 +36,17 @@ select tests.ok(not exists (select 1 from public.player_saves where user_id = te
 
 select tests.ok(not has_function_privilege('anon', 'public.put_player_save(jsonb, integer)', 'execute'),
                 'anon cannot write saves');
+
+-- A conflict must never be SQLSTATE 40001: PostgREST retries those forever.
+select tests.as_user('alice');
+do $$
+begin
+    perform public.put_player_save('{"schema":1}', 999999);
+    raise exception 'expected a conflict';
+exception
+    when serialization_failure then raise exception 'save_conflict is still SQLSTATE 40001 (PostgREST would retry it forever)';
+    when others then
+        if sqlerrm <> 'save_conflict' then raise; end if;
+end $$;
+select tests.ok(true, 'save conflicts use a code PostgREST does not retry');
+reset role;

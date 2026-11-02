@@ -452,7 +452,7 @@ begin
         returning version into new_version;
     end if;
     if new_version is null then
-        raise exception 'save_conflict' using errcode = '40001';
+        raise exception 'save_conflict' using errcode = 'P0001';
     end if;
     return new_version;
 end;
