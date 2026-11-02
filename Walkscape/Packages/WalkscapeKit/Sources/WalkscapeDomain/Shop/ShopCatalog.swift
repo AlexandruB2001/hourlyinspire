@@ -2,10 +2,12 @@ import Foundation
 
 /// Where an item is worn. One item per slot.
 public enum EquipmentSlot: String, Codable, Sendable, Hashable, CaseIterable {
-    case head, face, neck, feet, back
+    /// Tops come first: they recolour the tunic, and scarves (neck) recolour over a hoodie's collar.
+    case top, head, face, neck, feet, back
 
     public var displayName: String {
         switch self {
+        case .top: return "Tops"
         case .head: return "Hats"
         case .face: return "Glasses"
         case .neck: return "Scarves"
@@ -57,7 +59,7 @@ public enum ShopCatalog {
     /// Outfits and companion accessories only come out of the Mystery Box.
     public static let mysteryBoxPrice = 150
 
-    /// 45 items: 18 common, 14 rare, 9 epic, 4 legendary.
+    /// 58 items: 23 common, 20 rare, 11 epic, 4 legendary.
     public static let items: [ShopItem] = [
         // Hats
         ShopItem(id: "straw-hat", name: "Straw Hat", detail: "Keeps the sun off on long meadow walks.", slot: .head, rarity: .common),
@@ -109,6 +111,20 @@ public enum ShopCatalog {
         ShopItem(id: "hero-cape", name: "Hero Cape", detail: "Flaps dramatically in the wind.", slot: .back, rarity: .epic),
         ShopItem(id: "fairy-wings", name: "Fairy Wings", detail: "Glassy wings that catch the light.", slot: .back, rarity: .epic),
         ShopItem(id: "phoenix-wings", name: "Phoenix Wings", detail: "Fiery wings for the most dedicated walkers.", slot: .back, rarity: .legendary),
+        // Tops
+        ShopItem(id: "white-tee", name: "White Tee", detail: "A crisp white tee for sunny strolls.", slot: .top, rarity: .common),
+        ShopItem(id: "red-tee", name: "Red Tee", detail: "Bright red, easy to spot on the trail.", slot: .top, rarity: .common),
+        ShopItem(id: "blue-tee", name: "Blue Tee", detail: "Sky blue and soft as a cloud.", slot: .top, rarity: .common),
+        ShopItem(id: "yellow-tee", name: "Sunny Tee", detail: "A cheerful yellow tee.", slot: .top, rarity: .common),
+        ShopItem(id: "pink-tee", name: "Blossom Tee", detail: "Soft pink, like orchard blossom.", slot: .top, rarity: .common),
+        ShopItem(id: "cream-knit-sweater", name: "Cream Knit Sweater", detail: "Chunky cream knit with little berry dots.", slot: .top, rarity: .rare),
+        ShopItem(id: "forest-sweater", name: "Forest Sweater", detail: "Pine green with a cream stripe.", slot: .top, rarity: .rare),
+        ShopItem(id: "berry-sweater", name: "Berry Sweater", detail: "Purple knit with a pink band.", slot: .top, rarity: .rare),
+        ShopItem(id: "sailor-sweater", name: "Sailor Sweater", detail: "Navy and cream stripes for seaside walks.", slot: .top, rarity: .rare),
+        ShopItem(id: "grey-hoodie", name: "Cosy Grey Hoodie", detail: "The comfiest hoodie, hood and all.", slot: .top, rarity: .rare),
+        ShopItem(id: "sunset-hoodie", name: "Sunset Hoodie", detail: "Warm orange, like the end of a long walk.", slot: .top, rarity: .rare),
+        ShopItem(id: "lavender-hoodie", name: "Lavender Hoodie", detail: "Soft lavender from the fields past the orchard.", slot: .top, rarity: .epic),
+        ShopItem(id: "starry-hoodie", name: "Starry Night Hoodie", detail: "Midnight blue, scattered with tiny stars.", slot: .top, rarity: .epic),
     ]
 
     /// Coin-shop items and premium outfit pieces (which are never sold for coins).

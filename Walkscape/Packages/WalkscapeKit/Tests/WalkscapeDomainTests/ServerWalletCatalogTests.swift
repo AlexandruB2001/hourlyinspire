@@ -10,8 +10,10 @@ final class ServerWalletCatalogTests: XCTestCase {
         while !FileManager.default.fileExists(atPath: folder.appendingPathComponent("supabase").path), folder.pathComponents.count > 1 {
             folder.deleteLastPathComponent()
         }
-        return try String(contentsOf: folder.appendingPathComponent("supabase/migrations/20261110000001_server_wallet_spending.sql"),
-                          encoding: .utf8)
+        let migrations = folder.appendingPathComponent("supabase/migrations")
+        return try FileManager.default.contentsOfDirectory(atPath: migrations.path).filter { $0.hasSuffix(".sql") }.sorted()
+            .map { try String(contentsOf: migrations.appendingPathComponent($0), encoding: .utf8) }
+            .joined(separator: "\n")
     }
 
     func festivalWindow(of itemID: String) -> String {

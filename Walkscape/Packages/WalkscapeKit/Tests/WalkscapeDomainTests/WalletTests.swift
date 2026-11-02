@@ -30,10 +30,10 @@ final class WalletTests: XCTestCase {
 
     func testCatalogHasThirtyUniqueItemsAcrossRarities() {
         let items = ShopCatalog.items
-        XCTAssertEqual(items.count, 45)
-        XCTAssertEqual(Set(items.map(\.id)).count, 45)
+        XCTAssertEqual(items.count, 58)
+        XCTAssertEqual(Set(items.map(\.id)).count, 58)
         let counts = Dictionary(grouping: items, by: \.rarity).mapValues(\.count)
-        XCTAssertEqual(counts, [.common: 18, .rare: 14, .epic: 9, .legendary: 4])
+        XCTAssertEqual(counts, [.common: 23, .rare: 20, .epic: 11, .legendary: 4])
         XCTAssertEqual(Set(items.map(\.slot)), Set(EquipmentSlot.allCases))
         XCTAssertEqual(Rarity.allCases.map(\.mysteryBoxWeight).reduce(0, +), 100)
         XCTAssertLessThan(Rarity.rare, Rarity.legendary)
