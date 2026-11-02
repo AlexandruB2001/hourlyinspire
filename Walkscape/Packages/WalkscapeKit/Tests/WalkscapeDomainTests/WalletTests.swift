@@ -91,9 +91,9 @@ final class WalletTests: XCTestCase {
         XCTAssertEqual(wallet.pendingChests, 3)
 
         let coinsBefore = wallet.coins
-        let first = WalletState.chestCoins(day: today.isoString, index: 0)
-        XCTAssertEqual(wallet.openChest(), first)
-        XCTAssertEqual(wallet.coins, coinsBefore + first)
+        let chestCoins = WalletState.chestCoins(day: today.isoString, index: 0)
+        XCTAssertEqual(wallet.openChest(), chestCoins)
+        XCTAssertEqual(wallet.coins, coinsBefore + chestCoins)
         XCTAssertEqual(wallet.pendingChests, 2)
         _ = wallet.openChest()
         _ = wallet.openChest()
