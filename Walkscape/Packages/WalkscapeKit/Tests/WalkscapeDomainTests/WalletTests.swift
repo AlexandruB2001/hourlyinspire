@@ -137,20 +137,33 @@ final class WalletTests: XCTestCase {
                        "not while the Great Harvest is on")
     }
 
-    func testMysteryBoxOnlyGivesNewPrizesUntilSoldOut() {
-        let prizes = MysteryBox.prizes(on: LocalDay(year: 2026, month: 12, day: 1))
-        var wallet = wallet(coins: 150 * (prizes.count + 1))
-        var generator = SeededGenerator(state: 42)
-        var won = Set<String>()
-        for _ in prizes {
-            guard case .won(let prize) = wallet.openMysteryBox(from: prizes, using: &generator) else {
-                return XCTFail("expected a prize")
-            }
-            XCTAssertTrue(won.insert(prize.id).inserted, "duplicate \(prize.id)")
+    func testDuplicatesGiveCoinsBackByRarity() {
+        XCTAssertEqual(Rarity.allCases.map(\.duplicateRefund), [80, 100, 150, 200])
+        for rarity in Rarity.allCases {
+            let item = ShopCatalog.items.first { $0.rarity == rarity }!
+            var wallet = wallet(coins: 300)
+            var generator = SeededGenerator(state: 4)
+            XCTAssertEqual(wallet.openMysteryBox(from: [.outfit(item)], using: &generator), .won(.outfit(item)))
+            XCTAssertEqual(wallet.openMysteryBox(from: [.outfit(item)], using: &generator),
+                           .duplicate(.outfit(item), refund: rarity.duplicateRefund))
+            XCTAssertEqual(wallet.coins, 300 - 150 - (150 - rarity.duplicateRefund), "\(rarity): pays the net price")
         }
-        XCTAssertEqual(won, Set(prizes.map(\.id)))
-        XCTAssertEqual(wallet.openMysteryBox(from: prizes, using: &generator), .soldOut)
-        XCTAssertEqual(wallet.coins, 150, "a sold-out box costs nothing")
+    }
+
+    func testTheBoxNeverSellsOutAndItsOddsNeverChange() {
+        let prizes = MysteryBox.prizes(on: LocalDay(year: 2026, month: 12, day: 1))
+        var wallet = wallet(coins: 1_000_000)
+        var generator = SeededGenerator(state: 42)
+        for prize in prizes { give(prize.id, to: &wallet) }     // owns everything
+        var counts: [Rarity: Int] = [:]
+        for _ in 0..<4_000 {
+            guard case .duplicate(let prize, _) = wallet.openMysteryBox(from: prizes, using: &generator) else {
+                return XCTFail("owning everything, every box is a duplicate")
+            }
+            counts[prize.rarity, default: 0] += 1
+        }
+        XCTAssertEqual(Double(counts[.common] ?? 0) / 4_000, 0.60, accuracy: 0.03)
+        XCTAssertEqual(Double(counts[.legendary] ?? 0) / 4_000, 0.02, accuracy: 0.01, "legendaries stay rare")
     }
 
     func testMysteryBoxNeedsItsPrice() {

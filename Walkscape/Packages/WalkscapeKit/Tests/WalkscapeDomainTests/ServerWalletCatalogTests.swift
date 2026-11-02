@@ -45,6 +45,9 @@ final class ServerWalletCatalogTests: XCTestCase {
         XCTAssertTrue(sql.contains("('mystery-box', \(ShopCatalog.mysteryBoxPrice))"))
         XCTAssertTrue(sql.contains("('companion-adoption', \(CompanionRoster.adoptionCost))"))
         XCTAssertTrue(sql.contains("('rewarded-ad', \(AdRules.standard.rewardedCoins))"))
+        for rarity in Rarity.allCases {
+            XCTAssertTrue(sql.contains("('duplicate-\(rarity.rawValue)', \(rarity.duplicateRefund))"), "\(rarity) refund")
+        }
         for rarity in Rarity.allCases where rarity != .legendary {
             XCTAssertTrue(sql.contains("when '\(rarity.rawValue)' then \(rarity.mysteryBoxWeight)"), rarity.rawValue)
         }

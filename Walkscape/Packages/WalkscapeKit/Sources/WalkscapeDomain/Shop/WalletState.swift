@@ -45,6 +45,8 @@ public struct ReferralChest: Identifiable, Codable, Hashable, Sendable {
 public enum MysteryBoxResult: Hashable, Sendable {
     case won(MysteryBoxPrize)
     case notEnoughCoins(needed: Int)
+    /// An item you already own: `refund` coins came back.
+    case duplicate(MysteryBoxPrize, refund: Int)
     /// Nothing left to give.
     case soldOut
     /// The server couldn't sell one right now (offline, signed out...).
@@ -340,6 +342,22 @@ public struct WalletState: Codable, Hashable, Sendable {
         spent[key] = max(spent[key] ?? 0, amount)
     }
 
+    /// Records a duplicate Mystery Box the server settled: `net` is what it
+    /// charged after the refund, negative when the refund was bigger than the
+    /// box (paid as `earned["box-bonus-<request>"]`, the server's key).
+    public mutating func receiveServerDuplicate(chargeKey: String, net: Int) {
+        let request = chargeKey.hasPrefix("box-") ? String(chargeKey.dropFirst(4)) : chargeKey
+        settleDuplicate(key: chargeKey, bonusKey: "box-bonus-\(request)", net: net)
+    }
+
+    private mutating func settleDuplicate(key: String, bonusKey: String, net: Int) {
+        if net > 0 {
+            spent[key] = max(spent[key] ?? 0, net)
+        } else if net < 0 {
+            earned[bonusKey] = max(earned[bonusKey] ?? 0, -net)
+        }
+    }
+
     /// Records a purchase the server made and charged (a Mystery Box or a
     /// companion adoption) under the key it charged, with the item it gave.
     public mutating func receiveServerPurchase(chargeKey: String, coins: Int, itemID: String?) {
@@ -419,18 +437,19 @@ public struct WalletState: Codable, Hashable, Sendable {
     public func owns(_ item: ShopItem) -> Bool { ownedItemIDs.contains(item.id) }
     public func owns(itemID: String) -> Bool { ownedItemIDs.contains(itemID) }
 
-    /// Spends `ShopCatalog.mysteryBoxPrice` on a random prize you don't own
-    /// yet: the only way to get outfits and companion accessories. A rarity is
-    /// rolled by `Rarity.mysteryBoxWeight` (among rarities that still have
-    /// unowned prizes), then a prize of that rarity is picked evenly.
+    /// Spends `ShopCatalog.mysteryBoxPrice` on a random prize: the only way to
+    /// get outfits and companion accessories. A rarity is rolled by
+    /// `Rarity.mysteryBoxWeight`, then a prize of that rarity is picked evenly,
+    /// so the odds never change. An item you already own gives
+    /// `Rarity.duplicateRefund` coins back. (The server rolls the same way for
+    /// Apple Health players; this is for demo walking.)
     public mutating func openMysteryBox<G: RandomNumberGenerator>(from prizes: [MysteryBoxPrize],
                                                                   price: Int = ShopCatalog.mysteryBoxPrice,
                                                                   using generator: inout G) -> MysteryBoxResult {
-        let unowned = prizes.filter { !owns(itemID: $0.id) }
-        guard !unowned.isEmpty else { return .soldOut }
+        guard !prizes.isEmpty else { return .soldOut }
         guard coins >= price else { return .notEnoughCoins(needed: price - coins) }
 
-        let rarities = Rarity.allCases.filter { rarity in unowned.contains { $0.rarity == rarity } }
+        let rarities = Rarity.allCases.filter { rarity in prizes.contains { $0.rarity == rarity } }
         var roll = Int.random(in: 0..<rarities.reduce(0) { $0 + $1.mysteryBoxWeight }, using: &generator)
         var chosen = rarities[0]
         for rarity in rarities {
@@ -440,10 +459,15 @@ public struct WalletState: Codable, Hashable, Sendable {
             }
             roll -= rarity.mysteryBoxWeight
         }
-        let prize = unowned.filter { $0.rarity == chosen }.randomElement(using: &generator)!
-        spent["box-\(prize.id)"] = price
-        ownedItemIDs.insert(prize.id)
-        return .won(prize)
+        let prize = prizes.filter { $0.rarity == chosen }.randomElement(using: &generator)!
+        guard owns(itemID: prize.id) else {
+            spent["box-\(prize.id)"] = price
+            ownedItemIDs.insert(prize.id)
+            return .won(prize)
+        }
+        let request = UUID().uuidString.lowercased()
+        settleDuplicate(key: "box-\(request)", bonusKey: "box-bonus-\(request)", net: price - chosen.duplicateRefund)
+        return .duplicate(prize, refund: chosen.duplicateRefund)
     }
 
     public mutating func openMysteryBox(on day: LocalDay) -> MysteryBoxResult {

@@ -8,6 +8,8 @@ struct ShopView: View {
     /// Nil shows every slot.
     @State private var slot: EquipmentSlot?
     @State private var revealed: MysteryBoxPrize?
+    /// Coins back when the revealed prize was a duplicate.
+    @State private var revealedRefund: Int?
 
     var body: some View {
         NavigationStack {
@@ -15,7 +17,10 @@ struct ShopView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     WardrobeHeader()
                     if StoreFeature.isEnabled { StoreEntryCard() }
-                    MysteryBoxCard { revealed = $0 }
+                    MysteryBoxCard { prize, refund in
+                        revealedRefund = refund
+                        revealed = prize
+                    }
                     RewardedAdCard()
                     CompanionAccessoriesCard()
                     SlotPicker(selection: $slot)
@@ -32,7 +37,7 @@ struct ShopView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { CoinBadge(coins: model.wallet.coins) }
             }
-            .sheet(item: $revealed) { MysteryRevealSheet(prize: $0) }
+            .sheet(item: $revealed) { MysteryRevealSheet(prize: $0, refund: revealedRefund) }
         }
     }
 
@@ -74,13 +79,15 @@ private struct WardrobeHeader: View {
 
 private struct MysteryBoxCard: View {
     @Environment(AppModel.self) private var model
-    let onReveal: (MysteryBoxPrize) -> Void
+    let onReveal: (MysteryBoxPrize, Int?) -> Void
     @State private var opening = false
+    @State private var confirming = false
     @State private var problem: String?
 
     var body: some View {
         let price = ShopCatalog.mysteryBoxPrice
-        let soldOut = MysteryBox.prizes(on: model.today).allSatisfy { model.wallet.owns(itemID: $0.id) }
+        let ownsEverything = MysteryBox.prizes(on: model.today).allSatisfy { model.wallet.owns(itemID: $0.id) }
+        let refunds = Rarity.allCases.map { "\($0.duplicateRefund)" }.joined(separator: "/")
         let odds = Rarity.allCases.map { "\($0.mysteryBoxWeight)% \($0.rawValue)" }.joined(separator: " · ")
         HStack(spacing: Theme.Spacing.m) {
             ItemIcon(spriteID: "mystery-box", pixel: 5)
@@ -88,26 +95,15 @@ private struct MysteryBoxCard: View {
                 Text("Mystery Box")
                     .font(Theme.Typography.headline)
                     .foregroundStyle(Theme.Palette.cream)
-                Text(soldOut ? "You own everything. Amazing!"
-                     : "The only way to get new looks: a random outfit piece or companion accessory you don't own yet.")
+                Text(ownsEverything ? "You own everything! Every box now gives coins back."
+                     : "The only way to get new looks: a random outfit piece or companion accessory. Duplicates give \(refunds) coins back by rarity.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
                 Text(odds)
                     .font(Theme.Typography.micro)
                     .foregroundStyle(Theme.Palette.creamDim.opacity(0.8))
                 Button {
-                    opening = true
-                    problem = nil
-                    Task {
-                        let result = await model.openMysteryBox()
-                        opening = false
-                        switch result {
-                        case .won(let prize): onReveal(prize)
-                        case .notEnoughCoins(let needed): problem = "You need \(needed) more coins."
-                        case .soldOut: problem = "You own everything. Amazing!"
-                        case .unavailable(let message): problem = message
-                        }
-                    }
+                    confirming = true
                 } label: {
                     if opening {
                         ProgressView().tint(Theme.Palette.ink)
@@ -116,9 +112,16 @@ private struct MysteryBoxCard: View {
                     }
                 }
                 .buttonStyle(.pixel)
-                .disabled(opening || soldOut || model.wallet.coins < price)
-                .opacity(soldOut || model.wallet.coins < price ? 0.5 : 1)
+                .disabled(opening || model.wallet.coins < price)
+                .opacity(model.wallet.coins < price ? 0.5 : 1)
                 .padding(.top, Theme.Spacing.xs)
+                // A mis-tap shouldn't spend coins.
+                .confirmationDialog("Open a Mystery Box?", isPresented: $confirming, titleVisibility: .visible) {
+                    Button("Open for \(price) coins") { open() }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("\(price) coins from your \(model.wallet.coins). Duplicates give coins back.")
+                }
                 if let problem {
                     Text(problem)
                         .font(Theme.Typography.caption)
@@ -128,6 +131,22 @@ private struct MysteryBoxCard: View {
             Spacer(minLength: 0)
         }
         .pixelPanel(fill: Theme.Palette.forestRaised)
+    }
+
+    private func open() {
+        opening = true
+        problem = nil
+        Task {
+            let result = await model.openMysteryBox()
+            opening = false
+            switch result {
+            case .won(let prize): onReveal(prize, nil)
+            case .duplicate(let prize, let refund): onReveal(prize, refund)
+            case .notEnoughCoins(let needed): problem = "You need \(needed) more coins."
+            case .soldOut: problem = "The box is empty right now. Try again later."
+            case .unavailable(let message): problem = message
+            }
+        }
     }
 }
 
@@ -322,11 +341,14 @@ private struct MysteryRevealSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let prize: MysteryBoxPrize
+    /// Coins back when this was a duplicate.
+    var refund: Int?
     @State private var shown = false
 
     var body: some View {
         VStack(spacing: Theme.Spacing.l) {
-            Eyebrow("\(prize.rarity.displayName) find!", color: prize.rarity.color)
+            Eyebrow(refund == nil ? "\(prize.rarity.displayName) find!" : "Duplicate \(prize.rarity.displayName.lowercased())!",
+                    color: prize.rarity.color)
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
                 PixelImageView(image: image, pixel: 6)
@@ -343,6 +365,11 @@ private struct MysteryRevealSheet: View {
                     .font(Theme.Typography.body)
                     .foregroundStyle(Theme.Palette.creamDim)
                     .multilineTextAlignment(.center)
+                if let refund {
+                    Label("You already have this: +\(refund) coins back", systemImage: "arrow.uturn.backward.circle.fill")
+                        .font(Theme.Typography.caption.weight(.heavy))
+                        .foregroundStyle(Theme.Palette.gold)
+                }
             }
             HStack(spacing: Theme.Spacing.m) {
                 Button(wearLabel) {

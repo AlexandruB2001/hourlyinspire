@@ -50,22 +50,60 @@ select tests.ok(tests.coins() = 850, 'and charges nothing again');
 select tests.ok((select save -> 'wallet' -> 'ownedItemIDs' ? :'first_prize' from public.get_player_save()),
                 'the prize is written into the save');
 select public.open_mystery_box(gen_random_uuid(), current_date) from generate_series(1, 4);
-select tests.ok(tests.coins() = 250, 'five boxes cost 750');
 reset role;
-select tests.ok((select count(distinct item_id) = 5 and count(*) = 5 from public.owned_items where user_id = tests.id('box')),
-                'every box gives something new, recorded in the server inventory');
-select tests.ok((select count(*) from public.coin_charges where user_id = tests.id('box') and key like 'box-%') = 5,
-                'every box is a recorded charge');
+select tests.ok((select count(*) from public.mystery_box_opens where user_id = tests.id('box')) = 5, 'five boxes opened');
+select tests.ok((select count(*) from public.owned_items where user_id = tests.id('box'))
+                = (select count(*) from public.mystery_box_opens where user_id = tests.id('box') and not duplicate),
+                'every new prize is recorded in the server inventory');
+select tests.ok(not exists (select 1 from public.mystery_box_opens
+                            where user_id = tests.id('box') and duplicate <> (refund > 0)),
+                'refunds only for duplicates');
+select tests.as_user('box');
+select tests.ok(tests.coins() = 1000 - (select sum(coins) from public.mystery_box_opens where user_id = tests.id('box')),
+                'the balance is exactly what the boxes charged');
+reset role;
 
--- Sold out.
+-- Duplicates: owning everything, every box is a duplicate with coins back.
+select tests.ok((select array_agg(coins order by coins) from public.coin_prices where item like 'duplicate-%')
+                = array[80, 100, 150, 200], 'refunds: 80 common, 100 rare, 150 epic, 200 legendary');
 insert into public.owned_items (user_id, item_id, source)
 select tests.id('hoard'), item_id, 'legacy' from public.mystery_box_prizes;
 select tests.as_user('hoard');
 select tests.give_coins(500);
-select tests.fails($$select * from public.open_mystery_box(gen_random_uuid(), current_date)$$, 'sold_out',
-                   'with everything owned the box is sold out');
-select tests.ok(tests.coins() = 500, 'and takes nothing');
+select duplicate as hoard_duplicate, refund as hoard_refund, coins as hoard_net, rarity as hoard_rarity
+from public.open_mystery_box('00000000-0000-0000-0000-0000000000d7', current_date) \gset
+select tests.ok(:'hoard_duplicate'::boolean, 'owning everything, the box still opens and gives a duplicate');
+select tests.ok(:hoard_refund = (select coins from public.coin_prices where item = 'duplicate-' || :'hoard_rarity'),
+                'with the refund for its rarity');
+select tests.ok(:hoard_net = 150 - :hoard_refund, 'charging only the net price');
+select tests.ok(tests.coins() = 500 - :hoard_net, 'so the balance moves by the net price (it can rise for a legendary)');
+select tests.ok((select duplicate and coins = :hoard_net
+                 from public.open_mystery_box('00000000-0000-0000-0000-0000000000d7', current_date)),
+                'retrying a duplicate returns the same result');
+select tests.ok(tests.coins() = 500 - :hoard_net, 'and changes nothing');
 reset role;
+select tests.ok(not exists (select 1 from public.owned_items where user_id = tests.id('hoard') and source = 'mystery-box'),
+                'a duplicate adds nothing to the inventory');
+
+-- A duplicate legendary pays out more than the box cost (odds can't be forced,
+-- so make every prize legendary inside a transaction that is rolled back).
+select tests.as_user('hoard');
+select tests.coins() as hoard_before \gset
+reset role;
+begin;
+update public.mystery_box_prizes set rarity = 'legendary';
+select tests.as_user('hoard');
+select coins as legendary_net, refund as legendary_refund
+from public.open_mystery_box('00000000-0000-0000-0000-0000000000d8', current_date) \gset
+select tests.ok(:legendary_refund = 200 and :legendary_net = -50, 'a duplicate legendary gives 200 back: 50 more than the box');
+select tests.ok(tests.coins() = :hoard_before + 50, 'so the balance goes up by 50');
+select tests.ok((select (save #>> '{wallet,earned,box-bonus-00000000-0000-0000-0000-0000000000d8}')::integer = 50
+                 from public.get_player_save()), 'credited under the box''s bonus key');
+reset role;
+select tests.ok(not exists (select 1 from public.coin_charges
+                            where key = 'box-00000000-0000-0000-0000-0000000000d8'),
+                'and no charge is left behind');
+rollback;
 
 -- Adopting companions -----------------------------------------------------------
 

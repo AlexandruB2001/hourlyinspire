@@ -24,6 +24,17 @@ public enum Rarity: String, Codable, Sendable, Hashable, CaseIterable, Comparabl
     public var displayName: String { rawValue.capitalized }
 
     /// Relative chance of a mystery box landing on this rarity (out of 100).
+    /// Coins back when the Mystery Box gives an item you already own. The box
+    /// rolls from everything, so these keep a duplicate from feeling wasted.
+    public var duplicateRefund: Int {
+        switch self {
+        case .common: return 80
+        case .rare: return 100
+        case .epic: return 150
+        case .legendary: return 200
+        }
+    }
+
     public var mysteryBoxWeight: Int {
         switch self {
         case .common: return 60

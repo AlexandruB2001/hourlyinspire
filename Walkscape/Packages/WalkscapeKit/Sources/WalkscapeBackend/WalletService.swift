@@ -14,8 +14,11 @@ public struct WalletService: Sendable {
     /// What the server charged, under which wallet key, and the item it gave.
     public struct Purchase: Hashable, Sendable {
         public let chargeKey: String
+        /// Charged after any refund (negative when a duplicate paid out more).
         public let coins: Int
         public let itemID: String?
+        public var duplicate = false
+        public var refund = 0
     }
 
     public enum PurchaseError: Error, Equatable, Sendable {
@@ -38,12 +41,16 @@ public struct WalletService: Sendable {
             let item_id: String
             let charge_key: String
             let coins: Int
+            /// Missing before migration 20261112000001.
+            let duplicate: Bool?
+            let refund: Int?
         }
         let rows: [Row] = try await run {
             try await api.call("open_mystery_box", Params(p_request_id: requestID.uuidString.lowercased(), p_day: day.isoString))
         }
         guard let row = rows.first else { throw PurchaseError.network("Unexpected response from the server") }
-        return Purchase(chargeKey: row.charge_key, coins: row.coins, itemID: row.item_id)
+        return Purchase(chargeKey: row.charge_key, coins: row.coins, itemID: row.item_id, duplicate: row.duplicate ?? false,
+                        refund: row.refund ?? 0)
     }
 
     /// Adopts a companion species (charged once per species, ever).

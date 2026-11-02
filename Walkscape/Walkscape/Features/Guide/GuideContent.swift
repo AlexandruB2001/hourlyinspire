@@ -67,7 +67,7 @@ enum GuideContent {
 
     static let shop = GuideSection(id: .shop, title: "Items & Shop", spriteID: "mystery-box", entries: [
         .init(title: "Mystery Box",
-              body: "For \(ShopCatalog.mysteryBoxPrice) coins you get a random outfit piece or companion accessory you don't own yet: the box never repeats. Odds by rarity: common \(Rarity.common.mysteryBoxWeight)%, rare \(Rarity.rare.mysteryBoxWeight)%, epic \(Rarity.epic.mysteryBoxWeight)%, legendary \(Rarity.legendary.mysteryBoxWeight)%."),
+              body: "For \(ShopCatalog.mysteryBoxPrice) coins you get a random outfit piece or companion accessory. If it's one you already own, you get coins back (\(Rarity.common.duplicateRefund) common, \(Rarity.rare.duplicateRefund) rare, \(Rarity.epic.duplicateRefund) epic, \(Rarity.legendary.duplicateRefund) legendary). Odds by rarity, on every box: common \(Rarity.common.mysteryBoxWeight)%, rare \(Rarity.rare.mysteryBoxWeight)%, epic \(Rarity.epic.mysteryBoxWeight)%, legendary \(Rarity.legendary.mysteryBoxWeight)%."),
         .init(title: "Outfits",
               body: "\(ShopCatalog.items.count) outfit pieces (hats, glasses, scarves, shoes and backs) in four rarities, all found in the Mystery Box. The Shop shows every piece; tap one you own to wear it."),
         .init(title: "Companion accessories",

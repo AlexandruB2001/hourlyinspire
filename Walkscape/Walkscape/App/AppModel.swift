@@ -994,13 +994,17 @@ final class AppModel {
         await syncCloudSave(force: true)
         do {
             let purchase = try await backend.wallet.openMysteryBox(requestID: UUID(), day: today)
-            wallet.receiveServerPurchase(chargeKey: purchase.chargeKey, coins: purchase.coins, itemID: purchase.itemID)
+            if purchase.duplicate {
+                wallet.receiveServerDuplicate(chargeKey: purchase.chargeKey, net: purchase.coins)
+            } else {
+                wallet.receiveServerPurchase(chargeKey: purchase.chargeKey, coins: purchase.coins, itemID: purchase.itemID)
+            }
             store.save(wallet, for: .appleHealth)
             await syncCloudSave(force: true)
             guard let prize = purchase.itemID.flatMap(MysteryBox.prize(withID:)) else {
                 return .unavailable("Your prize is in your collection. Update the app to see it.")
             }
-            return revealBoxPrize(.won(prize))
+            return purchase.duplicate ? .duplicate(prize, refund: purchase.refund) : revealBoxPrize(.won(prize))
         } catch WalletService.PurchaseError.soldOut {
             return .soldOut
         } catch WalletService.PurchaseError.insufficientCoins, WalletService.PurchaseError.needsCloudSave {

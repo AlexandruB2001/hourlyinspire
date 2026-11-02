@@ -76,13 +76,15 @@ final class CompanionLifeTests: XCTestCase {
     }
 
     func testTheMysteryBoxCanGiveAccessories() {
-        var wallet = WalletState(rules: CoinRules(starterCoins: 150))
+        var wallet = WalletState(rules: CoinRules(starterCoins: 300))
         let hat = CompanionAccessoryCatalog.accessory(withID: "pet-straw-hat")!
         var generator = SeededGenerator(state: 9)
         XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator),
                        .won(.accessory(hat, rarity: .common)))
         XCTAssertTrue(wallet.owns(itemID: "pet-straw-hat"))
-        XCTAssertEqual(wallet.coins, 0)
-        XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator), .soldOut)
+        XCTAssertEqual(wallet.coins, 150)
+        XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator),
+                       .duplicate(.accessory(hat, rarity: .common), refund: 80))
+        XCTAssertEqual(wallet.coins, 150 - 70, "a duplicate common costs 150 - 80")
     }
 }
