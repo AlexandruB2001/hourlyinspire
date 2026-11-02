@@ -490,4 +490,21 @@ final class BackendTests: XCTestCase {
             XCTAssertEqual(error, .insufficientCoins)
         }
     }
+
+    func testSeveralDaysCanBeCaughtUpSideBySide() async throws {
+        let transport = MockTransport()
+        for _ in 0..<3 { transport.enqueue(200, "{}") }
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let syncer = DailyProgressSyncer(api: api)
+        func progress(_ day: Int, _ meters: Int) -> DailyProgress {
+            DailyProgress(userID: "me", localDate: LocalDay(year: 2026, month: 11, day: day), timeZoneIdentifier: "UTC",
+                          steps: meters * 4 / 3, distanceMeters: meters, distanceSource: .recorded, updatedAt: now)
+        }
+        let outcomes = [try await syncer.sync(progress(2, 5_000)), try await syncer.sync(progress(1, 8_000)),
+                        try await syncer.sync(progress(2, 5_000)), try await syncer.sync(progress(1, 8_000)),
+                        try await syncer.sync(progress(1, 9_000))]
+        XCTAssertEqual(outcomes, [.uploaded, .uploaded, .skippedUnchanged, .skippedUnchanged, .uploaded],
+                       "each day remembers its own last upload")
+        XCTAssertEqual(transport.requestCount, 3)
+    }
 }

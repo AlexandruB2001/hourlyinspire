@@ -279,4 +279,45 @@ final class WalletTests: XCTestCase {
         XCTAssertEqual(phone.merged(with: cloud).coins, 340)
         XCTAssertEqual(phone.merged(with: cloud).lifetimeCoins - phone.merged(with: cloud).spentCoins, 340)
     }
+
+    // MARK: Late walking for earlier days
+
+    func testWalkingThatArrivesLateForAnEarlierDayIsPaidOnce() {
+        let monday = LocalDay(year: 2026, month: 11, day: 2)
+        let tuesday = monday.adding(days: 1)
+        var wallet = WalletState(rules: CoinRules(starterCoins: 0))
+        _ = wallet.apply(progress(3_200, day: monday))       // last reading on Monday: 3 km
+        _ = wallet.apply(progress(500, day: tuesday))        // Tuesday starts
+        XCTAssertEqual(wallet.lifetimeCoins, 30)
+
+        // Monday's evening walk is read after midnight: 6.4 km in full.
+        let late = wallet.apply(progress(6_400, day: monday))
+        XCTAssertEqual(late.coinsEarned, 30, "pays the 3 km still owed")
+        XCTAssertEqual(late.newChests, WalletState.chestsReached(meters: 6_400, on: monday)
+                       - WalletState.chestsReached(meters: 3_200, on: monday))
+        XCTAssertEqual(wallet.lifetimeCoins, 60)
+
+        // Reading Monday again (every catch-up) pays nothing more.
+        let again = wallet.apply(progress(6_400, day: monday))
+        XCTAssertEqual(again, .none)
+        XCTAssertEqual(wallet.lifetimeCoins, 60)
+        // Nor does a lower reading.
+        XCTAssertEqual(wallet.apply(progress(1_000, day: monday)), .none)
+        // Tuesday carries on normally.
+        XCTAssertEqual(wallet.apply(progress(2_000, day: tuesday)).coinsEarned, 20)
+    }
+
+    func testLateWalkingIsCountedInFullWithNoDailyCap() {
+        let day = LocalDay(year: 2026, month: 11, day: 7)
+        var wallet = WalletState(rules: CoinRules(starterCoins: 0))
+        _ = wallet.apply(progress(1_000, day: day.adding(days: 1)))
+        XCTAssertEqual(wallet.apply(progress(42_195, day: day)).coinsEarned, 420, "a marathon read late counts in full")
+    }
+
+    func testDaysBeforeTheKeyedWalletAreNotPaidAgain() {
+        let old = LocalDay(year: 2026, month: 10, day: 29)
+        var wallet = WalletState(rules: CoinRules(starterCoins: 0))
+        _ = wallet.apply(progress(1_000, day: LocalDay(year: 2026, month: 11, day: 3)))
+        XCTAssertEqual(wallet.apply(progress(9_000, day: old)), .none, "already paid by the older wallet")
+    }
 }

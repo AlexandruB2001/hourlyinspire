@@ -176,9 +176,12 @@ public struct WalletState: Codable, Hashable, Sendable {
 
     // MARK: Earning
 
+    /// Days before this were paid by the older wallet (as one "legacy" sum),
+    /// so walking that arrives late for them isn't paid again.
+    public static let lateCreditStart = LocalDay(year: 2026, month: 11, day: 1)
+
     public mutating func apply(_ progress: DailyProgress, rules: CoinRules = .standard) -> WalletEvent {
-        // Delayed updates for earlier days never pay out again.
-        if let day, progress.localDate < day { return .none }
+        if let day, progress.localDate < day { return creditEarlierDay(progress, rules: rules) }
         if day != progress.localDate {
             day = progress.localDate
             kilometresRewardedToday = 0
@@ -201,6 +204,28 @@ public struct WalletState: Codable, Hashable, Sendable {
             chestsFoundToday = chests
             let key = progress.localDate.isoString
             chestsFound[key] = max(chestsFound[key] ?? 0, chests)
+        }
+        return event
+    }
+
+    /// Walking for an earlier day that arrived late (an evening walk read after
+    /// midnight, a day offline): pays that day's walking coins and chests up to
+    /// what its full distance earns. Keys are per day, so this never pays twice.
+    private mutating func creditEarlierDay(_ progress: DailyProgress, rules: CoinRules) -> WalletEvent {
+        guard progress.localDate >= Self.lateCreditStart else { return .none }
+        let meters = max(0, progress.distanceMeters)
+        var event = WalletEvent.none
+        let walkKey = Self.walkKey(progress.localDate)
+        let walk = meters / 1_000 * rules.coinsPerKilometre
+        if walk > earned[walkKey] ?? 0 {
+            event.coinsEarned = walk - (earned[walkKey] ?? 0)
+            earned[walkKey] = walk
+        }
+        let dayKey = progress.localDate.isoString
+        let chests = Self.chestsReached(meters: meters, on: progress.localDate, rules: rules)
+        if chests > chestsFound[dayKey] ?? 0 {
+            event.newChests = chests - (chestsFound[dayKey] ?? 0)
+            chestsFound[dayKey] = chests
         }
         return event
     }

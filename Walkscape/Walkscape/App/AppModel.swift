@@ -381,11 +381,47 @@ final class AppModel {
                 celebration = newCelebration
             }
             await uploadProgress(progress, source: source)
+            await catchUpEarlierDays(source: source, today: day)
         } catch let error as WalkingDataError {
             sync.fail(error)
         } catch {
             sync.fail(.queryFailed(error.localizedDescription))
         }
+    }
+
+    /// Days re-read after the fact. The server accepts uploads up to 7 UTC days
+    /// back; 6 local days stays inside that in every time zone.
+    static let catchUpDays = 6
+    @ObservationIgnored private var lastCatchUp: (day: LocalDay, at: Date)?
+
+    /// Walking recorded after a day's last refresh (an evening walk read after
+    /// midnight, days offline) is read back from Apple Health for the past few
+    /// days, credited to the Journey and wallet, and uploaded for friends, teams
+    /// and groups. Every walk counts in full. At most every 30 minutes, or when
+    /// the day changes.
+    private func catchUpEarlierDays(source: WalkingDataSourceKind, today day: LocalDay) async {
+        guard source == .appleHealth else { return }
+        if let last = lastCatchUp, last.day == day, Date().timeIntervalSince(last.at) < 30 * 60 { return }
+        lastCatchUp = (day, Date())
+        var changed = false
+        for back in 1...Self.catchUpDays {
+            let past = day.adding(days: -back)
+            guard let snapshot = try? await provider.fetchDailyTotals(for: past, timeZone: timeZone, now: Date()),
+                  source == dataSource else { return }
+            let progress = DailyProgress(snapshot: snapshot, userID: currentUserID)
+            guard progress.distanceSource != .unavailable else { continue }
+            let before = progression.dailyBestMeters[past.isoString] ?? 0
+            _ = progression.apply(progress, using: engine)
+            let coins = wallet.apply(progress)
+            if progress.distanceMeters > before || coins.coinsEarned > 0 || coins.newChests > 0 { changed = true }
+            await uploadProgress(progress, source: source)
+        }
+        guard changed else { return }
+        store.save(progression, for: source)
+        store.save(wallet, for: source)
+        updateJournal(source: source)
+        processLevelUps(source: source)
+        updateWidget()
     }
 
     func connectAppleHealth() async {

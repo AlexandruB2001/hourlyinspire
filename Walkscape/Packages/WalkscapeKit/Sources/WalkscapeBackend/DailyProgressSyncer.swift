@@ -22,7 +22,8 @@ public actor DailyProgressSyncer {
     }
 
     private let api: SupabaseAPI
-    private var lastUploaded: Fingerprint?
+    /// What was last uploaded for each day (several days can be caught up).
+    private var lastUploaded: [LocalDay: Fingerprint] = [:]
 
     public init(api: SupabaseAPI) {
         self.api = api
@@ -33,7 +34,7 @@ public actor DailyProgressSyncer {
         guard progress.distanceSource != .unavailable else { return .skippedUnavailable }
         let fingerprint = Fingerprint(day: progress.localDate, steps: progress.steps,
                                       meters: progress.distanceMeters, source: progress.distanceSource)
-        if fingerprint == lastUploaded { return .skippedUnchanged }
+        if lastUploaded[progress.localDate] == fingerprint { return .skippedUnchanged }
 
         struct Params: Encodable {
             let p_local_date: String
@@ -47,12 +48,12 @@ public actor DailyProgressSyncer {
                             p_steps: progress.steps, p_distance_meters: progress.distanceMeters,
                             p_distance_source: progress.distanceSource.rawValue, p_client_updated_at: progress.updatedAt)
         let _: IgnoredResult = try await api.call("upsert_daily_progress", params)
-        lastUploaded = fingerprint
+        lastUploaded[progress.localDate] = fingerprint
         return .uploaded
     }
 
     /// Forget what was uploaded (e.g. after signing in as someone else).
     public func reset() {
-        lastUploaded = nil
+        lastUploaded = [:]
     }
 }
