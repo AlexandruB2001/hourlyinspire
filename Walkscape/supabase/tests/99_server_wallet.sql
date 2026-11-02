@@ -58,9 +58,9 @@ select tests.ok((select count(*) from public.owned_items where user_id = tests.i
 select tests.ok(not exists (select 1 from public.mystery_box_opens
                             where user_id = tests.id('box') and duplicate <> (refund > 0)),
                 'refunds only for duplicates');
+select 1000 - sum(coins) as box_expected from public.mystery_box_opens where user_id = tests.id('box') \gset
 select tests.as_user('box');
-select tests.ok(tests.coins() = 1000 - (select sum(coins) from public.mystery_box_opens where user_id = tests.id('box')),
-                'the balance is exactly what the boxes charged');
+select tests.ok(tests.coins() = :box_expected, 'the balance is exactly what the boxes charged');
 reset role;
 
 -- Duplicates: owning everything, every box is a duplicate with coins back.
