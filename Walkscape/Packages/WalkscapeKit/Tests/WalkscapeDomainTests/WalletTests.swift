@@ -232,7 +232,7 @@ final class WalletTests: XCTestCase {
         wallet.receiveDailyChest(claimID: "abc", coins: 40)
         XCTAssertEqual(wallet.coins, before + 40, "the same claim never pays twice")
         XCTAssertEqual(wallet.earned[DailyChest.earnedKey(claimID: "abc")], 40)
-        var otherPhone = WalletState()
+        var otherPhone = self.wallet(coins: 0)
         otherPhone.receiveDailyChest(claimID: "abc", coins: 40)
         XCTAssertEqual(wallet.merged(with: otherPhone).coins, wallet.coins, "seen on two phones, counted once")
     }
