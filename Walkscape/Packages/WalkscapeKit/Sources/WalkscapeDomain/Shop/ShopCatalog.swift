@@ -215,19 +215,26 @@ public enum Contrails {
     public static func effect(forItemID id: String?) -> TrailEffect? { id.flatMap { effects[$0] } }
 }
 
-/// The free chest in the Shop: one every 24 hours. The server rolls the coins
-/// and keeps the time (its own clock), so changing the phone's clock or
-/// reinstalling can't open it early or change what's inside.
+/// The free chest in the Shop: one a day, back at the player's midnight. The
+/// server rolls the coins and works out the day from its own clock, so
+/// changing the phone's clock or reinstalling can't open it early or change
+/// what's inside. How much it holds is a surprise.
 public enum DailyChest {
-    public static let cooldown: TimeInterval = 24 * 60 * 60
-
     /// What it can hold, and how often (weights out of 100): bigger amounts are rarer.
-    public static let odds: [(coins: Int, weight: Int)] = [(15, 30), (20, 22), (25, 15), (30, 10), (40, 8), (50, 6), (60, 4), (75, 3), (100, 2)]
+    public static let odds: [(coins: Int, weight: Int)] = [(25, 30), (30, 22), (40, 15), (50, 10), (60, 8), (75, 6), (100, 4), (125, 3), (150, 2)]
     public static var range: ClosedRange<Int> { odds.map(\.coins).min()!...odds.map(\.coins).max()! }
 
     /// The wallet key a claim is paid under. The server writes the same key,
     /// and replaces every key with this prefix from its own records.
     public static func earnedKey(claimID: String) -> String { "daily-chest-\(claimID)" }
+
+    /// The next midnight after `date` in `timeZone` (when demo walking's chest is back).
+    public static func nextReset(after date: Date, in timeZone: TimeZone) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar.nextDate(after: date, matching: DateComponents(hour: 0, minute: 0, second: 0),
+                                 matchingPolicy: .nextTime) ?? date.addingTimeInterval(24 * 60 * 60)
+    }
 
     /// A roll for demo walking (the server rolls for Apple Health players).
     public static func roll<G: RandomNumberGenerator>(using generator: inout G) -> Int {

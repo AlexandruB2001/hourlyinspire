@@ -211,18 +211,25 @@ final class WalletTests: XCTestCase {
 
     // MARK: Daily chest
 
-    func testDailyChestHoldsFifteenToAHundredWithBigAmountsRare() {
+    func testDailyChestHoldsTwentyFiveToAHundredAndFiftyWithBigAmountsRare() {
         XCTAssertEqual(DailyChest.odds.map(\.weight).reduce(0, +), 100)
-        XCTAssertEqual(DailyChest.range, 15...100)
+        XCTAssertEqual(DailyChest.range, 25...150)
         XCTAssertEqual(DailyChest.odds.map(\.weight), DailyChest.odds.map(\.weight).sorted(by: >), "bigger amounts are never likelier")
         XCTAssertTrue(DailyChest.odds.allSatisfy { $0.coins % 5 == 0 })
         var generator = SeededGenerator(state: 3)
         var counts: [Int: Int] = [:]
         for _ in 0..<10_000 { counts[DailyChest.roll(using: &generator), default: 0] += 1 }
         XCTAssertEqual(Set(counts.keys), Set(DailyChest.odds.map(\.coins)))
-        XCTAssertEqual(Double(counts[15] ?? 0) / 10_000, 0.30, accuracy: 0.02)
-        XCTAssertEqual(Double(counts[100] ?? 0) / 10_000, 0.02, accuracy: 0.01)
-        XCTAssertEqual(DailyChest.cooldown, 86_400)
+        XCTAssertEqual(Double(counts[25] ?? 0) / 10_000, 0.30, accuracy: 0.02)
+        XCTAssertEqual(Double(counts[150] ?? 0) / 10_000, 0.02, accuracy: 0.01)
+    }
+
+    func testDemoDailyChestComesBackAtMidnight() {
+        let london = TimeZone(identifier: "Europe/London")!
+        let evening = ISO8601DateFormatter().date(from: "2026-11-03T21:30:00Z")!
+        XCTAssertEqual(DailyChest.nextReset(after: evening, in: london), ISO8601DateFormatter().date(from: "2026-11-04T00:00:00Z")!)
+        let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+        XCTAssertEqual(DailyChest.nextReset(after: evening, in: tokyo), ISO8601DateFormatter().date(from: "2026-11-04T15:00:00Z")!)
     }
 
     func testADailyChestPaysOncePerClaim() {

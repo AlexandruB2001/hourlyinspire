@@ -1132,7 +1132,7 @@ final class AppModel {
 
     enum DailyChestResult: Equatable {
         case opened(coins: Int)
-        /// Opened less than 24 hours ago; `dailyChestReadyAt` says when it's back.
+        /// Already opened today; `dailyChestReadyAt` says when it's back.
         case notReady
         case unavailable(String)
     }
@@ -1148,7 +1148,7 @@ final class AppModel {
             return
         }
         do {
-            dailyChestReadyAt = try await backend.wallet.dailyChestReadyAt()
+            dailyChestReadyAt = try await backend.wallet.dailyChestReadyAt(timeZone: timeZone)
         } catch WalletService.PurchaseError.notSignedIn {
             handleSessionExpired()
         } catch {
@@ -1156,8 +1156,8 @@ final class AppModel {
         }
     }
 
-    /// Opens the free daily chest (once every 24 hours). The server keeps the
-    /// time and rolls the coins, so the phone's clock can't open it early.
+    /// Opens the free daily chest (once a day, back at midnight). The server
+    /// keeps the time and rolls the coins, so the phone's clock can't open it early.
     func openDailyChest() async -> DailyChestResult {
         guard dataSource == .appleHealth else {
             if let ready = store.demoDailyChestReadyAt, ready > Date() { return .notReady }
@@ -1165,7 +1165,7 @@ final class AppModel {
             let coins = DailyChest.roll(using: &generator)
             wallet.receiveDailyChest(claimID: UUID().uuidString.lowercased(), coins: coins)
             store.save(wallet, for: dataSource)
-            store.demoDailyChestReadyAt = Date().addingTimeInterval(DailyChest.cooldown)
+            store.demoDailyChestReadyAt = DailyChest.nextReset(after: Date(), in: timeZone)
             dailyChestReadyAt = store.demoDailyChestReadyAt
             return .opened(coins: coins)
         }
@@ -1175,9 +1175,9 @@ final class AppModel {
             // One retry with the same request if the answer was lost on the way back.
             let claim: WalletService.DailyChestClaim
             do {
-                claim = try await backend.wallet.claimDailyChest(requestID: request)
+                claim = try await backend.wallet.claimDailyChest(requestID: request, timeZone: timeZone)
             } catch WalletService.PurchaseError.network {
-                claim = try await backend.wallet.claimDailyChest(requestID: request)
+                claim = try await backend.wallet.claimDailyChest(requestID: request, timeZone: timeZone)
             }
             wallet.receiveDailyChest(claimID: claim.claimID, coins: claim.coins)
             store.save(wallet, for: .appleHealth)

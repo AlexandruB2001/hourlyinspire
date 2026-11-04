@@ -161,7 +161,6 @@ private struct DailyChestCard: View {
     @State private var bounce = false
 
     var body: some View {
-        let range = DailyChest.range
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let readyAt = model.dailyChestReadyAt
             let ready = readyAt.map { $0 <= context.date } ?? false
@@ -173,7 +172,7 @@ private struct DailyChestCard: View {
                     Text("Daily Chest")
                         .font(Theme.Typography.headline)
                         .foregroundStyle(Theme.Palette.cream)
-                    Text("Free once a day: \(range.lowerBound) to \(range.upperBound) coins. Big amounts are rare!")
+                    Text("A free chest every day. What's inside is a surprise!")
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Palette.creamDim)
                     if let won {
@@ -183,7 +182,7 @@ private struct DailyChestCard: View {
                             .transition(.scale.combined(with: .opacity))
                     }
                     if let readyAt, !ready {
-                        Label("Next chest in \(Self.countdown(to: readyAt, from: context.date))", systemImage: "clock.fill")
+                        Label("New chest at midnight · \(Self.countdown(to: readyAt, from: context.date))", systemImage: "clock.fill")
                             .font(Theme.Typography.caption.monospacedDigit().weight(.heavy))
                             .foregroundStyle(Theme.Palette.gold)
                             .accessibilityLabel("Next chest in \(Self.spokenCountdown(to: readyAt, from: context.date))")
@@ -232,7 +231,7 @@ private struct DailyChestCard: View {
             opening = false
             switch result {
             case .opened(let coins): won = coins
-            case .notReady: problem = "Already opened. The countdown shows when the next one is ready."
+            case .notReady: problem = "Already opened today. A new chest arrives at midnight."
             case .unavailable(let message): problem = message
             }
         }

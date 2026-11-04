@@ -27,19 +27,21 @@ public struct WalletService: Sendable {
         /// The server has no up-to-date cloud save to pay from.
         case needsCloudSave
         case notSignedIn
-        /// The daily chest was opened less than 24 hours ago.
+        /// The daily chest was already opened today.
         case notReady
         case network(String)
     }
 
     /// When the daily chest is ready, as a time on this phone's clock (from
     /// the server's: how long is left is what counts, not the phone's time).
-    public func dailyChestReadyAt() async throws -> Date {
+    /// `timeZone` decides when the player's day starts (the server keeps the clock).
+    public func dailyChestReadyAt(timeZone: TimeZone) async throws -> Date {
+        struct Params: Encodable { let p_tz: String }
         struct Row: Decodable {
             let ready_at: Date
             let server_now: Date
         }
-        let rows: [Row] = try await run { try await api.call("daily_chest_status") }
+        let rows: [Row] = try await run { try await api.call("daily_chest_status", Params(p_tz: timeZone.identifier)) }
         guard let row = rows.first else { throw PurchaseError.network("Unexpected response from the server") }
         return Date().addingTimeInterval(row.ready_at.timeIntervalSince(row.server_now))
     }
@@ -52,8 +54,11 @@ public struct WalletService: Sendable {
     }
 
     /// Opens the daily chest. Retrying the same `requestID` returns the same claim.
-    public func claimDailyChest(requestID: UUID) async throws -> DailyChestClaim {
-        struct Params: Encodable { let p_request_id: String }
+    public func claimDailyChest(requestID: UUID, timeZone: TimeZone) async throws -> DailyChestClaim {
+        struct Params: Encodable {
+            let p_request_id: String
+            let p_tz: String
+        }
         struct Row: Decodable {
             let claim_id: String
             let coins: Int
@@ -61,7 +66,7 @@ public struct WalletService: Sendable {
             let server_now: Date
         }
         let rows: [Row] = try await run {
-            try await api.call("claim_daily_chest", Params(p_request_id: requestID.uuidString.lowercased()))
+            try await api.call("claim_daily_chest", Params(p_request_id: requestID.uuidString.lowercased(), p_tz: timeZone.identifier))
         }
         guard let row = rows.first else { throw PurchaseError.network("Unexpected response from the server") }
         return DailyChestClaim(claimID: row.claim_id.lowercased(), coins: row.coins,
