@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import WalkscapeDomain
 
 struct RootTabView: View {
     @Environment(AppModel.self) private var model
@@ -63,11 +64,57 @@ struct RootTabView: View {
         .fullScreenCover(isPresented: Binding(get: { model.needsCompanionChoice }, set: { _ in })) {
             CompanionOnboardingView()
         }
+        // Waits for the companion choice and the arrival scene.
+        .sheet(item: Binding(get: { model.needsCompanionChoice || model.teamWorldArrival != nil ? nil : model.availableUpdate },
+                             set: { if $0 == nil, let update = model.availableUpdate { model.snoozeBetaUpdate(update) } })) {
+            BetaUpdateSheet(update: $0)
+        }
         .alert("Account", isPresented: Binding(get: { model.accountError != nil },
                                                set: { if !$0 { model.accountError = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.accountError ?? "")
         }
+    }
+}
+
+/// "A new update is out": sends TestFlight testers to the TestFlight app.
+private struct BetaUpdateSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openURL) private var openURL
+    let update: BetaUpdate
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.l) {
+            Eyebrow("New update!", color: Theme.Palette.gold)
+            ItemIcon(spriteID: "mystery-box", pixel: 6)
+            VStack(spacing: Theme.Spacing.xs) {
+                Text("Build \(update.build) is out")
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Palette.cream)
+                Text(update.notes)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                    .multilineTextAlignment(.center)
+                Text("Open TestFlight and tap Update to get it.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+            }
+            HStack(spacing: Theme.Spacing.m) {
+                Button {
+                    openURL(BetaUpdate.testFlightURL)
+                    model.availableUpdate = nil
+                } label: {
+                    Label("Update in TestFlight", systemImage: "arrow.down.circle.fill")
+                }
+                .buttonStyle(.pixel)
+                Button("Later") { model.snoozeBetaUpdate(update) }
+                    .buttonStyle(.pixelQuiet)
+            }
+        }
+        .padding(Theme.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.Palette.forestDeep.ignoresSafeArea())
+        .presentationDetents([.medium])
     }
 }

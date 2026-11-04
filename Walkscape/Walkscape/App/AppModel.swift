@@ -103,6 +103,9 @@ final class AppModel {
     /// When the free daily chest in the Shop is ready (on this phone's clock,
     /// worked out from the server's). Nil until known, or when signed out.
     private(set) var dailyChestReadyAt: Date?
+    /// A newer TestFlight build to tell the tester about; cleared by the pop-up.
+    var availableUpdate: BetaUpdate?
+    private var lastUpdateCheck: Date?
     /// Nil until the player picks a companion.
     private(set) var companion: CompanionState?
     /// Companions resting at camp (you can own one of each species).
@@ -272,6 +275,7 @@ final class AppModel {
     /// Call when the app becomes active.
     func didBecomeActive() {
         Task { await refreshAll() }
+        Task { await checkForBetaUpdate() }
         Task { await notifications.refreshAuthorization() }
         if let backgroundedAt {
             self.backgroundedAt = nil
@@ -1027,6 +1031,35 @@ final class AppModel {
         } catch {
             return .unavailable("Couldn't reach the Mystery Box. Check your connection and try again.")
         }
+    }
+
+    // MARK: TestFlight updates
+
+    /// Asks the developer site for the newest TestFlight build (at most every
+    /// 30 minutes) and offers it if this one is older. App Store installs never ask.
+    func checkForBetaUpdate() async {
+        #if DEBUG
+        return
+        #else
+        guard !AdConfig.isAppStoreBuild else { return }
+        if let lastUpdateCheck, Date().timeIntervalSince(lastUpdateCheck) < 30 * 60 { return }
+        lastUpdateCheck = Date()
+        guard let current = (Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String).flatMap(Int.init) else { return }
+        var request = URLRequest(url: BetaUpdate.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let update = try? JSONDecoder().decode(BetaUpdate.self, from: data),
+              update.shouldPrompt(currentBuild: current, snoozedBuild: store.betaUpdateSnoozedBuild,
+                                  snoozedUntil: store.betaUpdateSnoozedUntil, now: Date()) else { return }
+        availableUpdate = update
+        #endif
+    }
+
+    /// "Later": don't ask about this build again for a day.
+    func snoozeBetaUpdate(_ update: BetaUpdate) {
+        store.betaUpdateSnoozedBuild = update.build
+        store.betaUpdateSnoozedUntil = Date().addingTimeInterval(BetaUpdate.snooze)
+        availableUpdate = nil
     }
 
     enum DailyChestResult: Equatable {

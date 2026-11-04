@@ -32,6 +32,8 @@ struct LocalStore {
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
         static let demoDailyChestReadyAt = "walkscape.demoDailyChestReadyAt.v1"
+        static let betaUpdateSnoozedBuild = "walkscape.betaUpdateSnoozedBuild.v1"
+        static let betaUpdateSnoozedUntil = "walkscape.betaUpdateSnoozedUntil.v1"
         static let ads = "walkscape.ads.v1"
         static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
         static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
@@ -108,6 +110,17 @@ struct LocalStore {
     var demoDailyChestReadyAt: Date? {
         get { defaults.object(forKey: Key.demoDailyChestReadyAt) as? Date }
         nonmutating set { defaults.set(newValue, forKey: Key.demoDailyChestReadyAt) }
+    }
+
+    /// The TestFlight build the tester said "Later" to, and until when.
+    var betaUpdateSnoozedBuild: Int? {
+        get { defaults.object(forKey: Key.betaUpdateSnoozedBuild) as? Int }
+        nonmutating set { defaults.set(newValue, forKey: Key.betaUpdateSnoozedBuild) }
+    }
+
+    var betaUpdateSnoozedUntil: Date? {
+        get { defaults.object(forKey: Key.betaUpdateSnoozedUntil) as? Date }
+        nonmutating set { defaults.set(newValue, forKey: Key.betaUpdateSnoozedUntil) }
     }
 
     // Rewards are per data source, like coins.
