@@ -32,6 +32,7 @@ struct LocalStore {
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
         static let demoDailyChestReadyAt = "walkscape.demoDailyChestReadyAt.v1"
+        static let healthStartDay = "walkscape.healthStartDay.v1"
         static let betaUpdateSnoozedBuild = "walkscape.betaUpdateSnoozedBuild.v1"
         static let betaUpdateSnoozedUntil = "walkscape.betaUpdateSnoozedUntil.v1"
         static let ads = "walkscape.ads.v1"
@@ -121,6 +122,12 @@ struct LocalStore {
     var betaUpdateSnoozedUntil: Date? {
         get { defaults.object(forKey: Key.betaUpdateSnoozedUntil) as? Date }
         nonmutating set { defaults.set(newValue, forKey: Key.betaUpdateSnoozedUntil) }
+    }
+
+    /// The first day this phone played with Apple Health ("2026-11-03").
+    var healthStartDay: String? {
+        get { defaults.string(forKey: Key.healthStartDay) }
+        nonmutating set { defaults.set(newValue, forKey: Key.healthStartDay) }
     }
 
     // Rewards are per data source, like coins.

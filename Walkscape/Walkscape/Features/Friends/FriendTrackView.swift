@@ -11,6 +11,8 @@ struct FriendTrackView: View {
 
     @Environment(AppModel.self) private var model
     var style: Style = .full
+    /// Who to draw; nil for today's live trail.
+    var participants: [TrackParticipant]?
 
     @State private var previousRange: TrackRange?
     @State private var dragStartRange: TrackRange?
@@ -20,7 +22,7 @@ struct FriendTrackView: View {
     var body: some View {
         GeometryReader { geometry in
             let viewport = FriendTrackLayoutEngine.layout(TrackLayoutInput(
-                participants: model.trackParticipants,
+                participants: participants ?? model.trackParticipants,
                 // The compact preview always centres on the user.
                 focus: style == .full ? model.trackFocus.focus : .currentUser,
                 configuration: metrics.configuration(width: geometry.size.width),

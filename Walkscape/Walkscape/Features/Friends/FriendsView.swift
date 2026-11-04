@@ -102,16 +102,40 @@ struct FriendsView: View {
     }
 
     private var trackSection: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
-            HStack {
-                Eyebrow("Today's shared trail")
-                Spacer()
-                Text(model.today.isoString)
-                    .font(Theme.Typography.caption.monospacedDigit())
-                    .foregroundStyle(Theme.Palette.creamDim)
+        let browser = model.trailBrowser
+        return VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            HStack(spacing: Theme.Spacing.s) {
+                dayArrow("chevron.left", label: "Previous day", enabled: browser.canGoBack) {
+                    var next = browser
+                    next.goBack()
+                    Task { await model.showTrailDay(next.selected) }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Eyebrow(browser.isToday ? "Today's shared trail" : "\(browser.selected.weekdayName)'s shared trail",
+                            color: browser.isToday ? Theme.Palette.creamDim : Theme.Palette.gold)
+                    Text(browser.selected.displayDate)
+                        .font(Theme.Typography.caption.monospacedDigit())
+                        .foregroundStyle(Theme.Palette.creamDim)
+                }
+                .accessibilityElement(children: .combine)
+                Spacer(minLength: 0)
+                if model.isLoadingTrailDay { ProgressView().tint(Theme.Palette.gold) }
+                dayArrow("chevron.right", label: "Next day", enabled: browser.canGoForward) {
+                    var next = browser
+                    next.goForward()
+                    Task { await model.showTrailDay(next.isToday ? nil : next.selected) }
+                }
             }
-            FriendTrackView(style: .full)
-            if let error = model.friendsError {
+            FriendTrackView(style: .full, participants: browser.isToday ? nil : model.trailParticipants)
+            if !browser.isToday {
+                Button("Back to today") { Task { await model.showTrailDay(nil) } }
+                    .buttonStyle(.pixelQuiet)
+            }
+            if !browser.isToday, let error = model.trailDayError {
+                Label(error, systemImage: "wifi.exclamationmark")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.ember)
+            } else if let error = model.friendsError {
                 Label(error, systemImage: "wifi.exclamationmark")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.ember)
@@ -124,10 +148,24 @@ struct FriendsView: View {
         }
     }
 
+    /// Steps the shared trail and leaderboard a day back or forward.
+    private func dayArrow(_ systemImage: String, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.headline.weight(.heavy))
+                .frame(width: 22, height: 22)
+        }
+        .buttonStyle(PixelButtonStyle(kind: enabled ? .secondary : .quiet))
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.4)
+        .accessibilityLabel(label)
+    }
+
     private var leaderboardSection: some View {
-        let entries = Leaderboard.rank(model.trackParticipants)
+        let browser = model.trailBrowser
+        let entries = Leaderboard.rank(model.trailParticipants)
         return VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            SectionHeader(title: "Today's leaderboard")
+            SectionHeader(title: browser.isToday ? "Today's leaderboard" : "\(browser.selected.weekdayName)'s leaderboard")
             if model.friends.isEmpty {
                 ContentUnavailableView {
                     Label("No friends yet", systemImage: "person.2")

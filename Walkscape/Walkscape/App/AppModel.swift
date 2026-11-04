@@ -228,6 +228,57 @@ final class AppModel {
         [me] + friends.map(TrackParticipant.init(friend:))
     }
 
+    // MARK: Shared trail history
+
+    /// How many days back the Social tab's shared trail can go.
+    static let trailHistoryDays = 7
+    /// The past day the shared trail shows; nil for today.
+    private(set) var trailDay: LocalDay?
+    private(set) var pastTrailFriends: [FriendSummary] = []
+    private(set) var isLoadingTrailDay = false
+    private(set) var trailDayError: String?
+
+    var trailBrowser: DayBrowser {
+        DayBrowser(today: today, earliest: today.adding(days: -Self.trailHistoryDays), selected: trailDay)
+    }
+
+    /// Everyone on the shared trail for the day being shown (today's live trail by default).
+    var trailParticipants: [TrackParticipant] {
+        guard let day = trailDay, day < today else { return trackParticipants }
+        let meters = progression.dailyBestMeters[day.isoString] ?? 0
+        let me = TrackParticipant(id: currentUserID, name: "You", avatarID: settings.avatarID, distanceMeters: meters,
+                                  isDistanceEstimated: false, availability: .current,
+                                  currentZoneID: engine.progress(forMeters: meters).currentZone.id, updatedAt: nil,
+                                  isCurrentUser: true)
+        return [me] + pastTrailFriends.map(TrackParticipant.init(friend:))
+    }
+
+    /// Shows an earlier day on the shared trail (nil goes back to today).
+    func showTrailDay(_ day: LocalDay?) async {
+        let day = day.flatMap { $0 < today ? $0 : nil }
+        trailDay = day
+        trailDayError = nil
+        guard let day else { return }
+        pastTrailFriends = []
+        guard let friendRepository else { return }
+        isLoadingTrailDay = true
+        defer { isLoadingTrailDay = false }
+        do {
+            let summaries = try await friendRepository.friendSummaries(for: day, now: Date())
+            guard trailDay == day else { return }
+            // A finished day's totals are final, not out of date.
+            pastTrailFriends = summaries.map { summary in
+                var summary = summary
+                if summary.dailyDistanceMeters != nil { summary.progressAvailability = .current }
+                return summary
+            }
+        } catch FriendRepositoryError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            trailDayError = "Couldn't load that day. Try again in a moment."
+        }
+    }
+
     var isSignedIn: Bool {
         if case .signedIn = account { return true }
         return false
@@ -400,7 +451,22 @@ final class AppModel {
     /// Days re-read after the fact. The server accepts uploads up to 7 UTC days
     /// back; 6 local days stays inside that in every time zone.
     static let catchUpDays = 6
+    /// A new player's walking counts from this many days before their first day
+    /// in the app, so joining doesn't pay out a week of past walks at once.
+    static let newPlayerBackfillDays = 2
     @ObservationIgnored private var lastCatchUp: (day: LocalDay, at: Date)?
+
+    /// The first day this phone played with Apple Health: the stored day, or
+    /// the earliest day already recorded (players from before this was kept).
+    private func healthStartDay(today day: LocalDay) -> LocalDay {
+        let recorded = progression.dailyBestMeters.keys.compactMap(LocalDay.init(isoString:)).min()
+        if let stored = store.healthStartDay.flatMap(LocalDay.init(isoString:)) {
+            return min(stored, recorded ?? stored)
+        }
+        let start = min(recorded ?? day, day)
+        store.healthStartDay = start.isoString
+        return start
+    }
 
     /// Walking recorded after a day's last refresh (an evening walk read after
     /// midnight, days offline) is read back from Apple Health for the past few
@@ -411,9 +477,11 @@ final class AppModel {
         guard source == .appleHealth else { return }
         if let last = lastCatchUp, last.day == day, Date().timeIntervalSince(last.at) < 30 * 60 { return }
         lastCatchUp = (day, Date())
+        let earliest = healthStartDay(today: day).adding(days: -Self.newPlayerBackfillDays)
         var changed = false
         for back in 1...Self.catchUpDays {
             let past = day.adding(days: -back)
+            guard past >= earliest else { break }
             guard let snapshot = try? await provider.fetchDailyTotals(for: past, timeZone: timeZone, now: Date()),
                   source == dataSource else { return }
             let progress = DailyProgress(snapshot: snapshot, userID: currentUserID)
