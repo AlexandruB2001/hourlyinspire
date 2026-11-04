@@ -351,6 +351,14 @@ coin purchase except creation fees, which were already server charges:
   signature and calls `record_ad_reward` (service role only, at most 6 a UTC
   day, 15 coins each) into `ad_rewards`.
 - `put_player_save` always adds the server inventory to the saved wallet.
+- Daily chest (migration 20261114000001): `claim_daily_chest(request)` opens
+  the free Shop chest once every 24 hours by the server's clock
+  (`daily_chests` holds the last claim, so the check and the claim are one
+  statement) and rolls 15-100 coins with `DailyChest.odds`. Each claim is in
+  `daily_chest_claims` and paid as `earned["daily-chest-<claim>"]`;
+  `put_player_save` rebuilds every `daily-chest-*` key from that table, so a
+  save can't add, grow or drop one. `daily_chest_status()` returns the ready
+  time with the server's `now()`, and the app counts down the difference.
 
 Two switches in `wallet_settings` stay **off** until every tester runs a build
 that buys through the server (build 20 or later). Builds 19 and older still
