@@ -18,7 +18,7 @@ where id in (select id from tests.users where name in ('box', 'pets', 'ads', 'fo
 
 -- The prize pool --------------------------------------------------------------
 
-select tests.ok((select count(*) from public.mystery_box_prizes) = 70, 'the box holds 58 outfits and 12 accessories');
+select tests.ok((select count(*) from public.mystery_box_prizes) = 74, 'the box holds 62 outfits (with 4 contrails) and 12 accessories');
 select tests.ok(not exists (select 1 from public.mystery_box_candidates(tests.id('box'), 1220, '[]') where item_id = 'pet-snow-hat'),
                 'a festival accessory stays out of the box while its festival runs (over New Year)');
 select tests.ok(exists (select 1 from public.mystery_box_candidates(tests.id('box'), 601, '[]') where item_id = 'pet-snow-hat'),

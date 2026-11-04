@@ -17,6 +17,7 @@ struct ShopView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                     WardrobeHeader()
                     if StoreFeature.isEnabled { StoreEntryCard() }
+                    DailyChestCard()
                     MysteryBoxCard { prize, refund in
                         revealedRefund = refund
                         revealed = prize
@@ -38,6 +39,7 @@ struct ShopView: View {
                 ToolbarItem(placement: .topBarTrailing) { CoinBadge(coins: model.wallet.coins) }
             }
             .sheet(item: $revealed) { MysteryRevealSheet(prize: $0, refund: revealedRefund) }
+            .task { await model.refreshDailyChest() }
         }
     }
 
@@ -147,6 +149,107 @@ private struct MysteryBoxCard: View {
             case .unavailable(let message): problem = message
             }
         }
+    }
+}
+
+/// A free chest every 24 hours, with a countdown to the next one.
+private struct DailyChestCard: View {
+    @Environment(AppModel.self) private var model
+    @State private var opening = false
+    @State private var won: Int?
+    @State private var problem: String?
+    @State private var bounce = false
+
+    var body: some View {
+        let range = DailyChest.range
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let readyAt = model.dailyChestReadyAt
+            let ready = readyAt.map { $0 <= context.date } ?? false
+            HStack(spacing: Theme.Spacing.m) {
+                ItemIcon(spriteID: "chest", pixel: 5)
+                    .offset(y: ready && bounce ? -4 : 0)
+                    .opacity(ready || won != nil ? 1 : 0.6)
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text("Daily Chest")
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.cream)
+                    Text("Free once a day: \(range.lowerBound) to \(range.upperBound) coins. Big amounts are rare!")
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.creamDim)
+                    if let won {
+                        Text("+\(won) coins!")
+                            .font(Theme.Typography.headline)
+                            .foregroundStyle(Theme.Palette.gold)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                    if let readyAt, !ready {
+                        Label("Next chest in \(Self.countdown(to: readyAt, from: context.date))", systemImage: "clock.fill")
+                            .font(Theme.Typography.caption.monospacedDigit().weight(.heavy))
+                            .foregroundStyle(Theme.Palette.gold)
+                            .accessibilityLabel("Next chest in \(Self.spokenCountdown(to: readyAt, from: context.date))")
+                    } else if ready {
+                        Button {
+                            open()
+                        } label: {
+                            if opening {
+                                ProgressView().tint(Theme.Palette.ink)
+                            } else {
+                                Label("Open free chest", systemImage: "gift.fill")
+                            }
+                        }
+                        .buttonStyle(.pixel)
+                        .disabled(opening)
+                        .padding(.top, Theme.Spacing.xs)
+                    } else {
+                        Text(model.dataSource == .appleHealth && !model.isSignedIn
+                             ? "Sign in on the Profile tab to open a free chest every day." : "Checking your chest\u{2026}")
+                            .font(Theme.Typography.micro)
+                            .foregroundStyle(Theme.Palette.creamDim)
+                    }
+                    if let problem {
+                        Text(problem)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Palette.ember)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .pixelPanel(fill: Theme.Palette.forestRaised)
+        .animation(.spring(response: 0.4, dampingFraction: 0.6), value: won)
+        .sensoryFeedback(.success, trigger: won)
+        .accessibilityElement(children: .contain)
+        .onAppear {
+            withAnimation(.easeInOut(duration: 0.6).repeatForever(autoreverses: true)) { bounce = true }
+        }
+    }
+
+    private func open() {
+        opening = true
+        problem = nil
+        Task {
+            let result = await model.openDailyChest()
+            opening = false
+            switch result {
+            case .opened(let coins): won = coins
+            case .notReady: problem = "Already opened. The countdown shows when the next one is ready."
+            case .unavailable(let message): problem = message
+            }
+        }
+    }
+
+    /// "13:42:05", or "42:05" in the last hour.
+    static func countdown(to date: Date, from now: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now).rounded(.up)))
+        let (h, m, s) = (seconds / 3600, seconds / 60 % 60, seconds % 60)
+        return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
+    }
+
+    static func spokenCountdown(to date: Date, from now: Date) -> String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute]
+        formatter.unitsStyle = .full
+        return formatter.string(from: max(60, date.timeIntervalSince(now))) ?? ""
     }
 }
 
@@ -306,9 +409,13 @@ private struct ShopItemCard: View {
         VStack(spacing: Theme.Spacing.s) {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
-                PixelImageView(image: PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID,
-                                                                          outfit: [item.id], walking: false),
-                               pixel: 3)
+                if let trail = Contrails.effect(forItemID: item.id) {
+                    TrailPreview(effect: trail, avatarID: model.settings.avatarID)
+                } else {
+                    PixelImageView(image: PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID,
+                                                                              outfit: [item.id], walking: false),
+                                   pixel: 3)
+                }
             }
             .frame(height: 84)
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
@@ -351,9 +458,15 @@ private struct MysteryRevealSheet: View {
                     color: prize.rarity.color)
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
-                PixelImageView(image: image, pixel: 6)
-                    .scaleEffect(shown ? 1 : 0.4)
-                    .rotationEffect(.degrees(shown ? 0 : -20))
+                Group {
+                    if let trail = Contrails.effect(forItemID: prize.id) {
+                        TrailPreview(effect: trail, avatarID: model.settings.avatarID, pixel: 5)
+                    } else {
+                        PixelImageView(image: image, pixel: 6)
+                    }
+                }
+                .scaleEffect(shown ? 1 : 0.4)
+                .rotationEffect(.degrees(shown ? 0 : -20))
             }
             .frame(width: 150, height: 170)
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(prize.rarity.color, lineWidth: 3))

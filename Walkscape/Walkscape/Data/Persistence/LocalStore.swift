@@ -31,6 +31,7 @@ struct LocalStore {
         static func companion(_ source: WalkingDataSourceKind) -> String { "walkscape.companion.v1.\(source.rawValue)" }
         static let companionSpecies = "walkscape.companionSpecies.v1"
         static let pendingReferralCode = "walkscape.pendingReferralCode.v1"
+        static let demoDailyChestReadyAt = "walkscape.demoDailyChestReadyAt.v1"
         static let ads = "walkscape.ads.v1"
         static func ledger(_ source: WalkingDataSourceKind) -> String { "walkscape.ledger.v1.\(source.rawValue)" }
         static let cloudSaveOwner = "walkscape.cloudSaveOwner.v1"
@@ -101,6 +102,12 @@ struct LocalStore {
     var pendingReferralCode: String? {
         get { defaults.string(forKey: Key.pendingReferralCode) }
         nonmutating set { defaults.set(newValue, forKey: Key.pendingReferralCode) }
+    }
+
+    /// When demo walking's daily chest is ready again (Apple Health asks the server).
+    var demoDailyChestReadyAt: Date? {
+        get { defaults.object(forKey: Key.demoDailyChestReadyAt) as? Date }
+        nonmutating set { defaults.set(newValue, forKey: Key.demoDailyChestReadyAt) }
     }
 
     // Rewards are per data source, like coins.

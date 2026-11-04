@@ -320,6 +320,13 @@ public struct WalletState: Codable, Hashable, Sendable {
         return chest.coins
     }
 
+    /// Pays a daily chest under its claim id (the server's, for Apple Health).
+    /// The same claim never pays twice.
+    public mutating func receiveDailyChest(claimID: String, coins: Int) {
+        let key = DailyChest.earnedKey(claimID: claimID)
+        earned[key] = max(earned[key] ?? 0, coins)
+    }
+
     /// Pays a `Reward` (see `RewardLedger.claim`, which makes sure it happens once).
     public mutating func receiveReward(id: String, coins: Int, itemIDs: [String]) {
         if coins > 0 { earned["reward-\(id)"] = max(earned["reward-\(id)"] ?? 0, coins) }

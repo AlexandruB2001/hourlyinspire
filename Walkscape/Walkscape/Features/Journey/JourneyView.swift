@@ -58,13 +58,15 @@ private struct JourneyHero: View {
                        companionSpeciesID: model.companion?.speciesID,
                        walking: model.distanceMeters > 0, season: model.season,
                        eventSpriteID: model.todaysEvents.first { $0.zoneID == zone.id && !model.hasFound($0) }?.event.spriteID,
-                       trail: TrailEffectCatalog.effect(withID: model.currentLook.trailEffectID))
+                       trail: model.walkerTrail, tappable: true)
             .id(zone.biome)
             .transition(.opacity)
             .frame(height: 330 + topInset)
             .overlay(alignment: .bottom) {
                 LinearGradient(colors: [.clear, Theme.Palette.night], startPoint: .top, endPoint: .bottom)
                     .frame(height: 90)
+                    // Taps reach the walker and companion underneath (they hop).
+                    .allowsHitTesting(false)
             }
             .overlay(alignment: .top) {
                 VStack(spacing: Theme.Spacing.s) {

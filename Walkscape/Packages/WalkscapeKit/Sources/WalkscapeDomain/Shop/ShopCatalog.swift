@@ -3,7 +3,8 @@ import Foundation
 /// Where an item is worn. One item per slot.
 public enum EquipmentSlot: String, Codable, Sendable, Hashable, CaseIterable {
     /// Tops come first: they recolour the tunic, and scarves (neck) recolour over a hoodie's collar.
-    case top, head, face, neck, feet, back
+    /// Trails aren't drawn on the walker but behind it (see `Contrails`).
+    case top, head, face, neck, feet, back, trail
 
     public var displayName: String {
         switch self {
@@ -13,6 +14,7 @@ public enum EquipmentSlot: String, Codable, Sendable, Hashable, CaseIterable {
         case .neck: return "Scarves"
         case .feet: return "Shoes"
         case .back: return "Backs"
+        case .trail: return "Trails"
         }
     }
 }
@@ -70,7 +72,7 @@ public enum ShopCatalog {
     /// Outfits and companion accessories only come out of the Mystery Box.
     public static let mysteryBoxPrice = 150
 
-    /// 58 items: 23 common, 20 rare, 11 epic, 4 legendary.
+    /// 62 items: 23 common, 20 rare, 11 epic, 8 legendary.
     public static let items: [ShopItem] = [
         // Hats
         ShopItem(id: "straw-hat", name: "Straw Hat", detail: "Keeps the sun off on long meadow walks.", slot: .head, rarity: .common),
@@ -136,6 +138,11 @@ public enum ShopCatalog {
         ShopItem(id: "sunset-hoodie", name: "Sunset Hoodie", detail: "Warm orange, like the end of a long walk.", slot: .top, rarity: .rare),
         ShopItem(id: "lavender-hoodie", name: "Lavender Hoodie", detail: "Soft lavender from the fields past the orchard.", slot: .top, rarity: .epic),
         ShopItem(id: "starry-hoodie", name: "Starry Night Hoodie", detail: "Midnight blue, scattered with tiny stars.", slot: .top, rarity: .epic),
+        // Trails: all legendary, the rarest pulls in the box.
+        ShopItem(id: "rainbow-contrail", name: "Rainbow Contrail", detail: "A ribbon of every colour streams behind you.", slot: .trail, rarity: .legendary),
+        ShopItem(id: "comet-contrail", name: "Comet Trail", detail: "Sparks and embers, like a shooting star.", slot: .trail, rarity: .legendary),
+        ShopItem(id: "stardust-contrail", name: "Stardust Trail", detail: "Twinkling dust from Starlight Pass.", slot: .trail, rarity: .legendary),
+        ShopItem(id: "bubble-contrail", name: "Bubble Trail", detail: "Shimmering bubbles float up from every step.", slot: .trail, rarity: .legendary),
     ]
 
     /// Coin-shop items and premium outfit pieces (which are never sold for coins).
@@ -189,5 +196,46 @@ public enum MysteryBox {
                 guard accessory.isInMysteryBox(on: day), let rarity = accessory.rarity else { return nil }
                 return .accessory(accessory, rarity: rarity)
             }
+    }
+}
+
+/// What each trail item (`EquipmentSlot.trail`) draws behind the walker.
+public enum Contrails {
+    public static let effects: [String: TrailEffect] = [
+        "rainbow-contrail": TrailEffect(id: "rainbow-contrail", name: "Rainbow Contrail",
+                                        colors: [0xE8574A, 0xF2A33A, 0xF4D35E, 0x7DBA5E, 0x5AA9E6, 0x9B7BD8], style: .ribbon),
+        "comet-contrail": TrailEffect(id: "comet-contrail", name: "Comet Trail",
+                                      colors: [0xFFF3B0, 0xFFC94A, 0xF27A2E, 0xC7402D], style: .embers),
+        "stardust-contrail": TrailEffect(id: "stardust-contrail", name: "Stardust Trail",
+                                         colors: [0xFFFFFF, 0xB49AE0, 0x7FE0E8, 0xFFE59A], style: .stardust),
+        "bubble-contrail": TrailEffect(id: "bubble-contrail", name: "Bubble Trail",
+                                       colors: [0xBFE6F2, 0xFFFFFF, 0xF4B6C8], style: .bubbles),
+    ]
+
+    public static func effect(forItemID id: String?) -> TrailEffect? { id.flatMap { effects[$0] } }
+}
+
+/// The free chest in the Shop: one every 24 hours. The server rolls the coins
+/// and keeps the time (its own clock), so changing the phone's clock or
+/// reinstalling can't open it early or change what's inside.
+public enum DailyChest {
+    public static let cooldown: TimeInterval = 24 * 60 * 60
+
+    /// What it can hold, and how often (weights out of 100): bigger amounts are rarer.
+    public static let odds: [(coins: Int, weight: Int)] = [(15, 30), (20, 22), (25, 15), (30, 10), (40, 8), (50, 6), (60, 4), (75, 3), (100, 2)]
+    public static var range: ClosedRange<Int> { odds.map(\.coins).min()!...odds.map(\.coins).max()! }
+
+    /// The wallet key a claim is paid under. The server writes the same key,
+    /// and replaces every key with this prefix from its own records.
+    public static func earnedKey(claimID: String) -> String { "daily-chest-\(claimID)" }
+
+    /// A roll for demo walking (the server rolls for Apple Health players).
+    public static func roll<G: RandomNumberGenerator>(using generator: inout G) -> Int {
+        var roll = Int.random(in: 0..<odds.reduce(0) { $0 + $1.weight }, using: &generator)
+        for entry in odds {
+            if roll < entry.weight { return entry.coins }
+            roll -= entry.weight
+        }
+        return odds[0].coins
     }
 }

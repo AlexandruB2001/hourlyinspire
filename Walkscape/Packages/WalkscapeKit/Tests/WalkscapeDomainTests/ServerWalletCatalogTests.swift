@@ -52,6 +52,12 @@ final class ServerWalletCatalogTests: XCTestCase {
             XCTAssertTrue(sql.contains("when '\(rarity.rawValue)' then \(rarity.mysteryBoxWeight)"), rarity.rawValue)
         }
         XCTAssertTrue(sql.contains("else \(Rarity.legendary.mysteryBoxWeight) end"))
+        let odds = DailyChest.odds.map { "(\($0.coins), \($0.weight))" }.joined(separator: ", ")
+        XCTAssertTrue(sql.contains("(values \(odds))"), "the server rolls the daily chest with the app's odds")
+        XCTAssertTrue(sql.contains("interval '\(Int(DailyChest.cooldown) / 3600) hours'"), "and the same wait")
+        XCTAssertTrue(sql.contains("'daily-chest-' || p_request_id"), "and pays it under the app's key")
+        XCTAssertEqual(DailyChest.earnedKey(claimID: "x"), "daily-chest-x")
+        XCTAssertTrue(sql.contains("check (coins between \(DailyChest.range.lowerBound) and \(DailyChest.range.upperBound))"))
         let species = CompanionCatalog.starters.map { "'\($0.id)'" }.joined(separator: ", ")
         XCTAssertTrue(sql.contains("not in (\(species))"), "the server knows every companion")
         XCTAssertEqual(CompanionRoster.adoptionChargeKey("emberfox"), "companion-emberfox", "the server charges under the app's key")

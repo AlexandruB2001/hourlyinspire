@@ -52,9 +52,11 @@ final class PixelArtTests: XCTestCase {
     }
 
     func testEveryShopItemHasArtThatChangesTheWalker() {
-        XCTAssertEqual(Set(EquipmentArt.allIDs), Set((ShopCatalog.items + PremiumOutfits.items).map(\.id)))
+        // Trails are drawn behind the walker, not on it.
+        let worn = (ShopCatalog.items + PremiumOutfits.items).filter { $0.slot != .trail }
+        XCTAssertEqual(Set(EquipmentArt.allIDs), Set(worn.map(\.id)))
         let plain = CharacterSprites.idleFrame(avatarID: "fern", outfit: [])
-        for item in ShopCatalog.items + PremiumOutfits.items {
+        for item in worn {
             let dressed = CharacterSprites.idleFrame(avatarID: "fern", outfit: [item.id])
             XCTAssertEqual(dressed.height, CharacterSprites.outfittedHeight)
             XCTAssertNotEqual(dressed, plain, "\(item.id) is invisible")
@@ -239,8 +241,9 @@ final class PixelArtTests: XCTestCase {
     }
 
     func testNoTwoShopItemsLookTheSame() {
-        let looks = ShopCatalog.items.map { CharacterSprites.walkFrame(0, avatarID: "fern", outfit: [$0.id]) }
-        XCTAssertEqual(Set(looks).count, ShopCatalog.items.count)
+        let worn = ShopCatalog.items.filter { $0.slot != .trail }
+        let looks = worn.map { CharacterSprites.walkFrame(0, avatarID: "fern", outfit: [$0.id]) }
+        XCTAssertEqual(Set(looks).count, worn.count)
     }
 
     func testPortraitsShowWornItems() {

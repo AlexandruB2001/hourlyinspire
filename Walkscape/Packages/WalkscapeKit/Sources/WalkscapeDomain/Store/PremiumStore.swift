@@ -146,10 +146,25 @@ public enum CompanionSkinCatalog {
 }
 
 public struct TrailEffect: Identifiable, Hashable, Sendable {
+    /// How the particles move.
+    public enum Style: String, Hashable, Sendable {
+        /// Specks drifting back and fading.
+        case sparkles
+        /// A wavy band of colour stripes streaming out behind.
+        case ribbon
+        /// Hot sparks that flicker, fall and cool from yellow to red.
+        case embers
+        /// Twinkling dust in a wide, slow cloud.
+        case stardust
+        /// Little rings rising and wobbling as they go.
+        case bubbles
+    }
+
     public let id: String
     public let name: String
     /// Particle colours as 0xRRGGBB.
     public let colors: [UInt32]
+    public var style: Style = .sparkles
 }
 
 public enum TrailEffectCatalog {

@@ -29,10 +29,16 @@ struct PixelSceneView: View {
     var eventSpriteID: String?
     /// Team worlds recolour the biome in the world's palette.
     var tint: WorldTint?
-    /// A premium trail drawn behind the walker while walking.
+    /// A trail drawn behind the walker (a contrail, or a premium trail).
     var trail: TrailEffect?
+    /// Tapping the walker or the companion makes them hop.
+    var tappable = false
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// When each last hopped (seconds since the reference date, as `time`).
+    @State private var walkerHopStart = -10.0
+    @State private var companionHopStart = -10.0
+    @State private var hops = 0
 
     var body: some View {
         GeometryReader { geometry in
@@ -53,6 +59,27 @@ struct PixelSceneView: View {
             }
         }
         .accessibilityHidden(true)
+        .sensoryFeedback(.impact(weight: .light), trigger: hops)
+    }
+
+    /// A quick hop: up 7 art pixels and back down in half a second.
+    private func hopOffset(since start: Double, time: Double) -> Int {
+        let t = time - start
+        guard t >= 0, t < 0.5 else { return 0 }
+        return -Int((sin(.pi * t / 0.5) * 7).rounded())
+    }
+
+    /// An invisible tap target over a sprite, a little larger than it.
+    private func hopTarget(x: CGFloat, y: CGFloat, width: Int, height: Int, hop: @escaping () -> Void) -> some View {
+        let margin: CGFloat = 8
+        return Color.clear
+            .contentShape(Rectangle())
+            .frame(width: CGFloat(width) * pixel + 2 * margin, height: CGFloat(height) * pixel + 2 * margin)
+            .offset(x: x * pixel - margin, y: y * pixel - margin)
+            .onTapGesture {
+                hop()
+                hops += 1
+            }
     }
 
     private func frame(_ images: PixelArtCache.SceneImages, frames: [CGImage]?, width: Int, height: Int,
@@ -76,25 +103,34 @@ struct PixelSceneView: View {
                     .offset(x: (CGFloat(width) * 0.68).rounded() * pixel,
                             y: CGFloat(images.layers.footY - 16 + Int(bob)) * pixel)
             }
+            let characterX = (CGFloat(width) * characterPosition).rounded()
+            let companionX = characterX - CGFloat(CompanionSprites.canvasSize) + 2
+            let companionY = images.layers.footY - CompanionSprites.canvasSize + 1
+            if let trail, animated, !reduceMotion, avatarID != nil {
+                TrailLayer(effect: trail, time: time, pixel: pixel,
+                           origin: CGPoint(x: characterX * pixel, y: CGFloat(images.layers.footY - 4) * pixel))
+            }
             if let companionImage, avatarID != nil {
                 // Walks just behind the character, each species in its own way.
-                let hop = companionOffset(time: time, stepping: stepping)
+                let hop = companionOffset(time: time, stepping: stepping) + hopOffset(since: companionHopStart, time: time)
                 layer(companionImage, width: CompanionSprites.canvasSize, height: CompanionSprites.canvasSize)
-                    .offset(x: ((CGFloat(width) * characterPosition).rounded() - CGFloat(CompanionSprites.canvasSize) + 2) * pixel,
-                            y: CGFloat(images.layers.footY - CompanionSprites.canvasSize + 1 + hop) * pixel)
+                    .offset(x: companionX * pixel, y: CGFloat(companionY + hop) * pixel)
             }
-            if let trail, stepping, avatarID != nil {
-                TrailLayer(effect: trail, time: time, pixel: pixel,
-                           origin: CGPoint(x: (CGFloat(width) * characterPosition).rounded() * pixel,
-                                           y: CGFloat(images.layers.footY - 4) * pixel))
-            }
+            let characterHeight = outfit == nil ? CharacterSprites.height : CharacterSprites.outfittedHeight
+            let characterY = images.layers.footY - characterHeight + 1
             if let frames, let idle = frames.last {
                 let walkCount = frames.count - 1
                 let image = stepping && walkCount > 0 ? frames[Int(time * 8) % walkCount] : idle
-                let characterHeight = outfit == nil ? CharacterSprites.height : CharacterSprites.outfittedHeight
                 layer(image, width: CharacterSprites.width, height: characterHeight)
-                    .offset(x: (CGFloat(width) * characterPosition).rounded() * pixel,
-                            y: CGFloat(images.layers.footY - characterHeight + 1) * pixel)
+                    .offset(x: characterX * pixel, y: CGFloat(characterY + hopOffset(since: walkerHopStart, time: time)) * pixel)
+            }
+            if tappable, animated, !reduceMotion, avatarID != nil {
+                if companionImage != nil {
+                    hopTarget(x: companionX, y: CGFloat(companionY), width: CompanionSprites.canvasSize,
+                              height: CompanionSprites.canvasSize) { companionHopStart = Date().timeIntervalSinceReferenceDate }
+                }
+                hopTarget(x: characterX, y: CGFloat(characterY), width: CharacterSprites.width,
+                          height: characterHeight) { walkerHopStart = Date().timeIntervalSinceReferenceDate }
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
@@ -147,8 +183,10 @@ struct PixelSceneView: View {
     }
 }
 
-/// Sparkles, petals or stardust drifting behind the walker.
-private struct TrailLayer: View {
+/// A trail behind the walker: sparkles, a rainbow ribbon, comet embers,
+/// stardust or bubbles. `origin` is the walker's back at hip height; the
+/// trail streams out to the left. Everything snaps to whole art pixels.
+struct TrailLayer: View {
     let effect: TrailEffect
     let time: Double
     let pixel: CGFloat
@@ -156,17 +194,119 @@ private struct TrailLayer: View {
 
     var body: some View {
         Canvas { context, _ in
-            for index in 0..<10 {
-                // Each particle drifts back and fades over a second, then restarts.
-                let age = (time * 1.2 + Double(index) / 10).truncatingRemainder(dividingBy: 1)
-                let x = origin.x - age * 40 * pixel / 3 + sin(Double(index) * 1.7) * 2 * pixel
-                let y = origin.y - age * 10 * pixel / 3 + cos(time * 3 + Double(index)) * pixel
-                let color = Color(hex: effect.colors[index % effect.colors.count]).opacity(1 - age)
-                let rect = CGRect(x: (x / pixel).rounded() * pixel, y: (y / pixel).rounded() * pixel, width: pixel, height: pixel)
-                context.fill(Path(rect), with: .color(color))
+            /// Fills one art pixel `dx`, `dy` art pixels from the origin.
+            func dot(_ dx: Double, _ dy: Double, _ color: UInt32, _ opacity: Double, size: Int = 1) {
+                guard opacity > 0.02 else { return }
+                let x = (origin.x / pixel + dx).rounded() * pixel
+                let y = (origin.y / pixel + dy).rounded() * pixel
+                let side = CGFloat(size) * pixel
+                context.fill(Path(CGRect(x: x, y: y, width: side, height: side)), with: .color(Color(hex: color).opacity(opacity)))
+            }
+            let colors = effect.colors
+            switch effect.style {
+            case .sparkles:
+                for index in 0..<10 {
+                    // Each particle drifts back and fades over a second, then restarts.
+                    let age = (time * 1.2 + Double(index) / 10).truncatingRemainder(dividingBy: 1)
+                    dot(-age * 13 + sin(Double(index) * 1.7) * 2, -age * 3 + cos(time * 3 + Double(index)),
+                        colors[index % colors.count], 1 - age)
+                }
+            case .ribbon:
+                // One stripe per colour, waving more the further back it goes.
+                let length = 26
+                for (band, color) in colors.enumerated() {
+                    for step in 1...length {
+                        let back = Double(step)
+                        let wave = sin(time * 7 - back * 0.32) * 1.8 * back / Double(length)
+                        dot(-back, Double(band) - Double(colors.count) + 1 + wave, color,
+                            0.95 * (1 - back / Double(length + 2)))
+                    }
+                }
+            case .embers:
+                for index in 0..<16 {
+                    let seed = Double((index * 7_919) % 1_000) / 1_000
+                    let age = (time * 1.5 + seed).truncatingRemainder(dividingBy: 1)
+                    // Thrown back and up, then falling, cooling from white-yellow to red.
+                    let dx = -age * (12 + seed * 10)
+                    let dy = -3 - seed * 4 + age * age * 10 + sin(time * 9 + Double(index)) * 0.5
+                    let flicker = sin(time * 23 + Double(index) * 3) > -0.6 ? 1.0 : 0.3
+                    let color = colors[min(colors.count - 1, Int(age * Double(colors.count)))]
+                    dot(dx, dy, color, (1 - age) * flicker, size: age < 0.25 && index % 3 == 0 ? 2 : 1)
+                }
+            case .stardust:
+                for index in 0..<18 {
+                    let seed = Double((index * 6_271) % 1_000) / 1_000
+                    let age = (time * 0.55 + seed).truncatingRemainder(dividingBy: 1)
+                    let dx = -2 - age * 28 + sin(time + Double(index)) * 1.5
+                    let dy = -6 + seed * 9 - age * 3 + cos(time * 1.3 + Double(index) * 2)
+                    let twinkle = 0.5 + 0.5 * sin(time * 6 + Double(index) * 2.3)
+                    let color = colors[index % colors.count]
+                    let opacity = (1 - age) * (0.35 + 0.65 * twinkle)
+                    dot(dx, dy, color, opacity)
+                    if twinkle > 0.85 {
+                        // The brightest grains flash into little crosses.
+                        for (cx, cy) in [(-1.0, 0.0), (1.0, 0.0), (0.0, -1.0), (0.0, 1.0)] {
+                            dot(dx + cx, dy + cy, color, opacity * 0.6)
+                        }
+                    }
+                }
+            case .bubbles:
+                for index in 0..<8 {
+                    let seed = Double((index * 4_513) % 1_000) / 1_000
+                    let age = (time * 0.6 + Double(index) / 8).truncatingRemainder(dividingBy: 1)
+                    let dx = -3 - age * 16 - seed * 4 + sin(time * 3 + Double(index)) * 1.2
+                    let dy = -2 - age * 14 + seed * 2
+                    let color = colors[index % colors.count]
+                    let opacity = age > 0.85 ? (1 - age) / 0.15 : 0.9
+                    if index % 3 == 0 {
+                        dot(dx, dy, color, opacity)
+                    } else {
+                        // A ring with a shine in its corner.
+                        for (cx, cy) in [(0.0, -1.0), (-1.0, 0.0), (1.0, 0.0), (0.0, 1.0)] {
+                            dot(dx + cx, dy + cy, color, opacity * 0.85)
+                        }
+                        dot(dx - 1, dy - 1, 0xFFFFFF, opacity * 0.5)
+                    }
+                }
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+/// The walker standing with a trail behind it, for the Shop and the Mystery
+/// Box reveal.
+struct TrailPreview: View {
+    let effect: TrailEffect
+    let avatarID: String?
+    var pixel: CGFloat = 3
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        GeometryReader { geometry in
+            let width = CGFloat(CharacterSprites.width) * pixel
+            let height = CGFloat(CharacterSprites.outfittedHeight) * pixel
+            let x = ((geometry.size.width * 0.62 - width / 2) / pixel).rounded() * pixel
+            let y = ((geometry.size.height - height) / 2 / pixel).rounded() * pixel
+            let origin = CGPoint(x: x, y: y + height - 4 * pixel)
+            TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
+                ZStack(alignment: .topLeading) {
+                    TrailLayer(effect: effect, time: reduceMotion ? 0.4 : context.date.timeIntervalSinceReferenceDate,
+                               pixel: pixel, origin: origin)
+                    if let avatarID,
+                       let image = PixelArtCache.shared.characterFrame(0, avatarID: avatarID, outfit: [], walking: false) {
+                        Image(decorative: image, scale: 1)
+                            .resizable()
+                            .interpolation(.none)
+                            .frame(width: width, height: height)
+                            .offset(x: x, y: y)
+                    }
+                }
+                .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 

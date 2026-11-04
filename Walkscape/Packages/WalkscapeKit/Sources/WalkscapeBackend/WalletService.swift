@@ -27,7 +27,45 @@ public struct WalletService: Sendable {
         /// The server has no up-to-date cloud save to pay from.
         case needsCloudSave
         case notSignedIn
+        /// The daily chest was opened less than 24 hours ago.
+        case notReady
         case network(String)
+    }
+
+    /// When the daily chest is ready, as a time on this phone's clock (from
+    /// the server's: how long is left is what counts, not the phone's time).
+    public func dailyChestReadyAt() async throws -> Date {
+        struct Row: Decodable {
+            let ready_at: Date
+            let server_now: Date
+        }
+        let rows: [Row] = try await run { try await api.call("daily_chest_status") }
+        guard let row = rows.first else { throw PurchaseError.network("Unexpected response from the server") }
+        return Date().addingTimeInterval(row.ready_at.timeIntervalSince(row.server_now))
+    }
+
+    /// A daily chest the server opened: its claim id, coins, and when the next is ready.
+    public struct DailyChestClaim: Hashable, Sendable {
+        public let claimID: String
+        public let coins: Int
+        public let nextReadyAt: Date
+    }
+
+    /// Opens the daily chest. Retrying the same `requestID` returns the same claim.
+    public func claimDailyChest(requestID: UUID) async throws -> DailyChestClaim {
+        struct Params: Encodable { let p_request_id: String }
+        struct Row: Decodable {
+            let claim_id: String
+            let coins: Int
+            let ready_at: Date
+            let server_now: Date
+        }
+        let rows: [Row] = try await run {
+            try await api.call("claim_daily_chest", Params(p_request_id: requestID.uuidString.lowercased()))
+        }
+        guard let row = rows.first else { throw PurchaseError.network("Unexpected response from the server") }
+        return DailyChestClaim(claimID: row.claim_id.lowercased(), coins: row.coins,
+                               nextReadyAt: Date().addingTimeInterval(row.ready_at.timeIntervalSince(row.server_now)))
     }
 
     /// Buys and opens a Mystery Box. Retrying with the same `requestID` returns
@@ -83,6 +121,7 @@ public struct WalletService: Sendable {
             case "sold_out": return .soldOut
             case "no_cloud_save", "update_app": return .needsCloudSave
             case "not_authenticated": return .notSignedIn
+            case "daily_chest_not_ready": return .notReady
             default: return .network(message)
             }
         case .invalidResponse, .decoding: return .network("Unexpected response from the server")

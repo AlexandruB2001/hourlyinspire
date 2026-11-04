@@ -100,6 +100,9 @@ final class AppModel {
     /// Ad frequency limits for this device.
     private(set) var adState: AdState
     private(set) var isWatchingAd = false
+    /// When the free daily chest in the Shop is ready (on this phone's clock,
+    /// worked out from the server's). Nil until known, or when signed out.
+    private(set) var dailyChestReadyAt: Date?
     /// Nil until the player picks a companion.
     private(set) var companion: CompanionState?
     /// Companions resting at camp (you can own one of each species).
@@ -329,7 +332,8 @@ final class AppModel {
         async let team: Void = refreshTeam()
         async let referrals: Void = refreshReferrals()
         async let communityGroups: Void = refreshGroups()
-        _ = await (walking, social, team, referrals, communityGroups)
+        async let dailyChest: Void = refreshDailyChest()
+        _ = await (walking, social, team, referrals, communityGroups, dailyChest)
         await syncCloudSave()
         await refreshPurchases()
     }
@@ -456,7 +460,9 @@ final class AppModel {
         celebration = nil
         levelUp = nil
         rollQuests()
+        dailyChestReadyAt = nil
         Task { await refreshWalking() }
+        Task { await refreshDailyChest() }
     }
 
     private func startHealthObservationIfPossible() {
@@ -963,6 +969,12 @@ final class AppModel {
     /// The walker's current outfit, in draw order.
     var outfit: [String] { wallet.outfit }
 
+    /// The trail behind the walker: a worn contrail, else a premium trail.
+    var walkerTrail: TrailEffect? {
+        Contrails.effect(forItemID: wallet.equipped[EquipmentSlot.trail.rawValue])
+            ?? TrailEffectCatalog.effect(withID: currentLook.trailEffectID)
+    }
+
     /// Opens one chest found on today's walk. Returns the coins it held.
     func openChest() -> Int? {
         // Each chest has a permanent id; opening the same one again pays nothing.
@@ -1014,6 +1026,71 @@ final class AppModel {
             return .unavailable("Sign in again to open Mystery Boxes.")
         } catch {
             return .unavailable("Couldn't reach the Mystery Box. Check your connection and try again.")
+        }
+    }
+
+    enum DailyChestResult: Equatable {
+        case opened(coins: Int)
+        /// Opened less than 24 hours ago; `dailyChestReadyAt` says when it's back.
+        case notReady
+        case unavailable(String)
+    }
+
+    /// Asks the server when the daily chest is ready. Demo walking keeps its own timer on the phone.
+    func refreshDailyChest() async {
+        guard dataSource == .appleHealth else {
+            dailyChestReadyAt = store.demoDailyChestReadyAt ?? .distantPast
+            return
+        }
+        guard let backend, isSignedIn else {
+            dailyChestReadyAt = nil
+            return
+        }
+        do {
+            dailyChestReadyAt = try await backend.wallet.dailyChestReadyAt()
+        } catch WalletService.PurchaseError.notSignedIn {
+            handleSessionExpired()
+        } catch {
+            // Keep what we knew; the server checks again when it's opened.
+        }
+    }
+
+    /// Opens the free daily chest (once every 24 hours). The server keeps the
+    /// time and rolls the coins, so the phone's clock can't open it early.
+    func openDailyChest() async -> DailyChestResult {
+        guard dataSource == .appleHealth else {
+            if let ready = store.demoDailyChestReadyAt, ready > Date() { return .notReady }
+            var generator = SystemRandomNumberGenerator()
+            let coins = DailyChest.roll(using: &generator)
+            wallet.receiveDailyChest(claimID: UUID().uuidString.lowercased(), coins: coins)
+            store.save(wallet, for: dataSource)
+            store.demoDailyChestReadyAt = Date().addingTimeInterval(DailyChest.cooldown)
+            dailyChestReadyAt = store.demoDailyChestReadyAt
+            return .opened(coins: coins)
+        }
+        guard let backend, isSignedIn else { return .unavailable("Sign in to open the daily chest.") }
+        let request = UUID()
+        do {
+            // One retry with the same request if the answer was lost on the way back.
+            let claim: WalletService.DailyChestClaim
+            do {
+                claim = try await backend.wallet.claimDailyChest(requestID: request)
+            } catch WalletService.PurchaseError.network {
+                claim = try await backend.wallet.claimDailyChest(requestID: request)
+            }
+            wallet.receiveDailyChest(claimID: claim.claimID, coins: claim.coins)
+            store.save(wallet, for: .appleHealth)
+            dailyChestReadyAt = claim.nextReadyAt
+            Task { await syncCloudSave(force: true) }
+            return .opened(coins: claim.coins)
+        } catch WalletService.PurchaseError.notReady {
+            await refreshDailyChest()
+            return .notReady
+        } catch WalletService.PurchaseError.notSignedIn {
+            handleSessionExpired()
+            return .unavailable("Sign in again to open the daily chest.")
+        } catch {
+            return .unavailable("Couldn't reach the server. Check your connection and try again.")
         }
     }
 
@@ -1933,6 +2010,7 @@ final class AppModel {
         await refreshTeam()
         await refreshGroups()
         await refreshReferrals()
+        await refreshDailyChest()
     }
 
     /// Deletes the account and all server data. Returns an error message, or nil on success.
@@ -1951,6 +2029,7 @@ final class AppModel {
         await refreshTeam()
         await refreshGroups()
         await refreshReferrals()
+        await refreshDailyChest()
         return nil
     }
 
@@ -1963,6 +2042,7 @@ final class AppModel {
         teamInvites = []
         groups = []
         referral = nil
+        if dataSource == .appleHealth { dailyChestReadyAt = nil }
         accountError = "You've been signed out. Sign in again to see your friends."
     }
 }

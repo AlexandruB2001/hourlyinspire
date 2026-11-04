@@ -30,10 +30,10 @@ final class WalletTests: XCTestCase {
 
     func testCatalogHasThirtyUniqueItemsAcrossRarities() {
         let items = ShopCatalog.items
-        XCTAssertEqual(items.count, 58)
-        XCTAssertEqual(Set(items.map(\.id)).count, 58)
+        XCTAssertEqual(items.count, 62)
+        XCTAssertEqual(Set(items.map(\.id)).count, 62)
         let counts = Dictionary(grouping: items, by: \.rarity).mapValues(\.count)
-        XCTAssertEqual(counts, [.common: 23, .rare: 20, .epic: 11, .legendary: 4])
+        XCTAssertEqual(counts, [.common: 23, .rare: 20, .epic: 11, .legendary: 8])
         XCTAssertEqual(Set(items.map(\.slot)), Set(EquipmentSlot.allCases))
         XCTAssertEqual(Rarity.allCases.map(\.mysteryBoxWeight).reduce(0, +), 100)
         XCTAssertLessThan(Rarity.rare, Rarity.legendary)
@@ -186,6 +186,55 @@ final class WalletTests: XCTestCase {
         XCTAssertEqual(Double(counts[.rare] ?? 0) / 5_000, 0.28, accuracy: 0.03)
         XCTAssertEqual(Double(counts[.epic] ?? 0) / 5_000, 0.10, accuracy: 0.02)
         XCTAssertEqual(Double(counts[.legendary] ?? 0) / 5_000, 0.02, accuracy: 0.01)
+    }
+
+    // MARK: Contrails
+
+    func testContrailsAreLegendaryTrailsWithTheirOwnLook() {
+        let trails = ShopCatalog.items.filter { $0.slot == .trail }
+        XCTAssertEqual(trails.count, 4)
+        XCTAssertTrue(trails.allSatisfy { $0.rarity == .legendary }, "contrails are the hardest pulls")
+        XCTAssertEqual(Set(trails.map(\.id)), Set(Contrails.effects.keys))
+        XCTAssertEqual(Set(Contrails.effects.values.map(\.style)).count, 4, "each contrail moves its own way")
+        XCTAssertNil(Contrails.effect(forItemID: "golden-crown"))
+    }
+
+    func testAContrailIsWornInItsOwnSlot() {
+        var wallet = wallet(coins: 0)
+        give("rainbow-contrail", to: &wallet)
+        give("phoenix-wings", to: &wallet)
+        XCTAssertTrue(wallet.equip(ShopCatalog.item(withID: "rainbow-contrail")!))
+        XCTAssertTrue(wallet.equip(ShopCatalog.item(withID: "phoenix-wings")!))
+        XCTAssertEqual(wallet.equipped[EquipmentSlot.trail.rawValue], "rainbow-contrail", "wings and a trail together")
+        XCTAssertEqual(wallet.outfit.last, "rainbow-contrail")
+    }
+
+    // MARK: Daily chest
+
+    func testDailyChestHoldsFifteenToAHundredWithBigAmountsRare() {
+        XCTAssertEqual(DailyChest.odds.map(\.weight).reduce(0, +), 100)
+        XCTAssertEqual(DailyChest.range, 15...100)
+        XCTAssertEqual(DailyChest.odds.map(\.weight), DailyChest.odds.map(\.weight).sorted(by: >), "bigger amounts are never likelier")
+        XCTAssertTrue(DailyChest.odds.allSatisfy { $0.coins % 5 == 0 })
+        var generator = SeededGenerator(state: 3)
+        var counts: [Int: Int] = [:]
+        for _ in 0..<10_000 { counts[DailyChest.roll(using: &generator), default: 0] += 1 }
+        XCTAssertEqual(Set(counts.keys), Set(DailyChest.odds.map(\.coins)))
+        XCTAssertEqual(Double(counts[15] ?? 0) / 10_000, 0.30, accuracy: 0.02)
+        XCTAssertEqual(Double(counts[100] ?? 0) / 10_000, 0.02, accuracy: 0.01)
+        XCTAssertEqual(DailyChest.cooldown, 86_400)
+    }
+
+    func testADailyChestPaysOncePerClaim() {
+        var wallet = wallet(coins: 0)
+        let before = wallet.coins
+        wallet.receiveDailyChest(claimID: "abc", coins: 40)
+        wallet.receiveDailyChest(claimID: "abc", coins: 40)
+        XCTAssertEqual(wallet.coins, before + 40, "the same claim never pays twice")
+        XCTAssertEqual(wallet.earned[DailyChest.earnedKey(claimID: "abc")], 40)
+        var otherPhone = WalletState()
+        otherPhone.receiveDailyChest(claimID: "abc", coins: 40)
+        XCTAssertEqual(wallet.merged(with: otherPhone).coins, wallet.coins, "seen on two phones, counted once")
     }
 
     // MARK: Outfit
