@@ -24,6 +24,8 @@ final class WatchModel: NSObject {
     static let snapshotKey = "walkscape.watch.snapshot.v1"
     /// The key the iPhone app sends its snapshot under (see WatchSync).
     static let contextKey = "snapshot"
+    /// Asks the iPhone app for its latest snapshot (WatchSync.requestKey).
+    static let requestKey = "request"
 
     var hasPhoneData: Bool { snapshot != nil }
 
@@ -39,8 +41,10 @@ final class WatchModel: NSObject {
         }
     }
 
-    /// Reads today's steps and distance from Apple Health on the watch.
+    /// Reads today's steps and distance from Apple Health on the watch, and
+    /// asks the iPhone for the latest outfit and companion.
     func refresh() async {
+        requestFromPhone()
         switch await health.authorizationState() {
         case .unavailable:
             healthUnavailable = true
@@ -63,6 +67,15 @@ final class WatchModel: NSObject {
         await refresh()
     }
 
+    /// Wakes the iPhone app if needed; its reply is the latest snapshot.
+    private func requestFromPhone() {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated, WCSession.default.isReachable else { return }
+        WCSession.default.sendMessage([Self.requestKey: "snapshot"], replyHandler: { reply in
+            let data = reply[Self.contextKey] as? Data
+            Task { @MainActor in if let data { self.receive(data) } }
+        }, errorHandler: nil)
+    }
+
     private func receive(_ data: Data) {
         guard let received = try? JSONDecoder().decode(WidgetSnapshot.self, from: data) else { return }
         snapshot = received
@@ -83,7 +96,16 @@ extension WatchModel: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState,
                              error: Error?) {
         let data = session.receivedApplicationContext[Self.contextKey] as? Data
-        Task { @MainActor in if let data { self.receive(data) } }
+        Task { @MainActor in
+            if let data { self.receive(data) }
+            self.requestFromPhone()
+        }
+    }
+
+    /// The iPhone came into reach (Bluetooth or Wi-Fi): get its latest look.
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else { return }
+        Task { @MainActor in self.requestFromPhone() }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {

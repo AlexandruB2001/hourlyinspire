@@ -118,6 +118,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         MainActor.assumeIsolated { NotificationService.shared.install() }
+        // Here rather than in the UI: the Watch app's request can launch this app in the background.
+        WatchSync.shared.start()
         return true
     }
 

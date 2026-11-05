@@ -300,7 +300,6 @@ final class AppModel {
     /// Call once at launch.
     func start() {
         guard tickerTask == nil else { return }
-        WatchSync.shared.start()
         tickerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
@@ -327,6 +326,7 @@ final class AppModel {
     /// Call when the app becomes active.
     func didBecomeActive() {
         Task { await refreshAll() }
+        WatchSync.shared.resend()
         Task { await checkForBetaUpdate() }
         Task { await notifications.refreshAuthorization() }
         if let backgroundedAt {
