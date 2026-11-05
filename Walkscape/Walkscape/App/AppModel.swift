@@ -300,6 +300,7 @@ final class AppModel {
     /// Call once at launch.
     func start() {
         guard tickerTask == nil else { return }
+        WatchSync.shared.start()
         tickerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(30))
@@ -365,6 +366,8 @@ final class AppModel {
         defaults.set(data, forKey: WidgetSnapshot.storageKey)
         lastWidgetSnapshot = snapshot
         WidgetCenter.shared.reloadAllTimelines()
+        // The Apple Watch app shows the same walker, companion and totals.
+        WatchSync.shared.send(snapshot)
     }
 
     private func tick() async {

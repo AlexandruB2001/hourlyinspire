@@ -96,4 +96,7 @@ jobs:
         run: |
           app=build/Build/Products/Debug-iphonesimulator/Walkscape.app
           test -f "$app/PrivacyInfo.xcprivacy" || { echo "::error::PrivacyInfo.xcprivacy missing from the app bundle"; exit 1; }
+          test -d "$app/Watch/WalkscapeWatch.app" || { echo "::error::The Watch app isn't embedded in the iPhone app"; ls -R "$app" | head -40; exit 1; }
+          test -d "$app/Watch/WalkscapeWatch.app/PlugIns/WalkscapeWatchWidgets.appex" || { echo "::error::The Watch complications aren't embedded in the Watch app"; exit 1; }
+          /usr/libexec/PlistBuddy -c "Print :WKCompanionAppBundleIdentifier" "$app/Watch/WalkscapeWatch.app/Info.plist"
           /usr/libexec/PlistBuddy -c "Print :SupabaseHost" "$app/Info.plist"

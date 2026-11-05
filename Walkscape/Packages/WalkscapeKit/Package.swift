@@ -5,10 +5,10 @@ import PackageDescription
 // domain models, the zone progression engine, the friend-track layout
 // engine, mock data sources, the procedural pixel-art renderer and the
 // Supabase client.
-// It builds and tests on macOS, iOS and Linux (`swift test`).
+// It builds on iOS and watchOS and tests on macOS and Linux (`swift test`).
 let package = Package(
     name: "WalkscapeKit",
-    platforms: [.iOS(.v17), .macOS(.v14)],
+    platforms: [.iOS(.v17), .watchOS(.v10), .macOS(.v14)],
     products: [
         .library(name: "WalkscapeDomain", targets: ["WalkscapeDomain"]),
         .library(name: "PixelArt", targets: ["PixelArt"]),

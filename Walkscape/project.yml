@@ -6,6 +6,7 @@ options:
   bundleIdPrefix: com.alexandrub
   deploymentTarget:
     iOS: "17.0"
+    watchOS: "10.0"
   createIntermediateGroups: true
   developmentLanguage: en
 settings:
@@ -44,6 +45,14 @@ targets:
       - package: GoogleUserMessagingPlatform
       - sdk: HealthKit.framework
       - target: WalkscapeWidgets
+      # The Apple Watch app ships inside the iPhone app.
+      - target: WalkscapeWatch
+        embed: true
+        # Signed by its own target; the "Embed Watch Content" phase doesn't re-sign.
+        codeSign: false
+        copy:
+          destination: productsDirectory
+          subpath: $(CONTENTS_FOLDER_PATH)/Watch
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.alexandrub.walkscape
@@ -73,6 +82,50 @@ targets:
         CODE_SIGN_ENTITLEMENTS: WalkscapeWidgets/WalkscapeWidgets.entitlements
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+  WalkscapeWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - path: WalkscapeWatch
+      # The same Apple Health reader as the iPhone app (same rules).
+      - path: Walkscape/Data/HealthKit/HealthKitWalkingDataProvider.swift
+    dependencies:
+      - package: WalkscapeKit
+        product: WalkscapeDomain
+      - package: WalkscapeKit
+        product: PixelArt
+      - sdk: HealthKit.framework
+      - target: WalkscapeWatchWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexandrub.walkscape.watchkitapp
+        INFOPLIST_FILE: WalkscapeWatch/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WalkscapeWatch/WalkscapeWatch.entitlements
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "4"
+        SKIP_INSTALL: YES
+  WalkscapeWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - path: WalkscapeWatchWidgets
+      - path: Walkscape/Data/HealthKit/HealthKitWalkingDataProvider.swift
+    dependencies:
+      - package: WalkscapeKit
+        product: WalkscapeDomain
+      - sdk: HealthKit.framework
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.alexandrub.walkscape.watchkitapp.complications
+        INFOPLIST_FILE: WalkscapeWatchWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WalkscapeWatchWidgets/WalkscapeWatchWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+        TARGETED_DEVICE_FAMILY: "4"
         SKIP_INSTALL: YES
         APPLICATION_EXTENSION_API_ONLY: YES
 schemes:
