@@ -124,6 +124,18 @@ if CommandLine.arguments.contains("promo") {
         }
         writeRGBA(CharacterSprites.idleFrame(avatarID: "fern", outfit: outfit), "walker-\(name)-idle")
     }
+    // Friends: the other starter avatars, each in their own outfit.
+    let friends: [(String, [String])] = [
+        ("sky", ["red-beanie", "cherry-scarf", "red-sneakers"]), ("ember", ["viking-helmet", "bandana", "explorer-pack"]),
+        ("plum", ["cat-beanie", "lavender-hoodie"]), ("sunny", ["straw-hat", "sunglasses", "yellow-wellies"]),
+        ("frost", ["ski-goggles", "ocean-scarf", "blue-wellies"]),
+    ]
+    for (avatar, outfit) in friends {
+        for frame in 0..<CharacterSprites.walkFrameCount {
+            writeRGBA(CharacterSprites.walkFrame(frame, avatarID: avatar, outfit: outfit), "friend-\(avatar)-walk\(frame)")
+        }
+        writeRGBA(CharacterSprites.idleFrame(avatarID: avatar, outfit: outfit), "friend-\(avatar)-idle")
+    }
     // Companions at each growth stage.
     for species in CompanionCatalog.starters {
         for km in [0, 5, 20, 50, 100] {
@@ -131,7 +143,7 @@ if CommandLine.arguments.contains("promo") {
                       "companion-\(species.id)-\(km)km")
         }
     }
-    for id in ["chest", "coin", "mystery-box", "star"] { writeRGBA(ItemSprites.render(id), "item-\(id)") }
+    for id in ["chest", "coin", "mystery-box", "star", "flag", "lantern"] { writeRGBA(ItemSprites.render(id), "item-\(id)") }
     print("wrote promo art to \(promo)")
 }
 
