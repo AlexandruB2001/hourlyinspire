@@ -88,6 +88,53 @@ for (i, biome) in Biome.allCases.enumerated() {
 }
 write(thumbs, "thumbnails", scale: 3)
 
+// Promo art for social videos: unscaled layers with transparency, each as a
+// PPM (colour) plus a PGM (alpha). Usage: pixel-preview <dir> promo
+if CommandLine.arguments.contains("promo") {
+    let promo = "\(output)/promo"
+    try? FileManager.default.createDirectory(atPath: promo, withIntermediateDirectories: true)
+    func writeRGBA(_ canvas: PixelCanvas, _ name: String) {
+        var rgb = Data("P6\n\(canvas.width) \(canvas.height)\n255\n".utf8)
+        var alpha = Data("P5\n\(canvas.width) \(canvas.height)\n255\n".utf8)
+        for p in canvas.pixels {
+            rgb.append(contentsOf: [p.r, p.g, p.b])
+            alpha.append(p.a)
+        }
+        FileManager.default.createFile(atPath: "\(promo)/\(name).ppm", contents: rgb)
+        FileManager.default.createFile(atPath: "\(promo)/\(name).pgm", contents: alpha)
+    }
+    // Scenes as separate parallax layers, a 9:8 band for 1080-wide video at 8x.
+    for biome in Biome.allCases {
+        let layers = SceneRenderer.render(biome, width: 135, height: 120)
+        for (name, layer) in [("sky", layers.sky), ("clouds", layers.clouds), ("far", layers.far), ("mid", layers.mid),
+                              ("ground", layers.ground)] {
+            writeRGBA(layer, "scene-\(biome.rawValue)-\(name)")
+        }
+        FileManager.default.createFile(atPath: "\(promo)/scene-\(biome.rawValue)-footY.txt", contents: Data("\(layers.footY)".utf8))
+    }
+    // The walker in a few outfits: 4 walk frames and the idle frame each.
+    let outfits: [(String, [String])] = [
+        ("plain", []), ("crown", ["golden-crown", "aurora-scarf", "red-sneakers"]), ("hoodie", ["grey-hoodie", "white-sneakers"]),
+        ("wizard", ["wizard-hat", "rainbow-scarf", "hero-cape"]), ("starry", ["starry-hoodie", "flower-crown", "golden-boots"]),
+        ("halo", ["halo", "phoenix-wings", "white-tee"]),
+    ]
+    for (name, outfit) in outfits {
+        for frame in 0..<CharacterSprites.walkFrameCount {
+            writeRGBA(CharacterSprites.walkFrame(frame, avatarID: "fern", outfit: outfit), "walker-\(name)-walk\(frame)")
+        }
+        writeRGBA(CharacterSprites.idleFrame(avatarID: "fern", outfit: outfit), "walker-\(name)-idle")
+    }
+    // Companions at each growth stage.
+    for species in CompanionCatalog.starters {
+        for km in [0, 5, 20, 50, 100] {
+            writeRGBA(CompanionSprites.render(speciesID: species.id, growth: CompanionGrowth(kilometres: km)),
+                      "companion-\(species.id)-\(km)km")
+        }
+    }
+    for id in ["chest", "coin", "mystery-box", "star"] { writeRGBA(ItemSprites.render(id), "item-\(id)") }
+    print("wrote promo art to \(promo)")
+}
+
 // App icon source: 128x128 art scaled 8x to 1024. Usage: pixel-preview <dir> icon
 if CommandLine.arguments.contains("icon") {
     let layers = SceneRenderer.render(.meadow, width: 64, height: 64)
