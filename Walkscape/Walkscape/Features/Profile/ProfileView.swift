@@ -216,6 +216,14 @@ private struct SettingsSection: View {
             Text("Only today's step count and distance are shared, never raw Health data or location.")
                 .font(Theme.Typography.caption)
                 .foregroundStyle(Theme.Palette.creamDim)
+            if model.isSignedIn {
+                Toggle("Show me on the Daily Leaderboard",
+                       isOn: Binding(get: { model.showOnLeaderboard }, set: { model.setShowOnLeaderboard($0) }))
+                    .task { await model.refreshDailyLeaderboard() }
+                Text("All players can see your username, walker and today's distance if you make the top of the board. You'll always see your own position.")
+                    .font(Theme.Typography.caption)
+                    .foregroundStyle(Theme.Palette.creamDim)
+            }
             if model.ads.needsPrivacyOptions {
                 Button("Ad privacy choices") { Task { await model.ads.presentPrivacyOptions() } }
                     .buttonStyle(.pixelQuiet)

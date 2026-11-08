@@ -128,6 +128,37 @@ public struct SupabaseGroupRepository: GroupRepository {
         return GroupLeaderboardPage(period: period, rows: standings, memberCount: rows.first?.total ?? 0, limit: limit)
     }
 
+    /// The top walkers for `day` plus the caller's own line.
+    public func dailyLeaderboard(day: LocalDay) async throws -> DailyLeaderboard {
+        struct Params: Encodable { let p_day: String; let p_limit: Int }
+        struct Row: Decodable {
+            let user_id: String
+            let username: String
+            let avatar_id: String
+            let outfit: [String]
+            let rank: Int?
+            let distance_meters: Int
+            let is_me: Bool
+            let total: Int
+            let under_review: Bool
+            let shown: Bool
+        }
+        let rows: [Row] = try await run {
+            try await api.call("daily_leaderboard", Params(p_day: day.isoString, p_limit: DailyLeaderboard.topCount))
+        }
+        let me = rows.first(where: \.is_me)
+        return DailyLeaderboard(rows: rows.map {
+            DailyLeaderboardRow(userID: UserID($0.user_id.lowercased()), username: $0.username, avatarID: $0.avatar_id,
+                                outfit: $0.outfit, rank: $0.rank, meters: $0.distance_meters, isMe: $0.is_me)
+        }, players: rows.first?.total ?? 0, isUnderReview: me?.under_review ?? false, isShownToOthers: me?.shown ?? true)
+    }
+
+    /// Shows or hides the caller on the Daily Leaderboard.
+    public func setShowOnLeaderboard(_ show: Bool) async throws {
+        struct Params: Encodable { let p_show: Bool }
+        let _: Bool = try await run { try await api.call("set_show_on_leaderboard", Params(p_show: show)) }
+    }
+
     private func run<T>(_ body: () async throws -> T) async throws -> T {
         do {
             return try await body()

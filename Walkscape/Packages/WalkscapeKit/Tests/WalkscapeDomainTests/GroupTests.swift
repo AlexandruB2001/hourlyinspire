@@ -90,10 +90,10 @@ final class GroupTests: XCTestCase {
     }
 
     func testTheSocialDropdownHasFriendsTeamsAndGroups() {
-        XCTAssertEqual(SocialSection.allCases, [.friends, .teams, .groups], "menu order")
-        XCTAssertEqual(SocialSection.allCases.map(\.rawValue), ["Friends", "Teams", "Groups"], "labels")
+        XCTAssertEqual(SocialSection.allCases, [.friends, .teams, .groups, .leaderboard], "menu order")
+        XCTAssertEqual(SocialSection.allCases.map(\.rawValue), ["Friends", "Teams", "Groups", "Daily Leaderboard"], "labels")
         XCTAssertEqual(SocialSection(rawValue: "Groups"), .groups, "the remembered choice comes back")
         XCTAssertNil(SocialSection(rawValue: "Team"), "an unknown stored value falls back to the default")
-        XCTAssertEqual(Set(SocialSection.allCases.map(\.spriteID)).count, 3, "each has its own icon")
+        XCTAssertEqual(Set(SocialSection.allCases.map(\.spriteID)).count, 4, "each has its own icon")
     }
 }

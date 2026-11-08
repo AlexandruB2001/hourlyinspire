@@ -94,7 +94,6 @@ private struct MysteryBoxCard: View {
     var body: some View {
         let price = ShopCatalog.mysteryBoxPrice
         let ownsEverything = MysteryBox.prizes(on: model.today).allSatisfy { model.wallet.owns(itemID: $0.id) }
-        let refunds = Rarity.allCases.map { "\($0.duplicateRefund)" }.joined(separator: "/")
         let odds = Rarity.allCases.map { "\($0.mysteryBoxWeight)% \($0.rawValue)" }.joined(separator: " · ")
         HStack(spacing: Theme.Spacing.m) {
             ItemIcon(spriteID: "mystery-box", pixel: 5)
@@ -103,7 +102,7 @@ private struct MysteryBoxCard: View {
                     .font(Theme.Typography.headline)
                     .foregroundStyle(Theme.Palette.cream)
                 Text(ownsEverything ? "You own everything! Every box now gives coins back."
-                     : "The only way to get new looks: a random outfit piece or companion accessory. Duplicates give \(refunds) coins back by rarity.")
+                     : "The only way to get new looks: a random outfit piece or companion accessory.")
                     .font(Theme.Typography.caption)
                     .foregroundStyle(Theme.Palette.creamDim)
                 Text(odds)

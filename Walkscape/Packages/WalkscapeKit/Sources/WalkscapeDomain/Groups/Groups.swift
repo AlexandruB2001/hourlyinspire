@@ -23,6 +23,7 @@ public enum SocialSection: String, CaseIterable, Identifiable, Sendable {
     case friends = "Friends"
     case teams = "Teams"
     case groups = "Groups"
+    case leaderboard = "Daily Leaderboard"
 
     public var id: String { rawValue }
 
@@ -32,6 +33,7 @@ public enum SocialSection: String, CaseIterable, Identifiable, Sendable {
         case .friends: return "boot"
         case .teams: return "team-badge"
         case .groups: return "flag"
+        case .leaderboard: return "medal"
         }
     }
 }

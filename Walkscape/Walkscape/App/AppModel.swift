@@ -344,6 +344,10 @@ final class AppModel {
     // MARK: Widget
 
     private var lastWidgetSnapshot: WidgetSnapshot?
+    private(set) var dailyLeaderboard: DailyLeaderboard?
+    private(set) var dailyLeaderboardError: String?
+    /// From the server; refreshed with the board.
+    private(set) var showOnLeaderboard = true
 
     /// Shares today's walk, the walker and the companion with the home-screen
     /// widget, and asks it to redraw when something it shows has changed.
@@ -934,6 +938,30 @@ final class AppModel {
     /// Coins that can pay for creating a team or group: the Apple Health
     /// wallet, which is the one in the cloud save the server charges.
     var spendableCoins: Int { dataSource == .appleHealth ? wallet.coins : store.loadWallet(.appleHealth).coins }
+
+    /// Today's board for every player, by the player's own calendar date.
+    func refreshDailyLeaderboard() async {
+        let day = today
+        switch await groupCall({ try await $0.dailyLeaderboard(day: day) }) {
+        case .success(let board):
+            dailyLeaderboard = board
+            showOnLeaderboard = board.isShownToOthers
+            dailyLeaderboardError = nil
+        case .failure(let error):
+            dailyLeaderboardError = error.message
+        }
+    }
+
+    func setShowOnLeaderboard(_ show: Bool) {
+        showOnLeaderboard = show
+        dailyLeaderboard?.isShownToOthers = show
+        Task {
+            if case .failure(let error) = await groupCall({ try await $0.setShowOnLeaderboard(show) }) {
+                dailyLeaderboardError = error.message
+            }
+            await refreshDailyLeaderboard()
+        }
+    }
 
     func refreshGroups() async {
         guard let backend, isSignedIn else {

@@ -1,7 +1,7 @@
 import SwiftUI
 import WalkscapeDomain
 
-/// The Social tab: friends, your team and your groups, switched with the dropdown.
+/// The Social tab: friends, your team, your groups and the Daily Leaderboard, switched with the dropdown.
 struct FriendsView: View {
     typealias Mode = SocialSection
 
@@ -16,11 +16,14 @@ struct FriendsView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                    if model.isSignedIn { DailyLeaderboardNotice() }
                     modePicker
                     if mode == .teams {
                         TeamSection()
                     } else if mode == .groups {
                         GroupsSection()
+                    } else if mode == .leaderboard {
+                        DailyLeaderboardSection()
                     } else {
                         if model.account == .signedOut { SignInCard() }
                         trackSection
@@ -53,6 +56,7 @@ struct FriendsView: View {
                 case .friends: await model.refreshFriends()
                 case .teams: await model.refreshTeam()
                 case .groups: await model.refreshGroups()
+                case .leaderboard: await model.refreshDailyLeaderboard()
                 }
             }
             .sheet(isPresented: $showingAddFriend) { AddFriendSheet() }
@@ -212,7 +216,7 @@ struct FriendsView: View {
 
     private var privacyNote: some View {
         Label {
-            Text("Friends see only your daily step and distance totals. Walkscape never uses or shares your location — the track compares distance walked, not where anyone is.")
+            Text("Friends see your daily step and distance totals. The Daily Leaderboard can show your username, walker and distance to all players unless you hide it in Profile. Walkscape never uses or shares your location — the track compares distance walked, not where anyone is.")
         } icon: {
             Image(systemName: "lock.shield")
         }
