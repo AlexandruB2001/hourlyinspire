@@ -10,7 +10,7 @@ struct WalkscapeWidgetBundle: WidgetBundle {
     }
 }
 
-/// Your walker and companion on today's trail. Small: total kilometres.
+/// Your walker and companion on today's trail. Small: today's kilometres.
 /// Medium: today's distance and the next zone. Large: the whole picture.
 struct WalkscapeJourneyWidget: Widget {
     var body: some WidgetConfiguration {
@@ -82,33 +82,33 @@ struct JourneyWidgetView: View {
 
     private var snapshot: WidgetSnapshot { entry.snapshot }
 
-    /// Walker and companion over the scene, total distance underneath.
+    /// Today's distance at the top, with the walker and companion clear below it.
     private var small: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
             VStack(spacing: 0) {
-                Text(Self.kilometres(snapshot.totalMeters))
+                Text(Self.kilometres(snapshot.todayMeters))
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(Palette.cream)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
-                Text("WALKED IN TOTAL")
+                Text("TODAY")
                     .font(.system(size: 9, weight: .heavy, design: .rounded))
                     .foregroundStyle(Palette.gold)
             }
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .padding(.horizontal, 10)
             .background(RoundedRectangle(cornerRadius: 8).fill(Palette.ink.opacity(0.8)))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Palette.ink, lineWidth: 2))
-            .padding(.bottom, 10)
+            .padding(.top, 8)
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(for: .widget) {
             PixelScene(snapshot: snapshot, width: 64, height: 64, walkerPosition: 0.6)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.totalMeters)) walked in total")
+        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) walked today")
     }
 
     /// The scene across the whole widget: walker and companion on the left,
@@ -157,7 +157,7 @@ struct JourneyWidgetView: View {
     }
 
     /// The scene with the walker and companion on top, and a panel underneath with
-    /// today, the total, the next zone and the companion's growth.
+    /// today, this week, the next zone and the companion's growth.
     private var large: some View {
         let growth = CompanionGrowth(kilometres: snapshot.companionKilometres)
         let species = snapshot.companionSpeciesID.flatMap(CompanionCatalog.species(withID:))
@@ -187,10 +187,10 @@ struct JourneyWidgetView: View {
                     }
                     Spacer(minLength: 8)
                     VStack(alignment: .trailing, spacing: 0) {
-                        Text("IN TOTAL")
+                        Text("THIS WEEK")
                             .font(.system(size: 10, weight: .heavy, design: .rounded))
                             .foregroundStyle(Palette.gold)
-                        Text(Self.kilometres(snapshot.totalMeters))
+                        Text(Self.kilometres(snapshot.weekMeters ?? snapshot.todayMeters))
                             .font(.system(size: 20, weight: .heavy, design: .rounded))
                             .monospacedDigit()
                             .foregroundStyle(Palette.cream)
@@ -238,7 +238,7 @@ struct JourneyWidgetView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .containerBackground(for: .widget) { Palette.ink }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, \(Self.kilometres(snapshot.totalMeters)) in total, in \(snapshot.zoneName).")
+        .accessibilityLabel("Walkscape: \(Self.kilometres(snapshot.todayMeters)) today, \(Self.kilometres(snapshot.weekMeters ?? snapshot.todayMeters)) this week, in \(snapshot.zoneName).")
     }
 
     /// Same text as the app (rounded down to 0.1 km), so the widget and the

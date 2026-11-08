@@ -10,6 +10,8 @@ struct ShopView: View {
     @State private var revealed: MysteryBoxPrize?
     /// Coins back when the revealed prize was a duplicate.
     @State private var revealedRefund: Int?
+    /// The item opened for a closer look.
+    @State private var inspecting: ShopInspection?
 
     var body: some View {
         NavigationStack {
@@ -23,11 +25,13 @@ struct ShopView: View {
                         revealed = prize
                     }
                     RewardedAdCard()
-                    CompanionAccessoriesCard()
+                    CompanionAccessoriesCard { inspecting = .accessory($0) }
                     SlotPicker(selection: $slot)
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: Theme.Spacing.m)],
                               spacing: Theme.Spacing.m) {
-                        ForEach(items) { ShopItemCard(item: $0) }
+                        ForEach(items) { item in
+                            ShopItemCard(item: item) { inspecting = .outfit(item) }
+                        }
                     }
                 }
                 .padding(Theme.Spacing.l)
@@ -39,6 +43,7 @@ struct ShopView: View {
                 ToolbarItem(placement: .topBarTrailing) { CoinBadge(coins: model.wallet.coins) }
             }
             .sheet(item: $revealed) { MysteryRevealSheet(prize: $0, refund: revealedRefund) }
+            .sheet(item: $inspecting) { ShopItemDetailSheet(target: $0) }
             .task { await model.refreshDailyChest() }
         }
     }
@@ -313,6 +318,7 @@ private struct RewardedAdCard: View {
 /// Hats, scarves and backpacks for your companion.
 private struct CompanionAccessoriesCard: View {
     @Environment(AppModel.self) private var model
+    let onOpen: (CompanionAccessory) -> Void
 
     var body: some View {
         if let companion = model.companion, let species = companion.species {
@@ -338,19 +344,27 @@ private struct CompanionAccessoriesCard: View {
         let wearing = companion.wornAccessories.contains(accessory.id)
         let growth = model.companionGrowth?.kilometres ?? 0
         return VStack(spacing: Theme.Spacing.xs) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
-                PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID, kilometres: growth,
-                                                                    accessories: [accessory.id]), pixel: 3)
+            Button {
+                onOpen(accessory)
+            } label: {
+                VStack(spacing: Theme.Spacing.xs) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
+                        PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID, kilometres: growth,
+                                                                            accessories: [accessory.id]), pixel: 3)
+                    }
+                    .frame(width: 84, height: 72)
+                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
+                        .strokeBorder(wearing ? Theme.Palette.gold : Theme.Palette.ink, lineWidth: 2))
+                    Text(accessory.name)
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(Theme.Palette.cream)
+                        .lineLimit(1)
+                        .frame(width: 84)
+                }
             }
-            .frame(width: 84, height: 72)
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
-                .strokeBorder(wearing ? Theme.Palette.gold : Theme.Palette.ink, lineWidth: 2))
-            Text(accessory.name)
-                .font(Theme.Typography.micro)
-                .foregroundStyle(Theme.Palette.cream)
-                .lineLimit(1)
-                .frame(width: 84)
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows it larger")
             if owned {
                 Button(wearing ? "Wearing" : "Wear") { model.toggleAccessory(accessory) }
                     .buttonStyle(PixelButtonStyle(kind: wearing ? .secondary : .quiet))
@@ -401,33 +415,40 @@ private struct SlotPicker: View {
 private struct ShopItemCard: View {
     @Environment(AppModel.self) private var model
     let item: ShopItem
+    let onOpen: () -> Void
 
     var body: some View {
         let owned = model.wallet.owns(item)
         let wearing = model.wallet.isEquipped(item)
         VStack(spacing: Theme.Spacing.s) {
-            ZStack {
-                RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
-                if let trail = Contrails.effect(forItemID: item.id) {
-                    TrailPreview(effect: trail, avatarID: model.settings.avatarID)
-                } else {
-                    PixelImageView(image: PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID,
-                                                                              outfit: [item.id], walking: false),
-                                   pixel: 3)
+            Button(action: onOpen) {
+                VStack(spacing: Theme.Spacing.s) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted)
+                        if let trail = Contrails.effect(forItemID: item.id) {
+                            TrailPreview(effect: trail, avatarID: model.settings.avatarID)
+                        } else {
+                            PixelImageView(image: PixelArtCache.shared.characterFrame(0, avatarID: model.settings.avatarID,
+                                                                                      outfit: [item.id], walking: false),
+                                           pixel: 3)
+                        }
+                    }
+                    .frame(height: 84)
+                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
+                        .strokeBorder(wearing ? Theme.Palette.gold : item.rarity.color.opacity(0.7), lineWidth: 2))
+
+                    VStack(spacing: 2) {
+                        Text(item.name)
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Palette.cream)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        RarityTag(rarity: item.rarity)
+                    }
                 }
             }
-            .frame(height: 84)
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s)
-                .strokeBorder(wearing ? Theme.Palette.gold : item.rarity.color.opacity(0.7), lineWidth: 2))
-
-            VStack(spacing: 2) {
-                Text(item.name)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Palette.cream)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                RarityTag(rarity: item.rarity)
-            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows it larger")
 
             if owned {
                 Button(wearing ? "Wearing" : "Wear") { model.toggleEquipped(item) }
@@ -440,6 +461,133 @@ private struct ShopItemCard: View {
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(item.name), \(item.rarity.displayName). \(item.detail)")
         .accessibilityValue(owned ? (wearing ? "Wearing" : "Owned") : "Not found yet. Comes from the Mystery Box")
+    }
+}
+
+/// What's open in the close-up sheet.
+private enum ShopInspection: Identifiable {
+    case outfit(ShopItem)
+    case accessory(CompanionAccessory)
+
+    var id: String {
+        switch self {
+        case .outfit(let item): return item.id
+        case .accessory(let accessory): return accessory.id
+        }
+    }
+}
+
+/// A shop item drawn large, with how to get it (or a button to wear it).
+private struct ShopItemDetailSheet: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    let target: ShopInspection
+
+    var body: some View {
+        VStack(spacing: Theme.Spacing.l) {
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.Radius.m).fill(Theme.Palette.skyMuted)
+                preview
+            }
+            .frame(width: 210, height: 230)
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.m).strokeBorder(frameColor, lineWidth: 3))
+            VStack(spacing: Theme.Spacing.xs) {
+                Text(name)
+                    .font(Theme.Typography.title)
+                    .foregroundStyle(Theme.Palette.cream)
+                if let rarity { RarityTag(rarity: rarity) }
+                Text(detail)
+                    .font(Theme.Typography.body)
+                    .foregroundStyle(Theme.Palette.creamDim)
+                    .multilineTextAlignment(.center)
+            }
+            HStack(spacing: Theme.Spacing.m) {
+                if owned {
+                    Button(wearing ? "Take off" : "Wear it", action: toggle)
+                        .buttonStyle(.pixel)
+                }
+                Button("Close") { dismiss() }
+                    .buttonStyle(.pixelQuiet)
+            }
+        }
+        .padding(Theme.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.Palette.forestDeep.ignoresSafeArea())
+        .presentationDetents([.fraction(0.68), .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder private var preview: some View {
+        switch target {
+        case .outfit(let item):
+            if let trail = Contrails.effect(forItemID: item.id) {
+                TrailPreview(effect: trail, avatarID: model.settings.avatarID, pixel: 6)
+            } else {
+                WalkingCharacter(avatarID: model.settings.avatarID, outfit: [item.id], walking: true, pixel: 8)
+            }
+        case .accessory(let accessory):
+            if let companion = model.companion {
+                PixelImageView(image: PixelArtCache.shared.companion(companion.speciesID,
+                                                                    kilometres: model.companionGrowth?.kilometres ?? 0,
+                                                                    accessories: [accessory.id]), pixel: 9)
+            }
+        }
+    }
+
+    private var name: String {
+        switch target {
+        case .outfit(let item): return item.name
+        case .accessory(let accessory): return accessory.name
+        }
+    }
+
+    private var rarity: Rarity? {
+        switch target {
+        case .outfit(let item): return item.rarity
+        case .accessory(let accessory): return accessory.rarity
+        }
+    }
+
+    private var frameColor: Color { wearing ? Theme.Palette.gold : (rarity?.color ?? Theme.Palette.ink) }
+
+    private var detail: String {
+        let source: String
+        switch target {
+        case .outfit(let item):
+            return owned ? item.detail : "\(item.detail) Comes from the Mystery Box."
+        case .accessory(let accessory):
+            if let event = accessory.eventID.flatMap(SeasonalEventCatalog.event(withID:)), !accessory.isInMysteryBox(on: model.today) {
+                source = "A reward from \(event.name)."
+            } else if accessory.rarity != nil {
+                source = "Comes from the Mystery Box."
+            } else if let level = accessory.unlockLevel {
+                source = "A gift at Explorer Level \(level)."
+            } else {
+                source = "A special gift."
+            }
+            return owned ? "For your companion. It's yours!" : "For your companion. \(source)"
+        }
+    }
+
+    private var owned: Bool {
+        switch target {
+        case .outfit(let item): return model.wallet.owns(item)
+        case .accessory(let accessory): return model.wallet.owns(itemID: accessory.id)
+        }
+    }
+
+    private var wearing: Bool {
+        switch target {
+        case .outfit(let item): return model.wallet.isEquipped(item)
+        case .accessory(let accessory): return model.companion?.wornAccessories.contains(accessory.id) == true
+        }
+    }
+
+    private func toggle() {
+        switch target {
+        case .outfit(let item): model.toggleEquipped(item)
+        case .accessory(let accessory): model.toggleAccessory(accessory)
+        }
     }
 }
 

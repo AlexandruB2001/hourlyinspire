@@ -30,9 +30,9 @@ public enum Rarity: String, Codable, Sendable, Hashable, CaseIterable, Comparabl
     /// rolls from everything, so these keep a duplicate from feeling wasted.
     public var duplicateRefund: Int {
         switch self {
-        case .common: return 80
-        case .rare: return 100
-        case .epic: return 150
+        case .common: return 40
+        case .rare: return 60
+        case .epic: return 100
         case .legendary: return 200
         }
     }

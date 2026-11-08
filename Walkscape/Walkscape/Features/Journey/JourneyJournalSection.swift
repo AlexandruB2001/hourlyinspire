@@ -368,7 +368,7 @@ struct ReferralChestPopUp: View {
         .sensoryFeedback(.success, trigger: opened)
         .task(id: opened) {
             guard opened > 0 else { return }
-            try? await Task.sleep(for: .seconds(1.6))
+            do { try await Task.sleep(for: .seconds(1.6)) } catch { return }
             reward = nil
         }
         .onAppear {

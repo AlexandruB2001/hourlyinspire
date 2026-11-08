@@ -356,7 +356,8 @@ final class AppModel {
             companionKilometres: companionGrowth?.kilometres ?? 0, companionAccessories: companion?.wornAccessories ?? [],
             companionSkinID: companionSkin?.id, day: today, todayMeters: distanceMeters, todaySteps: sync.progress?.steps,
             totalMeters: progression.lifetimeMeters, zoneName: zone.currentZone.name, biome: zone.currentZone.biome,
-            nextZoneName: zone.nextZone.name, metersToNextZone: zone.metersToNextZone, updatedAt: now)
+            nextZoneName: zone.nextZone.name, metersToNextZone: zone.metersToNextZone, updatedAt: now,
+            weekMeters: WidgetSnapshot.weekTotal(dailyBestMeters: progression.dailyBestMeters, today: today, todayMeters: distanceMeters))
         if let last = lastWidgetSnapshot {
             var unchanged = snapshot
             unchanged.updatedAt = last.updatedAt

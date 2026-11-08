@@ -427,6 +427,162 @@ enum CreatureSprites {
             ..........
             ..........
             """,
+        "river-stone": """
+            ..........
+            ..........
+            ...oooo...
+            .ooWWssoo.
+            oWWsssssSo
+            osssssSSSo
+            oSsssSSSSo
+            .ooSSSSoo.
+            ...oooo...
+            ..........
+            """,
+        "wishing-coin": """
+            ...oooo...
+            ..ohhyyo..
+            .ohyyyyYo.
+            ohyoooyyYo
+            ohyoyyyyYo
+            ohyoooyyYo
+            oyyyyoyyYo
+            oyyoooyyYo
+            .oyyyyYYo.
+            ..oooooo..
+            """,
+        "pine-cone": """
+            ....oo....
+            ...oWWo...
+            ..oWsWso..
+            .oWsWsWSo.
+            .osWsWsSo.
+            .oWsWsWSo.
+            ..osWsSo..
+            ...oSSo...
+            ....oo....
+            ..........
+            """,
+        "sea-shell": """
+            ..........
+            ...oooo...
+            ..oppwwo..
+            .oppoopwo.
+            .opopPopo.
+            .oppoPPpo.
+            ..oppPPo..
+            .ooPPPPoo.
+            .oooooooo.
+            ..........
+            """,
+        "brass-key": """
+            ..........
+            .ooo......
+            oyhyo.....
+            oy.yoooooo
+            oy.yyyyyyo
+            oyhyoooyoo
+            .ooo...oo.
+            ..........
+            ..........
+            ..........
+            """,
+        "snow-globe": """
+            ...oooo...
+            ..occwco..
+            .occwcCco.
+            .ocwccwco.
+            .occGgcco.
+            .ocGGggco.
+            ..oooooo..
+            .obbbbbbo.
+            .oBBBBBBo.
+            ..oooooo..
+            """,
+        "jade-frog": """
+            ..........
+            .oo....oo.
+            oLwo..oLwo
+            oggooooggo
+            ogggggggGo
+            oGgLLLLgGo
+            .oggggggo.
+            ooGgoogGoo
+            .oooo.ooo.
+            ..........
+            """,
+        "sapphire": """
+            ..........
+            ..oooooo..
+            .ocWuuuuo.
+            ocWuuuuUUo
+            ouuuuuUUUo
+            .ouuuUUUo.
+            ..ouuUUo..
+            ...ouUo...
+            ....oo....
+            ..........
+            """,
+        "hourglass": """
+            .oooooooo.
+            .obbbbbbo.
+            ..owwwwo..
+            ..oyyyyo..
+            ...oyyo...
+            ....oo....
+            ...owyo...
+            ..owyyyo..
+            .obbbbbbo.
+            .oooooooo.
+            """,
+        "dragon-egg": """
+            ...oooo...
+            ..ohaaao..
+            .ohaaraao.
+            .oaaraaAo.
+            oaraaaaAro
+            oaaaaraAAo
+            oaaraaaAAo
+            .oaaaAAAo.
+            ..oAAAAo..
+            ...oooo...
+            """,
+        "moon-ring": """
+            ...oooo...
+            ..occwco..
+            ...occo...
+            ..oyyyyo..
+            .oyooooyo.
+            oyo....oyo
+            oyo....oyo
+            .oyooooYo.
+            ..oYYYYo..
+            ...oooo...
+            """,
+        "phoenix-feather": """
+            ........oo
+            .......oho
+            ......ohao
+            .....ohaao
+            ....oharo.
+            ...oharo..
+            ..ohaRo...
+            .ohrRo....
+            .oroo.....
+            oo........
+            """,
+        "world-seed": """
+            ....oLo...
+            ...oLgo...
+            ...oooo...
+            ..ohyyyo..
+            .ohyyyyYo.
+            .oyyhyyYo.
+            .oyyyyYYo.
+            ..oyyYYo..
+            ...oYYo...
+            ....oo....
+            """,
         // MARK: Team worlds
         "glow-moth": """
             ..........

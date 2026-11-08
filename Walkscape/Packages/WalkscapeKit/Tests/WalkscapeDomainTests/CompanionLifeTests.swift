@@ -84,7 +84,7 @@ final class CompanionLifeTests: XCTestCase {
         XCTAssertTrue(wallet.owns(itemID: "pet-straw-hat"))
         XCTAssertEqual(wallet.coins, 150)
         XCTAssertEqual(wallet.openMysteryBox(from: [.accessory(hat, rarity: .common)], using: &generator),
-                       .duplicate(.accessory(hat, rarity: .common), refund: 80))
-        XCTAssertEqual(wallet.coins, 150 - 70, "a duplicate common costs 150 - 80")
+                       .duplicate(.accessory(hat, rarity: .common), refund: 40))
+        XCTAssertEqual(wallet.coins, 150 - 110, "a duplicate common costs 150 - 40")
     }
 }

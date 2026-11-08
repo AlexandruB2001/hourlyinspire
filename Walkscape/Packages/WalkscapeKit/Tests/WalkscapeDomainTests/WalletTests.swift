@@ -138,7 +138,7 @@ final class WalletTests: XCTestCase {
     }
 
     func testDuplicatesGiveCoinsBackByRarity() {
-        XCTAssertEqual(Rarity.allCases.map(\.duplicateRefund), [80, 100, 150, 200])
+        XCTAssertEqual(Rarity.allCases.map(\.duplicateRefund), [40, 60, 100, 200])
         for rarity in Rarity.allCases {
             let item = ShopCatalog.items.first { $0.rarity == rarity }!
             var wallet = wallet(coins: 300)

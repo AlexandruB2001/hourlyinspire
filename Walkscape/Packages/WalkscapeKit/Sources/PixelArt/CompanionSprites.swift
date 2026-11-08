@@ -59,12 +59,14 @@ public enum CompanionSprites {
         let left = x + (opaque.map(\.0).min() ?? 0)
         let centre = x + sprite.width / 2
         let worn = accessories.compactMap { id in CompanionAccessoryArt.sprite(id).map { (id, $0) } }
-        for (id, piece) in worn where CompanionAccessoryArt.slot(of: id) == .back {
-            canvas.draw(piece, x: left - piece.width / 2, y: top + (bottom - top) / 3)
-        }
         canvas.draw(sprite, x: x, y: y)
         for (id, piece) in worn {
             switch CompanionAccessoryArt.slot(of: id) {
+            // On top of the body at its side, overlapping two columns, so most of
+            // the cape or pack shows even on the widest species.
+            case .back:
+                canvas.draw(piece, x: max(0, left - piece.width + 2),
+                            y: min(canvasSize - piece.height, top + (bottom - top) / 3))
             case .head: canvas.draw(piece, x: centre - piece.width / 2, y: max(0, top - piece.height + 1))
             case .neck: canvas.draw(piece, x: centre - piece.width / 2, y: top + (bottom - top) * 9 / 20)
             default: break

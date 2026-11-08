@@ -142,7 +142,9 @@ private struct ChestPopUp: View {
         .sensoryFeedback(.success, trigger: opened)
         .task(id: opened) {
             guard opened > 0 else { return }
-            try? await Task.sleep(for: .seconds(1.4))
+            // Another tap cancels this timer and starts a fresh one; a cancelled
+            // timer must leave the newest amount on screen.
+            do { try await Task.sleep(for: .seconds(1.4)) } catch { return }
             reward = nil
         }
         .onAppear {

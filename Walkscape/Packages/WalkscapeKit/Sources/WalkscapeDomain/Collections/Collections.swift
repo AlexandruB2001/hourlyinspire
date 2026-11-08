@@ -179,6 +179,22 @@ public enum TreasureCatalog {
         Treasure(id: "ruby", name: "Canyon Ruby", rarity: .epic, detail: "Warm to the touch, like a coal from a campfire."),
         Treasure(id: "star-shard", name: "Star Shard", rarity: .epic, detail: "A sliver of a falling star. It hums softly."),
         Treasure(id: "crown-jewel", name: "Lost Crown", rarity: .legendary, detail: "The crown of a forgotten wandering king."),
+        Treasure(id: "river-stone", name: "Skipping Stone", rarity: .common, detail: "Perfectly flat. It has seven skips in it, easily."),
+        Treasure(id: "wishing-coin", name: "Wishing Coin", rarity: .common, detail: "Fished out of a fountain. The wish is still inside."),
+        Treasure(id: "pine-cone", name: "Silver Pine Cone", rarity: .common, detail: "Frost made it silver and it decided to stay that way."),
+        Treasure(id: "sea-shell", name: "Spiral Shell", rarity: .common, detail: "Hold it to your ear: someone is humming in there."),
+        Treasure(id: "blue-feather", name: "Bluebird Feather", rarity: .common, detail: "Dropped on purpose, you suspect.", spriteID: "feather"),
+        Treasure(id: "lucky-clover", name: "Four-Leaf Charm", rarity: .common, detail: "Pressed flat by a walker who no longer needed the luck.", spriteID: "clover"),
+        Treasure(id: "brass-key", name: "Brass Key", rarity: .rare, detail: "Fits no lock you know of. Yet."),
+        Treasure(id: "pocket-compass", name: "Pocket Compass", rarity: .rare, detail: "Points firmly toward the nearest snack.", spriteID: "compass"),
+        Treasure(id: "snow-globe", name: "Snow Globe", rarity: .rare, detail: "The tiny hills inside look awfully familiar."),
+        Treasure(id: "jade-frog", name: "Jade Frog", rarity: .rare, detail: "Carved so well you keep expecting it to blink."),
+        Treasure(id: "sapphire", name: "Frozen Sapphire", rarity: .epic, detail: "Cold all year. Lovely on a hot day."),
+        Treasure(id: "hourglass", name: "Sand Hourglass", rarity: .epic, detail: "It only runs while you are walking."),
+        Treasure(id: "dragon-egg", name: "Dragon Egg", rarity: .epic, detail: "Warm, heavy and occasionally wobbly."),
+        Treasure(id: "moon-ring", name: "Moonstone Ring", rarity: .epic, detail: "Too small for anyone who ever lost it."),
+        Treasure(id: "phoenix-feather", name: "Phoenix Feather", rarity: .legendary, detail: "Still glowing. Do not put it in your pocket."),
+        Treasure(id: "world-seed", name: "World Seed", rarity: .legendary, detail: "They say every trail you know grew from one of these."),
     ]
 
     public static func treasure(withID id: String) -> Treasure? { all.first { $0.id == id } }

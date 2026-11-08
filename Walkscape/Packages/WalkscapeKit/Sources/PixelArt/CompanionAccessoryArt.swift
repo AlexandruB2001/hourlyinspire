@@ -43,15 +43,19 @@ enum CompanionAccessoryArt {
             ...oo..
             """,
         "pet-bell": """
-            ooo
-            oyo
-            .o.
+            .......
+            orrrrro
+            .oyhyo.
+            .oyyyo.
+            ..oYo..
             """,
         "pet-backpack": """
-            ooo
-            onn
-            onn
-            ooo
+            .ooo.
+            oBnBo
+            onnno
+            oyyyo
+            onnno
+            ooooo
             """,
         "pet-pumpkin-hat": """
             ..g..
@@ -75,11 +79,13 @@ enum CompanionAccessoryArt {
             ouuuo
             """,
         "pet-star-cape": """
-            oo.
-            ovv
-            ovh
-            ovv
-            ooo
+            ...ooo
+            ..oVVo
+            .oVhVo
+            .oVVVo
+            oVVVvo
+            ohVVVo
+            oo.ooo
             """,
         "pet-plus-moon-hat": """
             ..ooo
@@ -93,11 +99,13 @@ enum CompanionAccessoryArt {
             oYYYYo
             """,
         "pet-plus-leaf-cloak": """
-            oo.
-            ogg
-            oLg
-            ogg
-            ooo
+            ...ooo
+            ..oggo
+            .ogLgo
+            .ogggo
+            ogggGo
+            oLgggo
+            oo.ooo
             """,
         "pet-plus-star-bow": """
             h.o.h
@@ -115,11 +123,13 @@ enum CompanionAccessoryArt {
             ...oo..
             """,
         "pet-cape": """
-            oo.
-            orr
-            orr
-            orR
-            ooo
+            ...ooo
+            ..orro
+            .orwro
+            .orrro
+            orrrRo
+            owrrro
+            oo.ooo
             """,
     ]
 

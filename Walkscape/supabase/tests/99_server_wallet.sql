@@ -65,7 +65,7 @@ reset role;
 
 -- Duplicates: owning everything, every box is a duplicate with coins back.
 select tests.ok((select array_agg(coins order by coins) from public.coin_prices where item like 'duplicate-%')
-                = array[80, 100, 150, 200], 'refunds: 80 common, 100 rare, 150 epic, 200 legendary');
+                = array[40, 60, 100, 200], 'refunds: 40 common, 60 rare, 100 epic, 200 legendary');
 insert into public.owned_items (user_id, item_id, source)
 select tests.id('hoard'), item_id, 'legacy' from public.mystery_box_prizes;
 select tests.as_user('hoard');
