@@ -3,8 +3,14 @@ import SwiftUI
 @main
 struct WalkscapeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @State private var model = AppModel()
+    @State private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        let model = AppModel()
+        _model = State(initialValue: model)
+        model.prepareBackgroundWalking()
+    }
 
     var body: some Scene {
         WindowGroup {

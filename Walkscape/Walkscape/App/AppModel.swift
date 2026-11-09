@@ -1,3 +1,4 @@
+import BackgroundTasks
 import Foundation
 import Observation
 import UIKit
@@ -339,6 +340,7 @@ final class AppModel {
     func didEnterBackground() {
         if !isWatchingAd && !ads.isShowingAd { backgroundedAt = Date() }
         updateWidget()
+        scheduleBackgroundRefresh()
     }
 
     // MARK: Widget
@@ -547,9 +549,60 @@ final class AppModel {
 
     private func startHealthObservationIfPossible() {
         guard dataSource == .appleHealth, authorization == .requested else { return }
+        observeHealthChanges()
+    }
+
+    private func observeHealthChanges() {
         healthProvider.startObservingChanges { [weak self] in
-            Task { @MainActor [weak self] in await self?.refreshWalking() }
+            await self?.refreshWalkingInBackground()
         }
+    }
+
+    // MARK: Background updates
+
+    static let backgroundRefreshID = "com.alexandrub.walkscape.refresh"
+
+    /// Call while the app launches, before any UI exists: iOS can launch the app
+    /// in the background to deliver new steps, and SwiftUI views may not run then.
+    func prepareBackgroundWalking() {
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: Self.backgroundRefreshID, using: .main) { [weak self] task in
+            MainActor.assumeIsolated {
+                guard let self else {
+                    task.setTaskCompleted(success: false)
+                    return
+                }
+                self.handleBackgroundRefresh(task)
+            }
+        }
+        guard dataSource == .appleHealth else { return }
+        observeHealthChanges()
+        scheduleBackgroundRefresh()
+    }
+
+    /// Reads today's walk and uploads it, without anyone opening the app. Health
+    /// data can't be read while the phone is locked, so that waits for an unlock.
+    private func refreshWalkingInBackground() async {
+        guard dataSource == .appleHealth, UIApplication.shared.isProtectedDataAvailable else { return }
+        // A background launch skips `start()`, so the account may not be loaded yet.
+        if !isSignedIn { await restoreSession() }
+        await refreshWalking()
+    }
+
+    private func handleBackgroundRefresh(_ task: BGTask) {
+        scheduleBackgroundRefresh()
+        let work = Task {
+            await refreshWalkingInBackground()
+            task.setTaskCompleted(success: !Task.isCancelled)
+        }
+        task.expirationHandler = { work.cancel() }
+    }
+
+    /// A backup for when a Health delivery was missed. iOS decides when it runs.
+    private func scheduleBackgroundRefresh() {
+        guard dataSource == .appleHealth else { return }
+        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundRefreshID)
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 60 * 60)
+        try? BGTaskScheduler.shared.submit(request)
     }
 
     /// Demo only: walk a bit further to preview zone transitions.

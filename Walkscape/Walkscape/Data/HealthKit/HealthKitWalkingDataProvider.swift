@@ -21,6 +21,25 @@ final class HealthKitWalkingDataProvider: WalkingDataProvider, @unchecked Sendab
 
     static var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
+    /// iOS stops waking apps that take too long to finish a delivery.
+    static let backgroundWorkLimit = 20
+
+    /// Runs its action the first time only, whichever caller gets there first.
+    private final class OnceOnly: @unchecked Sendable {
+        private let lock = NSLock()
+        private var action: (() -> Void)?
+
+        init(_ action: @escaping () -> Void) { self.action = action }
+
+        func run() {
+            lock.lock()
+            let pending = action
+            action = nil
+            lock.unlock()
+            pending?()
+        }
+    }
+
     func authorizationState() async -> WalkingAuthorizationState {
         guard Self.isAvailable else { return .unavailable }
         do {
@@ -82,15 +101,28 @@ final class HealthKitWalkingDataProvider: WalkingDataProvider, @unchecked Sendab
 
     /// Calls `onChange` whenever new step or distance samples arrive, including
     /// in the background (hourly at most; iOS decides the exact timing).
+    /// iOS is only told the delivery is finished once `onChange` returns, so the
+    /// app stays awake for the upload (up to `backgroundWorkLimit` seconds).
     /// Requires the HealthKit Background Delivery entitlement.
-    func startObservingChanges(_ onChange: @escaping @Sendable () -> Void) {
+    func startObservingChanges(_ onChange: @escaping @Sendable () async -> Void) {
         lock.lock()
         defer { lock.unlock() }
         guard Self.isAvailable, observerQueries.isEmpty else { return }
         for type in [stepType, distanceType] {
             let query = HKObserverQuery(sampleType: type, predicate: nil) { _, completion, error in
-                if error == nil { onChange() }
-                completion()
+                guard error == nil else {
+                    completion()
+                    return
+                }
+                let finish = OnceOnly(completion)
+                Task {
+                    await onChange()
+                    finish.run()
+                }
+                Task {
+                    try? await Task.sleep(for: .seconds(Self.backgroundWorkLimit))
+                    finish.run()
+                }
             }
             store.execute(query)
             observerQueries.append(query)
