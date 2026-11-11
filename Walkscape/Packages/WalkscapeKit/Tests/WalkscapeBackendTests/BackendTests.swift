@@ -353,6 +353,19 @@ final class BackendTests: XCTestCase {
         XCTAssertEqual(body["p_distance_source"] as? String, "recorded")
         XCTAssertEqual(body["p_time_zone"] as? String, "Europe/London")
         XCTAssertNotNil(PostgresDate.parse(body["p_client_updated_at"] as? String ?? ""))
+        XCTAssertEqual(body["p_uploaded_via"] as? String, "app")
+    }
+
+    func testBackgroundUploadsAreMarked() async throws {
+        let transport = MockTransport()
+        transport.enqueue(200, "{}")
+        let (_, api) = makeBackend(session: validSession(), transport: transport)
+        let syncer = DailyProgressSyncer(api: api)
+        let progress = DailyProgress(userID: "me", localDate: LocalDay(year: 2026, month: 10, day: 25),
+                                     timeZoneIdentifier: "UTC", steps: 5, distanceMeters: 4, distanceSource: .recorded,
+                                     updatedAt: now)
+        _ = try await syncer.sync(progress, via: .background)
+        XCTAssertEqual(transport.body(0)["p_uploaded_via"] as? String, "background")
     }
 
     func testFailedSyncIsRetriedNextTime() async throws {

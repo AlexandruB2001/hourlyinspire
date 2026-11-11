@@ -2178,7 +2178,9 @@ final class AppModel {
     private func uploadProgress(_ progress: DailyProgress, source: WalkingDataSourceKind) async {
         guard let backend, isSignedIn, source == .appleHealth, settings.shareProgressWithFriends else { return }
         do {
-            try await backend.progressSync.sync(progress)
+            // Marks uploads made while iOS woke the app in the background.
+            let origin: DailyProgressSyncer.Origin = UIApplication.shared.applicationState == .active ? .app : .background
+            try await backend.progressSync.sync(progress, via: origin)
         } catch BackendError.notSignedIn {
             handleSessionExpired()
         } catch {

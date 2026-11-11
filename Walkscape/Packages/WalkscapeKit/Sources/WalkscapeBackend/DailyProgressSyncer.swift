@@ -14,6 +14,12 @@ public actor DailyProgressSyncer {
         case skippedUnavailable
     }
 
+    /// Whether the upload happened with the app open or from a background refresh.
+    public enum Origin: String, Hashable, Sendable {
+        case app
+        case background
+    }
+
     private struct Fingerprint: Hashable {
         let day: LocalDay
         let steps: Int
@@ -30,7 +36,7 @@ public actor DailyProgressSyncer {
     }
 
     @discardableResult
-    public func sync(_ progress: DailyProgress) async throws -> Outcome {
+    public func sync(_ progress: DailyProgress, via origin: Origin = .app) async throws -> Outcome {
         guard progress.distanceSource != .unavailable else { return .skippedUnavailable }
         let fingerprint = Fingerprint(day: progress.localDate, steps: progress.steps,
                                       meters: progress.distanceMeters, source: progress.distanceSource)
@@ -43,10 +49,12 @@ public actor DailyProgressSyncer {
             let p_distance_meters: Int
             let p_distance_source: String
             let p_client_updated_at: Date
+            let p_uploaded_via: String
         }
         let params = Params(p_local_date: progress.localDate.isoString, p_time_zone: progress.timeZoneIdentifier,
                             p_steps: progress.steps, p_distance_meters: progress.distanceMeters,
-                            p_distance_source: progress.distanceSource.rawValue, p_client_updated_at: progress.updatedAt)
+                            p_distance_source: progress.distanceSource.rawValue, p_client_updated_at: progress.updatedAt,
+                            p_uploaded_via: origin.rawValue)
         let _: IgnoredResult = try await api.call("upsert_daily_progress", params)
         lastUploaded[progress.localDate] = fingerprint
         return .uploaded
