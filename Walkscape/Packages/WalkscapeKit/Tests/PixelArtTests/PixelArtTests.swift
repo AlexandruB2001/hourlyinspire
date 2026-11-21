@@ -194,8 +194,8 @@ final class PixelArtTests: XCTestCase {
                     let dressed = CompanionSprites.render(speciesID: species, growth: growth, accessories: [accessory.id])
                     // Every pixel of the pet itself is untouched: the piece only shows around it.
                     for y in 0..<plain.height {
-                        for x in 0..<plain.width where plain[x: x, y: y].a == 255 {
-                            XCTAssertEqual(dressed[x: x, y: y], plain[x: x, y: y],
+                        for x in 0..<plain.width where plain[x, y].a == 255 {
+                            XCTAssertEqual(dressed[x, y], plain[x, y],
                                            "\(accessory.id) covers \(species) at \(km) km (\(x), \(y))")
                         }
                     }
