@@ -204,14 +204,18 @@ struct CompanionSheet: View {
                             Text(species.name)
                                 .font(Theme.Typography.headline)
                                 .foregroundStyle(Theme.Palette.cream)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
                             Text(species.tagline)
                                 .font(Theme.Typography.micro)
                                 .foregroundStyle(Theme.Palette.creamDim)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
                         let affordable = model.wallet.coins >= CompanionRoster.adoptionCost
                         Button { adopting = species } label: { CoinPriceLabel(text: "Adopt", price: CompanionRoster.adoptionCost) }
                             .buttonStyle(.pixel)
+                            .layoutPriority(1)
                             .disabled(!affordable)
                             .opacity(affordable ? 1 : 0.5)
                     }

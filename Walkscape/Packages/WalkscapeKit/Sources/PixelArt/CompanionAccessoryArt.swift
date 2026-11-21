@@ -133,6 +133,20 @@ enum CompanionAccessoryArt {
             """,
     ]
 
+    /// Capes and cloaks are drawn to fit the pet's outline (see `CompanionSprites.drawCape`);
+    /// their art above is the icon. Keys are item palette keys.
+    struct CapeColors {
+        let fill: Character
+        let shade: Character
+        let light: Character
+    }
+
+    static let capeColors: [String: CapeColors] = [
+        "pet-cape": CapeColors(fill: "r", shade: "R", light: "w"),
+        "pet-star-cape": CapeColors(fill: "V", shade: "v", light: "h"),
+        "pet-plus-leaf-cloak": CapeColors(fill: "g", shade: "G", light: "L"),
+    ]
+
     static func sprite(_ id: String) -> Sprite? {
         art[id].map { Sprite(name: id, palette: ItemSprites.palette, art: $0) }
     }

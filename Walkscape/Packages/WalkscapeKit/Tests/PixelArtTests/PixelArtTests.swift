@@ -183,6 +183,27 @@ final class PixelArtTests: XCTestCase {
         }
     }
 
+    func testCapesAndPacksAreWornBehindThePet() {
+        let backs = CompanionAccessoryCatalog.all.filter { $0.slot == .back }
+        XCTAssertFalse(backs.isEmpty)
+        for species in CompanionSprites.speciesIDs {
+            for km in [0, 5, 20, 50, 100] {
+                let growth = CompanionGrowth(kilometres: km)
+                let plain = CompanionSprites.render(speciesID: species, growth: growth)
+                for accessory in backs {
+                    let dressed = CompanionSprites.render(speciesID: species, growth: growth, accessories: [accessory.id])
+                    // Every pixel of the pet itself is untouched: the piece only shows around it.
+                    for y in 0..<plain.height {
+                        for x in 0..<plain.width where plain[x: x, y: y].a == 255 {
+                            XCTAssertEqual(dressed[x: x, y: y], plain[x: x, y: y],
+                                           "\(accessory.id) covers \(species) at \(km) km (\(x), \(y))")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     func testCampsiteGrowsWithItsLevelAndShowsDecorations() {
         let levels = (1...5).map { CampfireRenderer.render(level: $0, decorations: []) }
         XCTAssertEqual(Set(levels).count, 5, "every level looks different")

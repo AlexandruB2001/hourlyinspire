@@ -59,20 +59,63 @@ public enum CompanionSprites {
         let left = x + (opaque.map(\.0).min() ?? 0)
         let centre = x + sprite.width / 2
         let worn = accessories.compactMap { id in CompanionAccessoryArt.sprite(id).map { (id, $0) } }
+        // Back pieces go first, so the body covers them and they read as worn behind the pet.
+        for (id, piece) in worn where CompanionAccessoryArt.slot(of: id) == .back {
+            if let colors = CompanionAccessoryArt.capeColors[id] {
+                drawCape(on: &canvas, sprite: sprite, x: x, y: y, from: top + (bottom - top) / 3, to: bottom,
+                         centre: centre, colors: colors)
+            } else {
+                // A pack peeks out from behind the shoulder, half of it hidden by the body.
+                canvas.draw(piece, x: max(0, left - piece.width + piece.width / 2),
+                            y: min(canvasSize - piece.height, top + (bottom - top) / 3))
+            }
+        }
         canvas.draw(sprite, x: x, y: y)
         for (id, piece) in worn {
             switch CompanionAccessoryArt.slot(of: id) {
-            // On top of the body at its side, overlapping two columns, so most of
-            // the cape or pack shows even on the widest species.
-            case .back:
-                canvas.draw(piece, x: max(0, left - piece.width + 2),
-                            y: min(canvasSize - piece.height, top + (bottom - top) / 3))
             case .head: canvas.draw(piece, x: centre - piece.width / 2, y: max(0, top - piece.height + 1))
             case .neck: canvas.draw(piece, x: centre - piece.width / 2, y: top + (bottom - top) * 9 / 20)
             default: break
             }
         }
         return canvas
+    }
+
+    /// A cape draped behind the body: from the shoulders down to the feet, following the
+    /// body's left edge (mirrored on the right, so a tail doesn't stretch it) and flaring
+    /// out by one more pixel towards the bottom. It only ever widens going down.
+    static func drawCape(on canvas: inout PixelCanvas, sprite: Sprite, x: Int, y: Int, from start: Int, to end: Int,
+                         centre: Int, colors: CompanionAccessoryArt.CapeColors) {
+        let palette = ItemSprites.palette
+        guard end >= start, let outline = palette["o"], let fill = palette[colors.fill],
+              let shade = palette[colors.shade], let light = palette[colors.light] else { return }
+        let rows = end - start + 1
+        var edge = Int.max
+        for (index, row) in (start...end).enumerated() {
+            let spriteRow = row - y
+            if sprite.rows.indices.contains(spriteRow),
+               let first = sprite.rows[spriteRow].firstIndex(where: { $0 != "." }) {
+                edge = min(edge, x + first)
+            }
+            guard edge != .max else { continue }
+            let flare = 1 + index * 2 / rows
+            let left = max(0, edge - flare)
+            let right = min(canvasSize - 1, centre + (centre - edge) - 1 + flare)
+            guard left <= right else { continue }
+            for column in left...right {
+                let color: PixelColor
+                if column == left || column == right || row == end {
+                    color = outline
+                } else if column == left + 1 && index % 3 == 1 {
+                    color = light
+                } else if column >= right - 1 {
+                    color = shade
+                } else {
+                    color = fill
+                }
+                canvas.plot(column, row, color)
+            }
+        }
     }
 
     public static var speciesIDs: [String] { art.keys.sorted() }

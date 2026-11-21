@@ -161,6 +161,9 @@ struct CoinPriceLabel: View {
             ItemIcon(spriteID: "coin", pixel: 1.4)
             Text("\(price)").monospacedDigit()
         }
+        // Never wrap a word onto two lines ("Adop / t"): the row gives way instead.
+        .lineLimit(1)
+        .fixedSize()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(text), \(price) coins")
     }
