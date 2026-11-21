@@ -64,13 +64,17 @@ public enum CompanionSprites {
             if let colors = CompanionAccessoryArt.capeColors[id] {
                 drawCape(on: &canvas, sprite: sprite, x: x, y: y, from: top + (bottom - top) / 3, to: bottom,
                          centre: centre, colors: colors)
+            } else if id == "pet-backpack" {
+                drawPack(on: &canvas, sprite: sprite, x: x, y: y, top: top, bottom: bottom, centre: centre)
             } else {
-                // A pack peeks out from behind the shoulder, half of it hidden by the body.
                 canvas.draw(piece, x: max(0, left - piece.width + piece.width / 2),
                             y: min(canvasSize - piece.height, top + (bottom - top) / 3))
             }
         }
         canvas.draw(sprite, x: x, y: y)
+        if worn.contains(where: { $0.0 == "pet-backpack" }) {
+            drawPackStraps(on: &canvas, sprite: sprite, x: x, y: y, top: top, bottom: bottom, centre: centre)
+        }
         for (id, piece) in worn {
             switch CompanionAccessoryArt.slot(of: id) {
             case .head: canvas.draw(piece, x: centre - piece.width / 2, y: max(0, top - piece.height + 1))
@@ -114,6 +118,73 @@ public enum CompanionSprites {
                     color = fill
                 }
                 canvas.plot(column, row, color)
+            }
+        }
+    }
+
+    /// Rows the backpack covers: from a little below the head down to just above the feet.
+    static func packRows(top: Int, bottom: Int) -> ClosedRange<Int> {
+        let start = top + (bottom - top) * 2 / 5
+        return start...max(start, bottom - 1)
+    }
+
+    /// The left edge of the body across the pack's rows (the right is mirrored, so a tail doesn't count).
+    static func packEdge(sprite: Sprite, x: Int, y: Int, rows: ClosedRange<Int>) -> Int? {
+        let edges = rows.compactMap { row -> Int? in
+            guard sprite.rows.indices.contains(row - y) else { return nil }
+            return sprite.rows[row - y].firstIndex(where: { $0 != "." }).map { x + $0 }
+        }
+        return edges.min()
+    }
+
+    /// The pets face the viewer, so a backpack sits behind the body and shows two pixels
+    /// either side of it, with a flap along the top and a buckle on each side.
+    static func drawPack(on canvas: inout PixelCanvas, sprite: Sprite, x: Int, y: Int, top: Int, bottom: Int, centre: Int) {
+        let palette = ItemSprites.palette
+        let rows = packRows(top: top, bottom: bottom)
+        guard let edge = packEdge(sprite: sprite, x: x, y: y, rows: rows),
+              let outline = palette["o"], let flap = palette["b"], let shade = palette["B"],
+              let fill = palette["n"], let buckle = palette["y"], let buckleShade = palette["Y"] else { return }
+        let left = max(0, edge - 2)
+        let right = min(canvasSize - 1, centre + (centre - edge) - 1 + 2)
+        guard left < right else { return }
+        for row in rows {
+            for column in left...right {
+                let isEndRow = row == rows.lowerBound || row == rows.upperBound
+                let isEndColumn = column == left || column == right
+                if isEndRow && isEndColumn { continue }
+                let color: PixelColor
+                if isEndRow || isEndColumn {
+                    color = outline
+                } else if row == rows.lowerBound + 1 {
+                    color = flap
+                } else if row == rows.lowerBound + 2 || column >= right - 1 {
+                    color = shade
+                } else {
+                    color = fill
+                }
+                canvas.plot(column, row, color)
+            }
+            if row == rows.lowerBound + 3 && row < rows.upperBound {
+                canvas.plot(left + 1, row, buckle)
+                canvas.plot(right - 1, row, buckleShade)
+            }
+        }
+    }
+
+    /// Two straps down the front of the body, below the face.
+    static func drawPackStraps(on canvas: inout PixelCanvas, sprite: Sprite, x: Int, y: Int, top: Int, bottom: Int, centre: Int) {
+        let rows = packRows(top: top, bottom: bottom)
+        guard let edge = packEdge(sprite: sprite, x: x, y: y, rows: rows),
+              let strap = ItemSprites.palette["B"], rows.lowerBound + 2 < rows.upperBound else { return }
+        let inset = max(2, (centre - edge) / 2)
+        for column in [centre - inset - 1, centre + inset] {
+            for row in (rows.lowerBound + 2)..<rows.upperBound {
+                let spriteRow = row - y, spriteColumn = column - x
+                guard sprite.rows.indices.contains(spriteRow) else { continue }
+                let keys = Array(sprite.rows[spriteRow])
+                guard keys.indices.contains(spriteColumn), keys[spriteColumn] != ".", keys[spriteColumn] != "o" else { continue }
+                canvas.plot(column, row, strap)
             }
         }
     }

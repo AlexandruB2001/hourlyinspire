@@ -193,12 +193,20 @@ final class PixelArtTests: XCTestCase {
                 for accessory in backs {
                     let dressed = CompanionSprites.render(speciesID: species, growth: growth, accessories: [accessory.id])
                     // Every pixel of the pet itself is untouched: the piece only shows around it.
+                    // The one exception is the backpack's two straps down the front.
+                    let strap = ItemSprites.palette["B"]
+                    var strapPixels = 0
                     for y in 0..<plain.height {
                         for x in 0..<plain.width where plain[x, y].a == 255 {
+                            if accessory.id == "pet-backpack", dressed[x, y] != plain[x, y], dressed[x, y] == strap {
+                                strapPixels += 1
+                                continue
+                            }
                             XCTAssertEqual(dressed[x, y], plain[x, y],
                                            "\(accessory.id) covers \(species) at \(km) km (\(x), \(y))")
                         }
                     }
+                    XCTAssertLessThanOrEqual(strapPixels, 2 * CompanionSprites.canvasSize, "only two straps")
                 }
             }
         }
