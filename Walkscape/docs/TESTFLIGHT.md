@@ -46,7 +46,7 @@ on your iPhone.
 
 ## Each new build
 Run the workflow. The build number is the workflow run number, so it always
-increases. The version (`MARKETING_VERSION` in `project.yml`) is 0.1.0.
+increases. The version (`MARKETING_VERSION` in `project.yml`) is 1.0.0 (the App Store launch version; bump it for each App Store update).
 
 ## Before external testers
 Fill in **App Privacy** in App Store Connect to match `Resources/PrivacyInfo.xcprivacy`:
