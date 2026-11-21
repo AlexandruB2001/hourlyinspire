@@ -250,7 +250,9 @@ private struct MapStopRow: View {
     /// The team's walkers gathered at the latest stop.
     private var team: some View {
         let members = dashboard.members
-        return HStack(spacing: -4) {
+        // Each walker gets its own column with a gap, so long names never run together
+        // ("caskazedstract"); a name too long for its column ends in "…".
+        return HStack(spacing: 3) {
             ForEach(members.prefix(5)) { member in
                 VStack(spacing: 0) {
                     WalkingCharacter(avatarID: member.avatarID, outfit: model.outfit(for: member.id), walking: (member.dayMeters ?? 0) > 0, pixel: 1.6,
@@ -260,7 +262,9 @@ private struct MapStopRow: View {
                         .font(.system(size: 8, weight: .bold, design: .rounded))
                         .foregroundStyle(member.isCurrentUser ? Theme.Palette.gold : Theme.Palette.cream)
                         .lineLimit(1)
-                        .frame(width: 34)
+                        .truncationMode(.tail)
+                        .frame(width: 38)
+                        .clipped()
                 }
             }
             if members.count > 5 {

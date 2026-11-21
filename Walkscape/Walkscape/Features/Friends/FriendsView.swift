@@ -88,6 +88,10 @@ struct FriendsView: View {
                     .font(Theme.Typography.headline)
                 Image(systemName: "chevron.down").font(.caption.weight(.heavy))
             }
+            // Keep the icon, the whole name and the chevron: the menu label must
+            // never be squeezed (it clipped to "Daily Leaderboar").
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(Theme.Palette.cream)
             .padding(.horizontal, Theme.Spacing.m)
             .padding(.vertical, Theme.Spacing.s)

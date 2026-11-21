@@ -133,8 +133,11 @@ struct TrackMetrics {
     var characterWidth: CGFloat { 16 * pixel }
     var characterHeight: CGFloat { 20 * pixel }
     var labelHeight: CGFloat { style == .full ? 30 : 26 }
-    var laneHeight: CGFloat { characterHeight + labelHeight - 4 }
-    var labelWidth: CGFloat { style == .full ? 66 : 58 }
+    /// Room above a walker for a tall hat (crowns, wizard hats), so a front-row walker's
+    /// hat never covers the name tag of the walker in the row behind.
+    var hatRoom: CGFloat { 4 * pixel }
+    var laneHeight: CGFloat { characterHeight + labelHeight + hatRoom - 4 }
+    var labelWidth: CGFloat { style == .full ? 66 : 64 }
     var indicatorWidth: CGFloat { style == .full ? 74 : 62 }
     var edgeInset: CGFloat { 6 }
     var bottomPadding: CGFloat { 2 }
