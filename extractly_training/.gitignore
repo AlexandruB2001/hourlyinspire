@@ -1,0 +1,4 @@
+build/qa/
+build/img/
+build/__pycache__/
+build/*.png
