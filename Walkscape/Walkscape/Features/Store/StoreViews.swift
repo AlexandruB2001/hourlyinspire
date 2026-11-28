@@ -169,12 +169,23 @@ private struct BundleCard: View {
     let product: StoreProduct
     let busy: Bool
     let buy: (StoreProduct) -> Void
+    /// The seasonal outfits show as a mystery silhouette until tapped.
+    @State private var revealed = false
 
     var body: some View {
         let owned = model.entitlements.bundles.contains(product.id)
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             TimelineView(.periodic(from: .now, by: 1.0 / 8)) { context in
                 preview(frame: Int(context.date.timeIntervalSinceReferenceDate * 8))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard kind == .outfits, !revealed else { return }
+                withAnimation(.easeInOut(duration: 0.3)) { revealed = true }
+                Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    withAnimation(.easeInOut(duration: 0.3)) { revealed = false }
+                }
             }
             .frame(maxWidth: .infinity)
             .frame(height: 150)
@@ -237,9 +248,13 @@ private struct BundleCard: View {
     @ViewBuilder private var background: some View {
         switch kind {
         case .outfits:
-            // One band per season: autumn, winter, spring, summer.
-            LinearGradient(colors: [Color(hex: 0xE8893A), Color(hex: 0xBFE6F2), Color(hex: 0xF2B7A8), Color(hex: 0xE3B04B)],
-                           startPoint: .leading, endPoint: .trailing)
+            if revealed {
+                // One band per season: autumn, winter, spring, summer.
+                LinearGradient(colors: [Color(hex: 0xE8893A), Color(hex: 0xBFE6F2), Color(hex: 0xF2B7A8), Color(hex: 0xE3B04B)],
+                               startPoint: .leading, endPoint: .trailing)
+            } else {
+                RadialGradient(colors: [Color(hex: 0x3A3A3A), Color(hex: 0x0A0A0A)], center: .center, startRadius: 10, endRadius: 180)
+            }
         case .skins:
             LinearGradient(colors: [Theme.Palette.skyMuted, Theme.Palette.sky], startPoint: .top, endPoint: .bottom)
         case .trails, .campsite:
@@ -251,9 +266,24 @@ private struct BundleCard: View {
         let cache = PixelArtCache.shared
         switch kind {
         case .outfits:
-            // The walker wearing all four seasonal pieces at once.
-            PixelImageView(image: cache.characterFrame(frame, avatarID: model.settings.avatarID,
-                                                       outfit: PremiumOutfits.items.map(\.id), walking: true), pixel: 5)
+            // The walker wearing all four seasonal pieces at once: a white mystery
+            // silhouette next to a big "?", in full colour while tapped.
+            let walker = PixelImageView(image: cache.characterFrame(frame, avatarID: model.settings.avatarID,
+                                                                    outfit: PremiumOutfits.items.map(\.id), walking: true), pixel: 5)
+            if revealed {
+                walker
+            } else {
+                VStack(spacing: Theme.Spacing.xs) {
+                    HStack(spacing: Theme.Spacing.xl) {
+                        walker.brightness(1)
+                        PixelQuestionMark(pixel: 9)
+                            .offset(y: frame / 4 % 2 == 0 ? -3 : 0)
+                    }
+                    Text("Tap to peek")
+                        .font(Theme.Typography.micro)
+                        .foregroundStyle(.white.opacity(0.6))
+                }
+            }
         case .skins:
             let species = model.companion?.speciesID ?? "emberfox"
             HStack(spacing: Theme.Spacing.l) {
@@ -286,6 +316,26 @@ private struct BundleCard: View {
                     .scaledToFill()
             }
         }
+    }
+}
+
+/// A chunky white "?" drawn in square pixels, outlined in black.
+private struct PixelQuestionMark: View {
+    let pixel: CGFloat
+    private static let rows = [".###.", "#...#", "....#", "...#.", "..#..", ".....", "..#.."]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(Self.rows.enumerated()), id: \.offset) { _, row in
+                HStack(spacing: 0) {
+                    ForEach(Array(row.enumerated()), id: \.offset) { _, cell in
+                        Rectangle().fill(cell == "#" ? Color.white : Color.clear).frame(width: pixel, height: pixel)
+                    }
+                }
+            }
+        }
+        .shadow(color: .black, radius: 0, x: 2, y: 2)
+        .accessibilityLabel("Mystery")
     }
 }
 
