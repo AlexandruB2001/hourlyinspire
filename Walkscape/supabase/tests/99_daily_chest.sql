@@ -87,3 +87,36 @@ reset role;
 select tests.ok(not exists (select 1 from information_schema.role_table_grants
                             where table_name in ('daily_chests', 'daily_chest_claims') and grantee in ('anon', 'authenticated')),
                 'the daily chest tables are only reachable through the functions');
+
+-- Walkscape Plus: a second chest each day, checked against the server's purchases.
+insert into tests.users values ('member', '00000000-0000-0000-0000-000000000062');
+insert into auth.users (id, email) values (tests.id('member'), 'member@example.com');
+update public.profiles set username = 'member' where id = tests.id('member');
+select tests.as_user('member');
+select tests.give_coins(0);
+select public.claim_daily_chest('00000000-0000-0000-0000-0000000000f1', 'UTC');
+select tests.fails($$select * from public.claim_daily_chest(gen_random_uuid(), 'UTC')$$, 'daily_chest_not_ready',
+                   'without Plus there''s one chest a day');
+reset role;
+insert into public.purchases (original_transaction_id, user_id, product_id, environment, purchased_at, expires_at, revoked_at)
+values ('9001', tests.id('member'), 'com.alexandrub.walkscape.plus.monthly', 'Sandbox', now(), now() + interval '30 days', null);
+select tests.as_user('member');
+select tests.ok((select ready_at <= server_now from public.daily_chest_status('UTC')), 'Plus makes a second chest ready');
+select coins as bonus_coins, ready_at as bonus_ready
+from public.claim_daily_chest('00000000-0000-0000-0000-0000000000f2', 'UTC') \gset
+select tests.ok(:bonus_coins between 25 and 150, 'the Plus chest pays coins');
+select tests.ok(:'bonus_ready'::timestamptz = ((now() at time zone 'UTC')::date + 1)::timestamp at time zone 'UTC',
+                'after both chests the next is ready at midnight');
+select tests.fails($$select * from public.claim_daily_chest(gen_random_uuid(), 'UTC')$$, 'daily_chest_not_ready',
+                   'Plus gives two chests a day, not more');
+select tests.fails($$select public.caller_has_plus()$$, 'permission denied', 'the Plus check isn''t callable directly');
+reset role;
+update public.daily_chests set last_day = last_day - 1, bonus_day = bonus_day - 1 where user_id = tests.id('member');
+update public.purchases set revoked_at = now() where original_transaction_id = '9001';
+select tests.as_user('member');
+select public.claim_daily_chest(gen_random_uuid(), 'UTC');
+select tests.fails($$select * from public.claim_daily_chest(gen_random_uuid(), 'UTC')$$, 'daily_chest_not_ready',
+                   'a refunded Plus gives no bonus chest');
+reset role;
+select tests.ok((select count(*) from public.daily_chest_claims where user_id = tests.id('member')) = 3,
+                'three claims recorded: two days, one bonus');

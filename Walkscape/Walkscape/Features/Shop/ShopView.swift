@@ -156,7 +156,7 @@ private struct MysteryBoxCard: View {
     }
 }
 
-/// A free chest every 24 hours, with a countdown to the next one.
+/// A free chest every day (two with Walkscape Plus), with a countdown to the next one.
 private struct DailyChestCard: View {
     @Environment(AppModel.self) private var model
     @State private var opening = false
@@ -176,7 +176,8 @@ private struct DailyChestCard: View {
                     Text("Daily Chest")
                         .font(Theme.Typography.headline)
                         .foregroundStyle(Theme.Palette.cream)
-                    Text("A free chest every day. What's inside is a surprise!")
+                    Text(model.hasPlus ? "Two free chests every day with Walkscape Plus. What's inside is a surprise!"
+                                       : "A free chest every day. What's inside is a surprise!")
                         .font(Theme.Typography.caption)
                         .foregroundStyle(Theme.Palette.creamDim)
                     if let won {

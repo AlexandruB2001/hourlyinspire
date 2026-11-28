@@ -2,8 +2,9 @@ import Foundation
 
 // MARK: - Products
 
-/// Something sold for real money through the App Store. Everything here is
-/// cosmetic: no coins, XP, progress or features are ever sold.
+/// Something sold for real money through the App Store. Bundles are cosmetic;
+/// Walkscape Plus adds cosmetics and a second free Daily Chest each day (coins
+/// are never sold directly, and nothing in the game is locked behind Plus).
 public struct StoreProduct: Identifiable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable {
         case subscription, bundle
@@ -38,9 +39,9 @@ public enum StoreCatalog {
 
     public static let plus: [StoreProduct] = [
         StoreProduct(id: plusMonthlyID, kind: .subscription, name: "Walkscape Plus (monthly)",
-                     summary: "All Plus cosmetics, renewed every month.", fallbackPrice: "$2.99"),
+                     summary: "All Plus perks, renewed every month.", fallbackPrice: "$2.99"),
         StoreProduct(id: plusYearlyID, kind: .subscription, name: "Walkscape Plus (yearly)",
-                     summary: "All Plus cosmetics for a year. Save about 44%.", fallbackPrice: "$19.99"),
+                     summary: "All Plus perks for a year. Save about 44%.", fallbackPrice: "$19.99"),
     ]
 
     public static let bundles: [StoreProduct] = [
@@ -65,6 +66,7 @@ public enum StoreCatalog {
 
     /// What Plus includes, for the store screen.
     public static let plusPerks = [
+        "A second free Daily Chest every day, for more coins",
         "A new exclusive companion accessory every month you're a member, yours to keep",
         "Premium profile frames: Prism, Starlight and Ember",
         "Journal themes: Moonlight, Meadow and Parchment",

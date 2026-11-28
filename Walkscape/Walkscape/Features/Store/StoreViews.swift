@@ -43,17 +43,17 @@ struct StoreSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Spacing.l) {
+                    if let loadError = model.shop.loadError {
+                        Label(loadError, systemImage: "exclamationmark.triangle.fill")
+                            .font(Theme.Typography.caption)
+                            .foregroundStyle(Theme.Palette.ember)
+                    }
                     plusCard
                     Text("Bundles")
                         .font(Theme.Typography.title)
                         .foregroundStyle(Theme.Palette.cream)
                     ForEach(StoreCatalog.bundles) { BundleCard(product: $0, busy: busyProductID == $0.id) { buy($0) } }
                     PremiumLooksCard()
-                    if let message {
-                        Text(message)
-                            .font(Theme.Typography.caption)
-                            .foregroundStyle(Theme.Palette.gold)
-                    }
                     Button("Restore purchases") {
                         Task { message = await model.restorePurchases() ?? "Purchases restored." }
                     }
@@ -70,6 +70,10 @@ struct StoreSheet: View {
                 ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.foregroundStyle(Theme.Palette.gold) }
             }
             .manageSubscriptionsSheet(isPresented: $managing)
+            .task { if model.shop.products.isEmpty { await model.shop.loadProducts() } }
+            .alert(message ?? "", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
+                Button("OK", role: .cancel) { message = nil }
+            }
         }
         .presentationDragIndicator(.visible)
     }
@@ -85,7 +89,7 @@ struct StoreSheet: View {
                         .foregroundStyle(Theme.Palette.gold)
                 }
             }
-            Text("Extra cosmetics, every month")
+            Text("Extra looks and a bonus chest")
                 .font(Theme.Typography.title)
                 .foregroundStyle(Theme.Palette.cream)
             VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
@@ -95,7 +99,7 @@ struct StoreSheet: View {
                         .foregroundStyle(Theme.Palette.cream)
                 }
             }
-            Text("Plus is cosmetic only: no coins, XP or features are locked behind it.")
+            Text("Nothing in the game is locked behind Plus: it adds looks and a bonus chest.")
                 .font(Theme.Typography.micro)
                 .foregroundStyle(Theme.Palette.creamDim)
             if model.hasPlus, let until = model.entitlements.plusExpires {
@@ -158,7 +162,8 @@ struct StoreSheet: View {
     }
 }
 
-/// One cosmetic bundle with a preview.
+/// One cosmetic bundle: a large animated preview of everything inside, what's
+/// included, and the price.
 private struct BundleCard: View {
     @Environment(AppModel.self) private var model
     let product: StoreProduct
@@ -167,19 +172,31 @@ private struct BundleCard: View {
 
     var body: some View {
         let owned = model.entitlements.bundles.contains(product.id)
-        HStack(spacing: Theme.Spacing.m) {
-            preview
-                .frame(width: 84, height: 84)
-                .background(RoundedRectangle(cornerRadius: Theme.Radius.s).fill(Theme.Palette.skyMuted))
-                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.s))
-                .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(product.name)
-                    .font(Theme.Typography.headline)
-                    .foregroundStyle(Theme.Palette.cream)
-                Text(product.summary)
-                    .font(Theme.Typography.caption)
-                    .foregroundStyle(Theme.Palette.creamDim)
+        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            TimelineView(.periodic(from: .now, by: 1.0 / 8)) { context in
+                preview(frame: Int(context.date.timeIntervalSinceReferenceDate * 8))
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 150)
+            .background(background)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.s))
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.s).strokeBorder(Theme.Palette.ink, lineWidth: 2))
+            .accessibilityHidden(true)
+            HStack(alignment: .top, spacing: Theme.Spacing.m) {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                    Text(product.name)
+                        .font(Theme.Typography.headline)
+                        .foregroundStyle(Theme.Palette.cream)
+                    Text(product.summary)
+                        .font(Theme.Typography.caption)
+                        .foregroundStyle(Theme.Palette.creamDim)
+                    if !contentNames.isEmpty {
+                        Text(contentNames.joined(separator: " · "))
+                            .font(Theme.Typography.micro.weight(.heavy))
+                            .foregroundStyle(Theme.Palette.gold)
+                    }
+                }
+                Spacer(minLength: 0)
                 if owned {
                     Label("Owned", systemImage: "checkmark.seal.fill")
                         .font(Theme.Typography.caption)
@@ -192,28 +209,82 @@ private struct BundleCard: View {
                     .disabled(busy)
                 }
             }
-            Spacer(minLength: 0)
         }
         .pixelPanel()
         .accessibilityElement(children: .contain)
     }
 
-    @ViewBuilder private var preview: some View {
+    private enum Kind { case outfits, skins, trails, campsite }
+
+    private var kind: Kind {
+        let first = product.contents.first
+        if PremiumOutfits.items.contains(where: { $0.id == first }) { return .outfits }
+        if CompanionSkinCatalog.skin(withID: first) != nil { return .skins }
+        if TrailEffectCatalog.effect(withID: first) != nil { return .trails }
+        return .campsite
+    }
+
+    /// Everything the bundle unlocks, by name.
+    private var contentNames: [String] {
+        switch kind {
+        case .outfits: return PremiumOutfits.items.map(\.name)
+        case .skins: return CompanionSkinCatalog.all.map(\.name)
+        case .trails: return TrailEffectCatalog.all.map(\.name)
+        case .campsite: return CampfireCatalog.premiumDecorations.map(\.name)
+        }
+    }
+
+    @ViewBuilder private var background: some View {
+        switch kind {
+        case .outfits:
+            // One band per season: autumn, winter, spring, summer.
+            LinearGradient(colors: [Color(hex: 0xE8893A), Color(hex: 0xBFE6F2), Color(hex: 0xF2B7A8), Color(hex: 0xE3B04B)],
+                           startPoint: .leading, endPoint: .trailing)
+        case .skins:
+            LinearGradient(colors: [Theme.Palette.skyMuted, Theme.Palette.sky], startPoint: .top, endPoint: .bottom)
+        case .trails, .campsite:
+            Theme.Palette.night
+        }
+    }
+
+    @ViewBuilder private func preview(frame: Int) -> some View {
         let cache = PixelArtCache.shared
-        if product.contents.contains(where: { id in PremiumOutfits.items.contains { $0.id == id } }) {
-            PixelImageView(image: cache.characterFrame(0, avatarID: model.settings.avatarID,
-                                                       outfit: Array(product.contents.prefix(2)), walking: false), pixel: 3)
-        } else if let skin = CompanionSkinCatalog.skin(withID: product.contents.first), let companion = model.companion {
-            PixelImageView(image: cache.companion(companion.speciesID, kilometres: 25, skin: skin), pixel: 3.5)
-        } else if let trail = TrailEffectCatalog.effect(withID: product.contents.first) {
-            HStack(spacing: 2) {
-                ForEach(0..<6, id: \.self) { index in
-                    Rectangle().fill(Color(hex: trail.colors[index % trail.colors.count]).opacity(1 - Double(index) / 7))
-                        .frame(width: 5, height: 5)
+        switch kind {
+        case .outfits:
+            // The walker wearing all four seasonal pieces at once.
+            PixelImageView(image: cache.characterFrame(frame, avatarID: model.settings.avatarID,
+                                                       outfit: PremiumOutfits.items.map(\.id), walking: true), pixel: 5)
+        case .skins:
+            let species = model.companion?.speciesID ?? "emberfox"
+            HStack(spacing: Theme.Spacing.l) {
+                ForEach(CompanionSkinCatalog.all) { skin in
+                    PixelImageView(image: cache.companion(species, kilometres: 25, skin: skin), pixel: 4)
+                        .offset(y: (frame / 4 + CompanionSkinCatalog.all.firstIndex(of: skin)!) % 2 == 0 ? -2 : 0)
                 }
             }
-        } else {
-            PixelImageView(image: cache.campsite(level: 2, decorations: product.contents, frame: 0), pixel: 0.7)
+        case .trails:
+            HStack(spacing: Theme.Spacing.xl) {
+                ForEach(TrailEffectCatalog.all) { trail in
+                    VStack(spacing: 3) {
+                        ForEach(0..<6, id: \.self) { index in
+                            let step = (index + frame / 2) % 6
+                            Rectangle()
+                                .fill(Color(hex: trail.colors[step % trail.colors.count]).opacity(1 - Double(step) / 7))
+                                .frame(width: 7, height: 7)
+                                .offset(x: CGFloat((step % 3) - 1) * 4)
+                        }
+                    }
+                }
+            }
+        case .campsite:
+            // The finished camp at night with every decoration, fire flickering.
+            if let image = cache.campsite(level: CampfireCatalog.levels.last?.level ?? 5,
+                                          decorations: product.contents, frame: frame / 3) {
+                Image(decorative: image, scale: 1)
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFill()
+            }
         }
     }
 }

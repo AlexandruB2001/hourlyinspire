@@ -52,7 +52,7 @@ Character limits are Apple's; the counts here were checked.
 > No pressure, no streaks to lose. Just walk, and watch your world grow.
 
 If the store and Walkscape Plus are on at launch, add before the last line:
-> Optional Walkscape Plus and cosmetic bundles add extra outfits and decorations. Everything that affects your walk stays free.
+> Optional Walkscape Plus adds extra outfits, decorations and a second free Daily Chest each day, and cosmetic bundles add more looks. Nothing in the game is locked behind a purchase.
 
 ## Keywords (100, comma-separated, no spaces)
 

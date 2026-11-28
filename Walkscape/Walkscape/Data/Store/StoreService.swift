@@ -75,7 +75,12 @@ final class StoreService {
     /// Buys `product`. `accountID` (the player's account id) is attached to the
     /// transaction so the server can tie the purchase to their account.
     func purchase(_ product: StoreProduct, accountID: UUID?) async -> PurchaseOutcome {
-        guard let storeProduct = products[product.id] else { return .failed("This item isn't available right now.") }
+        // Products may not have loaded yet (no connection at launch, or the App Store
+        // wasn't ready): try once more before giving up.
+        if products[product.id] == nil { await loadProducts() }
+        guard let storeProduct = products[product.id] else {
+            return .failed("This item isn't available from the App Store right now. Please try again later.")
+        }
         var options: Set<Product.PurchaseOption> = []
         if let accountID { options.insert(.appAccountToken(accountID)) }
         do {
