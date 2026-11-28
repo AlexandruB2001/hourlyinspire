@@ -4,9 +4,12 @@ import StoreKit
 import WalkscapeDomain
 
 /// Switch for everything that sells or advertises real-money purchases.
-/// Off until the Paid Apps agreement is active and the owner says to turn it on.
+/// On in TestFlight and development builds (sandbox purchases, no real money) so testers
+/// can try it. Off in App Store builds until the owner says to launch it: then set
+/// `inAppStoreBuilds` to true.
 enum StoreFeature {
-    static let isEnabled = false
+    static let inAppStoreBuilds = false
+    static let isEnabled = inAppStoreBuilds || !AdConfig.isAppStoreBuild
 
     /// Plus frames, Plus gifts and bundle decorations stay out of lists while the store is hidden.
     static func shows(frame: ProfileFrame) -> Bool { isEnabled || frame.requirement != .plus }
